@@ -1,7 +1,5 @@
 # Crispy
 
-![sample image](documentation/gomd-01.png)
-
 **Crispy** is a variable font, designed by Agyei Archer for Google Fonts and licensed under the [SIL Open Font License, 1.1](http://scripts.sil.org/OFL).
 
 Crispy's variations are created based on Font Bureau and David Berlow's [variations proposal](https://variationsguide.typenetwork.com/), which outlined the descriptions of font features using more elemental factors than the more common paradigms like weight, width, x-height, etc.
@@ -47,7 +45,7 @@ ___
 * Agyei Archer
 
 ### License:
-Copyright (c) 2021, Agyei Archer Limited (hello@agyei.design | [agyei.design]() )
+Copyright (c) 2025, Agyei Archer (hello@agyei.design | [agyei.design]() )
 
 Licensed under the [SIL Open Font License, 1.1](http://scripts.sil.org/OFL); you may not use this file except in compliance with the License.
 
