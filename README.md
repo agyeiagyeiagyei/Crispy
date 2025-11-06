@@ -16,11 +16,10 @@ Development and design for this typeface project is sponsored by Google Fonts, a
 |  X-Opacity      | XOPQ       | Parametric    | 1            | 1000      |
 |  Y-Opacity      | YOPQ       | Parametric    | 1            | 1000      |
 |  X-Transparency | YTRA       | Parametric    | 1            | 1000      |
-|  Weight         | wght       | Stylistic     | 1            | 1000      |
-|  Width          | wdth       | Stylistic     | 1            | 1000      |
-|  Grade          | GRAD       | Stylistic     | -0.5         | 0.5       |
-|  Slant          | slnt       | Stylistic     | -1           | 1         |
-|  Shadow         | shdw       | Stylistic     | 0            | 1         |
+|  Relative X-Advance | RXAD       | Parametric    | 40            | 160      |
+|  Weight         | wght       | Stylistic     | 100          | 900       |
+|  Width          | wdth       | Stylistic     | 40            | 160       |
+|  Optical Size   | opsz       | Stylistic     | 12           | 72        |
 
 ¹Dependent on automation using a modified Slanter fork.
 
