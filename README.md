@@ -13,9 +13,9 @@ Development and design for this typeface project is sponsored by Google Fonts, a
 
 | Axis Name       | Axis Label | Axis Type     | Min Value    | Max Value |
 | :-------------  | :--------- | :-----------  | -----------: | --------: |
-|  X-Opacity      | XOPQ       | Parametric    | 1            | 1000      |
-|  Y-Opacity      | YOPQ       | Parametric    | 1            | 1000      |
-|  X-Transparency | YTRA       | Parametric    | 1            | 1000      |
+|  X-Opacity      | XOPQ       | Parametric    | 1            | 1016      |
+|  Y-Opacity      | YOPQ       | Parametric    | 1            | 462       |
+|  X-Transparency | YTRA       | Parametric    | 1            | 3330      |
 |  Relative X-Advance | RXAD       | Parametric    | 40            | 160      |
 |  Weight         | wght       | Stylistic     | 100          | 900       |
 |  Width          | wdth       | Stylistic     | 40            | 160       |
