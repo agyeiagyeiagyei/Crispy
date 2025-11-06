@@ -42,59 +42,10 @@ Copyright (c) 2025, Agyei Archer (hello@agyei.design | [agyei.design]() )
 
 Licensed under the [SIL Open Font License, 1.1](http://scripts.sil.org/OFL); you may not use this file except in compliance with the License.
 
-___
-
-## Font Log:
-
-
-Crispy is a variable font that supports [Google Latin Pro](https://github.com/googlefonts/gftools/blob/master/Lib/gftools/encodings/GF%20Glyph%20Sets/GF-latin-pro_unique-glyphs.nam) glyph set, with a total of 713 core glyphs in each of its 8 master font files.
-
-### File Setup:
-
-**The master files are configured below as follows:**
-
-| Master Name   | XOPQ | YOPQ     | XTRA |
-| :------------- | :---------- | ----------- | -----------: |
-|  x0y0t0 | 1   | 1    | 1 |
-|  x0y0t1000 | 1   | 1    | 1000 |
-|  x1000y0t0 | 1000   | 1    | 1 |
-|  x0y1000t0 | 1   | 1000    | 1 |
-|  x1000y0t1000 | 1000   | 1000    | 1000 |
-|  x0y1000t1000 | 1   | 1000    | 1000 |
-|  Crispy Support: Medium Condensed³ | 174.5   | 320    | 20 |
-|  Crispy Support: Medium Extended³ | 410   | 475    | 450 |
-
-These master files were first made in Robofont, but are now being produced in Glyphs for more speed, using Robofont and Skateboard to visualise changes for nuanced axe such as grade, and Robofont Scripts, DesignSpace files, and Fontmake-specific tools to generate the exported file.
-
-The logic is:
-1. Masters are designed and edited in Glyphs (manual)
-2. These masters are exported in .ufo format and VF instances are created and managed by Robofont + Skateboard (manual) 
-3. The necessary instances to be used for masters for Grade, Weight, and Width will be generated in min/max grade pairs per style. (manual)
-4. These instances are handled by Robofont and Skateboard using a designspace file, and masters for Stylistic versions are exported (automated/scripted)
-4. The final instances that include configurations for both Stylistic and Parametric axes are exported, in additions to checks for matching widths on grade masters and tools like ttfautohunt being applied.
-
-The Current output file should support and include masters for:
-
-* Width: Min/Max
-* Weight: Min/max
-* Grade: Min/max
-* XTRA: Min/Max
-* XOPQ: Min/Max
-* YOPQ: Min/Max
-
-*Still to be added:*
-
-* Shadow: Min/Max
-* Slant: Min/Max
-
-*³ Support files were added to have more control over certain font features such as diagonals and areas where weight management needed more nuanced control. Because of the nature of the font files used, it's also easier to use these files to preview and design test cases for more complicated glyphs.*
-
-
-The second designspace file manages the stylistic definitions based on the files exported on building the first file. This file is where details such as glyph substitutions, and style definitions as outlined for specifications like [usWeightClass](https://docs.microsoft.com/en-us/typography/opentype/spec/os2#usweightclass) and [usWidthClass](https://docs.microsoft.com/en-us/typography/opentype/spec/os2#uswidthclass). 
 
 ### Ideal build:
 
-The masters asociated with these file are only handled on export by a recently updated configuration of gftools builder, and the build process is currently automated to cover:
+The masters asociated with these file are only handled on export by a recently updated configuration of gftools builder, and the build process is currently automated using this congif file to specify variables like family name, instance names, etc.
 
 [I think It would be good for Marc to help me outline the limitations that the builder has in terms of font features?]
 
