@@ -101,19 +101,14 @@ The second designspace file manages the stylistic definitions based on the files
 
 ### Ideal build:
 
-The masters asociated with these file are only handled on export by fontmake, and the build process is currently automated to cover:
+The masters asociated with these file are only handled on export by a recently updated configuration of gftools builder, and the build process is currently automated to cover:
 
-1. Building parametric instances i.e. stylistic sources
-2. Compensating for possible grade-related advance width issues
-3. Building stylistic sources
-4. ttfautohint and other builtin fontmake checks
-2. Building well-labeled versions of static .ttf and .woff files
-3. Building variable font
+[I think It would be good for Marc to help me outline the limitations that the builder has in terms of font features?]
 
 ***The ideal build will cover:***
 
 1. Building parametric instances i.e. stylistic sources
-2. Compensating for possible grade-related advance width issues
+2. Weight, Width, and Optical Size expressed as combinations of X-Opacity (XOPQ), Y-Opacity (YOPQ), X-Transparency (XTRA), and Relative Advance Width (RXAD) axes
 3. Building stylistic sources
 4. ttfautohint and other builtin fontmake checks
 2. Building well-labeled versions of static .ttf and .woff files
@@ -121,22 +116,18 @@ The masters asociated with these file are only handled on export by fontmake, an
 4. *Automated static and animated proofs with drawbot*
 5. *Automated, well-labelled git push* ⁴
 
-⁴ Currently `git push` triggers [FontBakery](https://github.com/googlefonts/fontbakery/) QA checks. Fontbakery MarkDown generation creates a simple readable report on font errors following this, to help move the font files toward completion.
 
 ### Glyphs + :
 
 ### Design log:
+* August 2025: build process completed: 8 masters, 6 axes
+* December 2024: design optimised for avar2 revamped
+* December 2023: design revamped entirely
 * December 2021: math symbols completed, Design sources moved to Glyphs
 * December 2020: lowercase parametric versions completed and merged
 * March 2020: design direction completed and proportions resolved
 * Juneish 2019: design initiated
 
-### Roadmap:
-* Combining marks - completed and reviewed (March 2022)
-* Math Symbol filtering - completed and reviewed (March 2022)
-* Final Design review incl. Combined marks - completed (March 2022)
-* GlyphConstruction & Full Language support (April 2022)
-* Kerning (May 2022) - to be done with Kern-On in Glyphs
 
 ### Acknowledgements
 
