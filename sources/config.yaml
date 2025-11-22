@@ -3,67 +3,12 @@ sources:
 familyName: Crispy
 buildStatic: false
 
-# STAT table definitions for custom axes
-stat:
-  Crispy[RXAD,XOPQ,XTRA,YOPQ].ttf:
-  - name: Weight
-    tag: wght
-    values:
-    - name: Light
-      value: 200
-    - name: Medium
-      value: 500
-    - name: Bold
-      value: 700
-    - name: Black
-      value: 900
-  - name: Width
-    tag: wdth
-    values:
-    - name: Condensed
-      value: 40
-    - name: Normal
-      value: 100
-    - name: Extended
-      value: 160
-  - name: Optical Size
-    tag: opsz
-    values:
-    - name: Small
-      value: 12
-    - name: Big
-      value: 72
-  - name: X Transparency
-    tag: XTRA
-    values:
-    - name: Min
-      value: 94
-    - name: Max
-      value: 1977.352
-  - name: X Opacity
-    tag: XOPQ
-    values:
-    - name: Min
-      value: 2
-    - name: Max
-      value: 672.254
-  - name: Y Opacity
-    tag: YOPQ
-    values:
-    - name: Min
-      value: 2
-    - name: Max
-      value: 435.78
-  - name: RX Adjustment
-    tag: RXAD
-    values:
-    - name: Min
-      value: 40
-    - name: Max
-      value: 80
+spacingAxis:
+  min: -500
+  max: 500
 
 fvarInstances:
-  Crispy[RXAD,XOPQ,XTRA,YOPQ].ttf:
+  Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
   - name: ExtraLight
     coordinates:
       wght: 200
@@ -106,7 +51,7 @@ fvarInstances:
       opsz: 12
 
 avar2:
-  Crispy[RXAD,XOPQ,XTRA,YOPQ].ttf:
+  Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
   - in:
       wght: 200
       wdth: 100
@@ -115,7 +60,7 @@ avar2:
       XTRA: 580
       XOPQ: 91.9
       YOPQ: 84.9
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 200
       wdth: 100
@@ -124,7 +69,7 @@ avar2:
       XTRA: 580
       XOPQ: 78.115
       YOPQ: 72.165
-      RXAD: 80
+      SPAC: 80
   - in:
       wght: 500
       wdth: 100
@@ -133,7 +78,7 @@ avar2:
       XTRA: 650.5
       XOPQ: 283.3
       YOPQ: 196
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 500
       wdth: 100
@@ -142,7 +87,7 @@ avar2:
       XTRA: 650.5
       XOPQ: 240.805
       YOPQ: 166.6
-      RXAD: 80
+      SPAC: 80
   - in:
       wght: 700
       wdth: 100
@@ -151,7 +96,7 @@ avar2:
       XTRA: 735.6
       XOPQ: 468.7
       YOPQ: 325.7
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 700
       wdth: 100
@@ -160,7 +105,7 @@ avar2:
       XTRA: 735.6
       XOPQ: 398.395
       YOPQ: 276.845
-      RXAD: 80
+      SPAC: 80
   - in:
       wght: 900
       wdth: 100
@@ -169,7 +114,7 @@ avar2:
       XTRA: 804.4
       XOPQ: 622.7
       YOPQ: 396.6
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 900
       wdth: 100
@@ -178,7 +123,7 @@ avar2:
       XTRA: 804.4
       XOPQ: 529.295
       YOPQ: 337.11
-      RXAD: 80
+      SPAC: 80
   - in:
       wght: 200
       wdth: 40
@@ -187,7 +132,7 @@ avar2:
       XTRA: 94
       XOPQ: 53.714
       YOPQ: 51.22
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 200
       wdth: 40
@@ -196,7 +141,7 @@ avar2:
       XTRA: 94
       XOPQ: 46
       YOPQ: 44
-      RXAD: 80
+      SPAC: 80
   - in:
       wght: 500
       wdth: 40
@@ -205,7 +150,7 @@ avar2:
       XTRA: 155
       XOPQ: 206
       YOPQ: 175
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 500
       wdth: 40
@@ -214,7 +159,7 @@ avar2:
       XTRA: 155.484
       XOPQ: 174.9419
       YOPQ: 148.325
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 700
       wdth: 40
@@ -223,7 +168,7 @@ avar2:
       XTRA: 213.732
       XOPQ: 299.102
       YOPQ: 279.38
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 700
       wdth: 40
@@ -232,7 +177,7 @@ avar2:
       XTRA: 213.732
       XOPQ: 254.2367
       YOPQ: 237.473
-      RXAD: 80
+      SPAC: 80
   - in:
       wght: 900
       wdth: 40
@@ -241,7 +186,7 @@ avar2:
       XTRA: 229.912
       XOPQ: 512.042
       YOPQ: 416.46
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 900
       wdth: 40
@@ -250,7 +195,7 @@ avar2:
       XTRA: 229.912
       XOPQ: 435.2357
       YOPQ: 353.991
-      RXAD: 80
+      SPAC: 80
   - in:
       wght: 200
       wdth: 160
@@ -259,7 +204,7 @@ avar2:
       XTRA: 1495.188
       XOPQ: 109.484
       YOPQ: 92.62
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 200
       wdth: 160
@@ -268,7 +213,7 @@ avar2:
       XTRA: 1495.188
       XOPQ: 93.0614
       YOPQ: 78.727
-      RXAD: 80
+      SPAC: 80
   - in:
       wght: 500
       wdth: 160
@@ -277,7 +222,7 @@ avar2:
       XTRA: 1501.66
       XOPQ: 293.018
       YOPQ: 234.76
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 500
       wdth: 160
@@ -286,7 +231,7 @@ avar2:
       XTRA: 1501.66
       XOPQ: 249.0653
       YOPQ: 199.546
-      RXAD: 80
+      SPAC: 80
   - in:
       wght: 700
       wdth: 160
@@ -295,7 +240,7 @@ avar2:
       XTRA: 1605.212
       XOPQ: 493.79
       YOPQ: 351.14
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 700
       wdth: 160
@@ -304,7 +249,7 @@ avar2:
       XTRA: 1605.212
       XOPQ: 419.7215
       YOPQ: 298.469
-      RXAD: 80
+      SPAC: 80
   - in:
       wght: 900
       wdth: 160
@@ -313,7 +258,7 @@ avar2:
       XTRA: 1977.352
       XOPQ: 672.254
       YOPQ: 435.78
-      RXAD: 40
+      SPAC: 40
   - in:
       wght: 900
       wdth: 160
@@ -322,5 +267,5 @@ avar2:
       XTRA: 1977.352
       XOPQ: 571.4159
       YOPQ: 370.413
-      RXAD: 80
+      SPAC: 80
 includeSourceFixes: true
