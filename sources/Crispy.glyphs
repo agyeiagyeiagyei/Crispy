@@ -23,7 +23,7 @@ est,
 "/s.001",
 "/S.001 ayg",
 v,
-"/S.001",
+"/S.001 BE83",
 Q,
 K,
 ij,
@@ -32240,7 +32240,7 @@ metricRight = "=H";
 {
 color = 4;
 glyphname = S.001;
-lastChange = "2025-12-20 20:59:48 +0000";
+lastChange = "2025-12-20 21:08:07 +0000";
 layers = (
 {
 anchors = (
