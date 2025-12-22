@@ -14,7 +14,11 @@ ef/s.001",
 "/S.001",
 a,
 ".",
-"'\"Oh‘‘‘’,"
+"'\"Oh‘‘‘’,",
+",",
+"“",
+"”",
+"’"
 );
 axes = (
 {
@@ -56492,7 +56496,7 @@ unicode = 46;
 },
 {
 glyphname = comma;
-lastChange = "2025-12-22 01:10:05 +0000";
+lastChange = "2025-12-22 01:21:32 +0000";
 layers = (
 {
 layerId = "6803808E-8576-48E9-AEA7-EE0D171F6F70";
@@ -56553,17 +56557,17 @@ pos = (0,-1295);
 ref = quoteright;
 }
 );
-width = 1216;
+width = 1116;
 },
 {
 layerId = "80FDAF56-89B9-483B-B264-E4AEDBEEB158";
 shapes = (
 {
-pos = (0,-1138);
+pos = (-100,-1138);
 ref = quoteright;
 }
 );
-width = 372;
+width = 272;
 },
 {
 layerId = "986EB9B7-B65B-4446-9CAC-0D719242B857";
@@ -60044,7 +60048,7 @@ unicode = 93;
 },
 {
 glyphname = quotedblleft;
-lastChange = "2025-11-11 14:14:15 +0000";
+lastChange = "2025-12-22 01:21:46 +0000";
 layers = (
 {
 layerId = "6803808E-8576-48E9-AEA7-EE0D171F6F70";
@@ -60161,7 +60165,7 @@ unicode = 8220;
 },
 {
 glyphname = quotedblright;
-lastChange = "2025-11-11 14:14:15 +0000";
+lastChange = "2025-12-22 01:21:59 +0000";
 layers = (
 {
 layerId = "6803808E-8576-48E9-AEA7-EE0D171F6F70";
@@ -60385,18 +60389,18 @@ unicode = 8216;
 },
 {
 glyphname = quoteright;
-lastChange = "2025-12-22 01:11:04 +0000";
+lastChange = "2025-12-22 01:26:43 +0000";
 layers = (
 {
 layerId = "6803808E-8576-48E9-AEA7-EE0D171F6F70";
 shapes = (
 {
 angle = 180;
-pos = (332,2628);
+pos = (232,2628);
 ref = quoteleft;
 }
 );
-width = 332;
+width = 232;
 },
 {
 layerId = "1E1683DE-29BB-491B-BAA6-759729746529";
