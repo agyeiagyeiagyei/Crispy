@@ -58,215 +58,145 @@ avar2:
       opsz: 72
     out:
       XTRA: 580
-      XOPQ: 91.9
-      YOPQ: 84.9
-      SPAC: 40
+      XOPQ: 72.59
+      YOPQ: 78.575
+      SPAC: 0
+  - in:
+      wght: 300
+      wdth: 100
+      opsz: 72
+    out:
+      XTRA: 603.55
+      XOPQ: 104.253
+      YOPQ: 133.124
+      SPAC: 0
+  - in:
+      wght: 400
+      wdth: 100
+      opsz: 72
+    out:
+      XTRA: 627
+      XOPQ: 135.916
+      YOPQ: 187.672
+      SPAC: 0
+  - in:
+      wght: 500
+      wdth: 100
+      opsz: 72
+    out:
+      XTRA: 650.5
+      XOPQ: 167.58
+      YOPQ: 242.221
+      SPAC: 0
+  - in:
+      wght: 600
+      wdth: 100
+      opsz: 72
+    out:
+      XTRA: 693.05
+      XOPQ: 223.027
+      YOPQ: 321.48
+      SPAC: 0
+  - in:
+      wght: 700
+      wdth: 100
+      opsz: 72
+    out:
+      XTRA: 735.6
+      XOPQ: 278.474
+      YOPQ: 400.738
+      SPAC: 0
+  - in:
+      wght: 800
+      wdth: 100
+      opsz: 72
+    out:
+      XTRA: 770
+      XOPQ: 308.783
+      YOPQ: 466.573
+      SPAC: 0
+  - in:
+      wght: 900
+      wdth: 100
+      opsz: 72
+    out:
+      XTRA: 804.4
+      XOPQ: 339.093
+      YOPQ: 532.409
+      SPAC: 0
+
   - in:
       wght: 200
       wdth: 100
       opsz: 12
     out:
       XTRA: 580
-      XOPQ: 78.115
-      YOPQ: 72.165
-      SPAC: 80
+      XOPQ: 90.7375
+      YOPQ: 88.178594
+      SPAC: 50
+  - in:
+      wght: 300
+      wdth: 100
+      opsz: 12
+    out:
+      XTRA: 603.55
+      XOPQ: 130.31625
+      YOPQ: 149.394681
+      SPAC: 50
+  - in:
+      wght: 400
+      wdth: 100
+      opsz: 12
+    out:
+      XTRA: 627
+      XOPQ: 169.895
+      YOPQ: 210.609647
+      SPAC: 50
   - in:
       wght: 500
       wdth: 100
-      opsz: 72
+      opsz: 12
     out:
       XTRA: 650.5
-      XOPQ: 283.3
-      YOPQ: 196
-      SPAC: 40
+      XOPQ: 209.475
+      YOPQ: 271.825735
+      SPAC: 50
   - in:
-      wght: 500
+      wght: 600
       wdth: 100
       opsz: 12
     out:
-      XTRA: 650.5
-      XOPQ: 240.805
-      YOPQ: 166.6
-      SPAC: 80
-  - in:
-      wght: 700
-      wdth: 100
-      opsz: 72
-    out:
-      XTRA: 735.6
-      XOPQ: 468.7
-      YOPQ: 325.7
-      SPAC: 40
+      XTRA: 693.05
+      XOPQ: 278.78375
+      YOPQ: 360.771929
+      SPAC: 50
   - in:
       wght: 700
       wdth: 100
       opsz: 12
     out:
       XTRA: 735.6
-      XOPQ: 398.395
-      YOPQ: 276.845
-      SPAC: 80
+      XOPQ: 309.10614
+      YOPQ: 449.717
+      SPAC: 50
   - in:
-      wght: 900
-      wdth: 100
-      opsz: 72
-    out:
-      XTRA: 804.4
-      XOPQ: 622.7
-      YOPQ: 396.6
-      SPAC: 40
-  - in:
-      wght: 900
+      wght: 800
       wdth: 100
       opsz: 12
     out:
+      XTRA: 770
+      XOPQ: 342.74913
+      YOPQ: 523.598485
+      SPAC: 50
+  - in:
+      wght: 900
+      wdth: 100
+      opsz: 12
+    out:
       XTRA: 804.4
-      XOPQ: 529.295
-      YOPQ: 337.11
-      SPAC: 80
-  - in:
-      wght: 200
-      wdth: 40
-      opsz: 72
-    out:
-      XTRA: 94
-      XOPQ: 53.714
-      YOPQ: 51.22
-      SPAC: 40
-  - in:
-      wght: 200
-      wdth: 40
-      opsz: 12
-    out:
-      XTRA: 94
-      XOPQ: 46
-      YOPQ: 44
-      SPAC: 80
-  - in:
-      wght: 500
-      wdth: 40
-      opsz: 72
-    out:
-      XTRA: 155
-      XOPQ: 206
-      YOPQ: 175
-      SPAC: 40
-  - in:
-      wght: 500
-      wdth: 40
-      opsz: 12
-    out:
-      XTRA: 155.484
-      XOPQ: 174.9419
-      YOPQ: 148.325
-      SPAC: 40
-  - in:
-      wght: 700
-      wdth: 40
-      opsz: 72
-    out:
-      XTRA: 213.732
-      XOPQ: 299.102
-      YOPQ: 279.38
-      SPAC: 40
-  - in:
-      wght: 700
-      wdth: 40
-      opsz: 12
-    out:
-      XTRA: 213.732
-      XOPQ: 254.2367
-      YOPQ: 237.473
-      SPAC: 80
-  - in:
-      wght: 900
-      wdth: 40
-      opsz: 72
-    out:
-      XTRA: 229.912
-      XOPQ: 512.042
-      YOPQ: 416.46
-      SPAC: 40
-  - in:
-      wght: 900
-      wdth: 40
-      opsz: 12
-    out:
-      XTRA: 229.912
-      XOPQ: 435.2357
-      YOPQ: 353.991
-      SPAC: 80
-  - in:
-      wght: 200
-      wdth: 160
-      opsz: 72
-    out:
-      XTRA: 1495.188
-      XOPQ: 109.484
-      YOPQ: 92.62
-      SPAC: 40
-  - in:
-      wght: 200
-      wdth: 160
-      opsz: 12
-    out:
-      XTRA: 1495.188
-      XOPQ: 93.0614
-      YOPQ: 78.727
-      SPAC: 80
-  - in:
-      wght: 500
-      wdth: 160
-      opsz: 72
-    out:
-      XTRA: 1501.66
-      XOPQ: 293.018
-      YOPQ: 234.76
-      SPAC: 40
-  - in:
-      wght: 500
-      wdth: 160
-      opsz: 12
-    out:
-      XTRA: 1501.66
-      XOPQ: 249.0653
-      YOPQ: 199.546
-      SPAC: 80
-  - in:
-      wght: 700
-      wdth: 160
-      opsz: 72
-    out:
-      XTRA: 1605.212
-      XOPQ: 493.79
-      YOPQ: 351.14
-      SPAC: 40
-  - in:
-      wght: 700
-      wdth: 160
-      opsz: 12
-    out:
-      XTRA: 1605.212
-      XOPQ: 419.7215
-      YOPQ: 298.469
-      SPAC: 80
-  - in:
-      wght: 900
-      wdth: 160
-      opsz: 72
-    out:
-      XTRA: 1977.352
-      XOPQ: 672.254
-      YOPQ: 435.78
-      SPAC: 40
-  - in:
-      wght: 900
-      wdth: 160
-      opsz: 12
-    out:
-      XTRA: 1977.352
-      XOPQ: 571.4159
-      YOPQ: 370.413
-      SPAC: 80
+      XOPQ: 376.39323
+      YOPQ: 597.481093
+      SPAC: 50
+
 
 includeSourceFixes: false
