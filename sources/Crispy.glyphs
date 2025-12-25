@@ -2,7 +2,8 @@
 .appVersion = "3508";
 .formatVersion = 3;
 DisplayStrings = (
-Adhesion
+Adhesion,
+A
 );
 axes = (
 {
