@@ -4,8 +4,8 @@ familyName: Crispy
 buildStatic: false
 
 spacingAxis:
-  min: -500
-  max: 500
+  min: 0
+  max: 50
 
 fvarInstances:
   Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
