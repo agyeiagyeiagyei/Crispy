@@ -24,7 +24,7 @@ customize: venv
 # Step 1: Update config.yaml with STAT and avar2 sections from CSV
 # Steps 2-7: Build fonts (gftools builder generates build.ninja with 6 steps: buildVariable, fix, BuildSTAT, AddSpacingAxis, BuildAvar2, BuildFvarInstances)
 # Step 8: Convert avar2 to avar1
-build.stamp: venv sources/config.yaml $(SOURCES)
+build.stamp: venv sources/config.yaml sources/avar2-mappings.csv $(SOURCES)
 	rm -rf fonts;
 	. venv/bin/activate && \
 	python3 sources/update_config.py --csv sources/avar2-mappings.csv --config sources/config.yaml --no-backup && \
