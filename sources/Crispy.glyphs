@@ -2,15 +2,7 @@
 .appVersion = "3508";
 .formatVersion = 3;
 DisplayStrings = (
-Adhesion,
-e,
-"e/s.001",
-"e/S.001 e",
-w,
-o,
-"/at.001",
-"#",
-"*"
+Adhesion
 );
 axes = (
 {
@@ -72757,7 +72749,6 @@ axesValues = (
 90,
 88
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.05996;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.0106;
@@ -72777,7 +72768,6 @@ axesValues = (
 133.124,
 104.253
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.08473;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.01584;
@@ -72797,7 +72787,6 @@ axesValues = (
 187.672,
 135.916
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.10842;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.02138;
@@ -72816,7 +72805,6 @@ axesValues = (
 242.221,
 167.58
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.12555;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.02608;
@@ -72836,7 +72824,6 @@ axesValues = (
 321.48,
 223.027
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.13338;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.0303;
@@ -72856,7 +72843,6 @@ axesValues = (
 400.738,
 278.474
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.12578;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.03111;
@@ -72876,7 +72862,6 @@ axesValues = (
 466.573,
 308.783
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.12072;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.03188;
@@ -72896,7 +72881,6 @@ axesValues = (
 532.409,
 339.093
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.10908;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.03068;
@@ -72916,7 +72900,6 @@ axesValues = (
 78,
 72
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.06052;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.00302;
@@ -72935,7 +72918,6 @@ axesValues = (
 95,
 90
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.06991;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.00426;
@@ -72954,7 +72936,6 @@ axesValues = (
 147,
 130
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.09696;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.00625;
@@ -72973,7 +72954,6 @@ axesValues = (
 171,
 163
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.10067;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.00767;
@@ -72992,7 +72972,6 @@ axesValues = (
 240,
 240
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.10449;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.00879;
@@ -73011,7 +72990,6 @@ axesValues = (
 322,
 268
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.1224;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.01069;
@@ -73030,7 +73008,6 @@ axesValues = (
 380,
 320
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.10668;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.00839;
@@ -73049,7 +73026,6 @@ axesValues = (
 407,
 327
 );
-exports = 0;
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.1091;
 "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C" = 0.00811;

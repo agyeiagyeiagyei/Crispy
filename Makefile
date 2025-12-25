@@ -21,9 +21,13 @@ venv: venv/touchfile
 customize: venv
 	. venv/bin/activate; python3 scripts/customize.py
 
+# Step 1: Update config.yaml with STAT and avar2 sections from CSV
+# Steps 2-7: Build fonts (gftools builder generates build.ninja with 6 steps: buildVariable, fix, BuildSTAT, AddSpacingAxis, BuildAvar2, BuildFvarInstances)
+# Step 8: Convert avar2 to avar1
 build.stamp: venv sources/config.yaml $(SOURCES)
 	rm -rf fonts;
 	. venv/bin/activate && \
+	python3 sources/update_config.py --csv sources/avar2-mappings.csv --config sources/config.yaml --no-backup && \
 	(for config in sources/config*.yaml; do gftools builder $$config; done) && \
 	gftools avar2-to-avar1 fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf -m scripts/mapping.yaml -o fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ]-avar1.ttf && touch build.stamp
 
