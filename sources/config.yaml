@@ -1,5 +1,5 @@
 sources:
-  - Crispy.glyphs
+- Crispy.glyphs
 familyName: Crispy
 buildStatic: false
 spacingAxis:
@@ -9,44 +9,45 @@ fvarInstances:
   Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
   - name: ExtraLight
     coordinates:
-      wght: 200
-      wdth: 100
       opsz: 12
+      wdth: 100
+      wght: 200
   - name: Light
     coordinates:
-      wght: 300
-      wdth: 100
       opsz: 12
+      wdth: 100
+      wght: 300
   - name: Regular
     coordinates:
-      wght: 400
-      wdth: 100
       opsz: 12
+      wdth: 100
+      wght: 400
   - name: Medium
     coordinates:
-      wght: 500
-      wdth: 100
       opsz: 12
+      wdth: 100
+      wght: 500
   - name: SemiBold
     coordinates:
-      wght: 600
-      wdth: 100
       opsz: 12
+      wdth: 100
+      wght: 600
   - name: Bold
     coordinates:
-      wght: 700
-      wdth: 100
       opsz: 12
+      wdth: 100
+      wght: 700
   - name: ExtraBold
     coordinates:
-      wght: 800
-      wdth: 100
       opsz: 12
+      wdth: 100
+      wght: 800
   - name: Black
     coordinates:
-      wght: 900
-      wdth: 100
       opsz: 12
+      wdth: 100
+      wght: 900
+
 stat:
   Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
   - name: Optical Size
@@ -107,7 +108,7 @@ avar2:
       XTRA: 248
       XOPQ: 78
       YOPQ: 72
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -133,7 +134,7 @@ avar2:
       XTRA: 280
       XOPQ: 95
       YOPQ: 90
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -159,7 +160,7 @@ avar2:
       XTRA: 290
       XOPQ: 147
       YOPQ: 130
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -185,7 +186,7 @@ avar2:
       XTRA: 323
       XOPQ: 171
       YOPQ: 163
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -211,7 +212,7 @@ avar2:
       XTRA: 345
       XOPQ: 240
       YOPQ: 240
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -237,7 +238,7 @@ avar2:
       XTRA: 354
       XOPQ: 322
       YOPQ: 268
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -263,7 +264,7 @@ avar2:
       XTRA: 330
       XOPQ: 380
       YOPQ: 320
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -289,7 +290,7 @@ avar2:
       XTRA: 318
       XOPQ: 407
       YOPQ: 327
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -319,7 +320,7 @@ avar2:
       XTRA: 580
       XOPQ: 78.575
       YOPQ: 72.59
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -345,7 +346,7 @@ avar2:
       XTRA: 603.55
       XOPQ: 133.124
       YOPQ: 104.253
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -371,7 +372,7 @@ avar2:
       XTRA: 627
       XOPQ: 187.672
       YOPQ: 135.916
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -397,7 +398,7 @@ avar2:
       XTRA: 650.5
       XOPQ: 242.221
       YOPQ: 167.58
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -423,7 +424,7 @@ avar2:
       XTRA: 693.05
       XOPQ: 321.48
       YOPQ: 223.027
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -449,7 +450,7 @@ avar2:
       XTRA: 735.6
       XOPQ: 400.738
       YOPQ: 278.474
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -475,7 +476,7 @@ avar2:
       XTRA: 770
       XOPQ: 466.573
       YOPQ: 308.783
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -501,7 +502,7 @@ avar2:
       XTRA: 804.4
       XOPQ: 532.409
       YOPQ: 339.093
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -531,7 +532,7 @@ avar2:
       XTRA: 1259
       XOPQ: 85
       YOPQ: 84
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -557,7 +558,7 @@ avar2:
       XTRA: 1259
       XOPQ: 113
       YOPQ: 111
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -583,7 +584,7 @@ avar2:
       XTRA: 1259
       XOPQ: 200
       YOPQ: 188
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -609,7 +610,7 @@ avar2:
       XTRA: 1213
       XOPQ: 299
       YOPQ: 273
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -635,7 +636,7 @@ avar2:
       XTRA: 1213
       XOPQ: 370
       YOPQ: 318
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -661,7 +662,7 @@ avar2:
       XTRA: 1200
       XOPQ: 448
       YOPQ: 345
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -687,7 +688,7 @@ avar2:
       XTRA: 1275
       XOPQ: 508
       YOPQ: 360
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -713,7 +714,7 @@ avar2:
       XTRA: 1350
       XOPQ: 610
       YOPQ: 405
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -743,7 +744,7 @@ avar2:
       XTRA: 2300
       XOPQ: 100
       YOPQ: 98
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -769,7 +770,7 @@ avar2:
       XTRA: 2290
       XOPQ: 134
       YOPQ: 128
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -795,7 +796,7 @@ avar2:
       XTRA: 2290
       XOPQ: 176
       YOPQ: 158
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -821,7 +822,7 @@ avar2:
       XTRA: 2290
       XOPQ: 317
       YOPQ: 259
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -847,7 +848,7 @@ avar2:
       XTRA: 2346
       XOPQ: 359
       YOPQ: 292
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -873,7 +874,7 @@ avar2:
       XTRA: 2346
       XOPQ: 419
       YOPQ: 346
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -899,7 +900,7 @@ avar2:
       XTRA: 2380
       XOPQ: 511
       YOPQ: 374
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 
@@ -925,7 +926,7 @@ avar2:
       XTRA: 2470
       XOPQ: 585
       YOPQ: 441
-      SPAC: 15
+      SPAC: 25
 
   # OPSZ = 12
 

@@ -58,7 +58,11 @@ def _parse_decimal(raw: str, *, context: str) -> Decimal:
 
 def _normalize_in_axis_name(col: str) -> str:
     # "WGHT-e" -> "wght"
-    return col[:-2].strip().lower()
+    # "CONTRAST-e" -> "cntr"
+    name = col[:-2].strip().lower()
+    if name == "contrast":
+        return "cntr"
+    return name
 
 
 def _load_font_key_from_config(config_path: Path) -> str:
@@ -143,6 +147,10 @@ def read_csv_mappings(csv_path: Path) -> List[RowMapping]:
                         f"Line {line_no}: missing required traditional axis '{required}' "
                         f"(need {required.upper()}-e value for sorting/grouping)"
                     )
+            
+            # Contrast is optional, default to 0 if not present
+            if "cntr" not in in_axes:
+                in_axes["cntr"] = Decimal(0)
 
             mappings.append(
                 RowMapping(
@@ -171,12 +179,13 @@ def _dedupe_check(mappings: List[RowMapping]) -> None:
         seen[key] = m.instance_name
 
 
-def _sort_key(m: RowMapping) -> Tuple[Decimal, Decimal, Decimal]:
-    # primary: wdth, secondary: wght, tertiary: -opsz (72 before 12)
+def _sort_key(m: RowMapping) -> Tuple[Decimal, Decimal, Decimal, Decimal]:
+    # primary: wdth, secondary: wght, tertiary: -opsz (72 before 12), quaternary: contrast
     wdth = m.in_axes["wdth"]
     wght = m.in_axes["wght"]
     opsz = m.in_axes["opsz"]
-    return (wdth, wght, -opsz)
+    contrast = m.in_axes.get("cntr", Decimal(0))  # Default to 0 if not present
+    return (wdth, wght, -opsz, contrast)
 
 
 def _fmt_decimal(d: Decimal) -> str:
@@ -187,6 +196,139 @@ def _fmt_decimal(d: Decimal) -> str:
     if "." in s:
         s = s.rstrip("0").rstrip(".")
     return s
+
+
+def expand_csv_with_contrast(
+    csv_path: Path,
+    output_path: Optional[Path] = None,
+    reduction_factor: Decimal = Decimal("0.75"),
+    fixed_offset: Decimal = Decimal("0"),
+    negative_factor: Optional[Decimal] = None,
+    negative_offset: Optional[Decimal] = None,
+    positive_factor: Optional[Decimal] = None,
+    positive_offset: Optional[Decimal] = None,
+) -> Path:
+    """
+    Expand CSV with contrast variations using adaptive gap scaling.
+    
+    For each row, creates 3 rows:
+    - CONTRAST-e = -10: Reduce gap by hybrid formula (split evenly between axes)
+    - CONTRAST-e = 0: Original values
+    - CONTRAST-e = +10: Increase gap by hybrid formula (split evenly between axes)
+    
+    Gap change formula: gap_change = base_gap * factor + offset
+    
+    If asymmetric factors/offsets are provided, they override the symmetric reduction_factor/fixed_offset.
+    This allows different scaling for negative vs positive contrast to balance perceptual impact.
+    
+    Returns path to expanded CSV.
+    """
+    if output_path is None:
+        output_path = csv_path.parent / f"{csv_path.stem}_with_contrast{csv_path.suffix}"
+    
+    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+        
+        # Check if CONTRAST-e already exists
+        if "CONTRAST-e" not in fieldnames:
+            # Insert CONTRAST-e after OPSZ-e (before parametric axes)
+            try:
+                opsz_idx = fieldnames.index("OPSZ-e")
+                fieldnames.insert(opsz_idx + 1, "CONTRAST-e")
+            except ValueError:
+                # OPSZ-e not found, append to end of -e columns
+                in_cols = [c for c in fieldnames if c.endswith("-e")]
+                if in_cols:
+                    last_in_idx = fieldnames.index(in_cols[-1])
+                    fieldnames.insert(last_in_idx + 1, "CONTRAST-e")
+                else:
+                    fieldnames.insert(1, "CONTRAST-e")
+        
+        rows = list(reader)
+    
+    expanded_rows = []
+    for row in rows:
+        xopq_orig = Decimal(str(row.get("XOPQ", "0")))
+        yopq_orig = Decimal(str(row.get("YOPQ", "0")))
+        
+        # Create three variations
+        original_name = row.get("Instance Name", "").strip()
+        
+        for contrast_val in [-10, 0, 10]:
+            new_row = row.copy()
+            new_row["CONTRAST-e"] = str(contrast_val)
+            
+            # Modify instance name based on contrast value
+            # Only cntr=0 keeps original name; others get suffix
+            gap_orig = xopq_orig - yopq_orig
+            
+            # Extract width and weight for dynamic splitting
+            wdth = Decimal(str(row.get("WDTH-e", "100")))
+            wght = Decimal(str(row.get("WGHT-e", "400")))
+            
+            # Normalize width and weight to 0-1 range
+            # Width range: 40 (Condensed) to 220 (Ultra Extended)
+            # Weight range: 200 (ExtraLight) to 900 (Black)
+            wdth_norm = (wdth - Decimal("40")) / (Decimal("220") - Decimal("40"))
+            wght_norm = (wght - Decimal("200")) / (Decimal("900") - Decimal("200"))
+            wdth_norm = max(Decimal("0"), min(Decimal("1"), wdth_norm))  # Clamp to 0-1
+            wght_norm = max(Decimal("0"), min(Decimal("1"), wght_norm))  # Clamp to 0-1
+            
+            if contrast_val == -10:
+                new_row["Instance Name"] = f"{original_name} Contrast-Min"
+                # Less contrast: reduce gap using hybrid formula, with separate factor/offset if provided
+                if negative_factor is not None and negative_offset is not None:
+                    gap_change = gap_orig * negative_factor + negative_offset
+                else:
+                    gap_change = gap_orig * reduction_factor + fixed_offset
+                
+                # Dynamic splitting: narrower + bolder → reduce XOPQ more
+                # Combine width (inverted: narrower = lower) and weight
+                # Narrower means lower wdth_norm, bolder means higher wght_norm
+                # For negative contrast: we want to favor XOPQ reduction when (1 - wdth_norm) is high AND wght_norm is high
+                xopq_weight = ((Decimal("1") - wdth_norm) + wght_norm) / Decimal("2")
+                xopq_weight = Decimal("0.3") + xopq_weight * Decimal("0.4")  # Range: 0.3 to 0.7 (30-70% to XOPQ)
+                
+                xopq_delta = gap_change * xopq_weight
+                yopq_delta = gap_change - xopq_delta
+                
+                new_row["XOPQ"] = str(xopq_orig - xopq_delta)
+                new_row["YOPQ"] = str(yopq_orig + yopq_delta)
+            elif contrast_val == 10:
+                new_row["Instance Name"] = f"{original_name} Contrast-Max"
+                # More contrast: increase gap using hybrid formula, with separate factor/offset if provided
+                if positive_factor is not None and positive_offset is not None:
+                    gap_change = gap_orig * positive_factor + positive_offset
+                else:
+                    gap_change = gap_orig * reduction_factor + fixed_offset
+                
+                # Dynamic splitting: wider + bolder → reduce YOPQ more
+                # Combine width and weight for YOPQ reduction weight
+                # Wider means higher wdth_norm, bolder means higher wght_norm
+                yopq_weight = (wdth_norm + wght_norm) / Decimal("2")
+                yopq_weight = Decimal("0.3") + yopq_weight * Decimal("0.4")  # Range: 0.3 to 0.7 (30-70% to YOPQ)
+                
+                yopq_delta = gap_change * yopq_weight
+                xopq_delta = gap_change - yopq_delta
+                
+                new_row["XOPQ"] = str(xopq_orig + xopq_delta)
+                new_row["YOPQ"] = str(yopq_orig - yopq_delta)
+            else:
+                # Normal contrast (0): keep original name
+                new_row["Instance Name"] = original_name
+                new_row["XOPQ"] = str(xopq_orig)
+                new_row["YOPQ"] = str(yopq_orig)
+            
+            expanded_rows.append(new_row)
+    
+    # Write expanded CSV
+    with output_path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(expanded_rows)
+    
+    return output_path
 
 
 def generate_avar2_yaml_section(
@@ -224,6 +366,8 @@ def generate_avar2_yaml_section(
                 current_opsz = opsz
 
         lines.append("")
+        # Instance name already includes contrast suffix from CSV expansion
+        # (cntr=0 keeps original, cntr=-10/+10 get "Contrast-Min"/"Contrast-Max" suffix)
         lines.append(f"  # {m.instance_name}")
         lines.append("  - in:")
 
@@ -247,14 +391,22 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--font-key", default=None, help="Override font key (otherwise auto-detected from config fvarInstances).")
     ap.add_argument("--no-group-headers", action="store_true", help="Disable group header comments (Width/OPSZ).")
     ap.add_argument("--output", type=Path, default=None, help="Output file path (default: avar2.yaml in same folder as CSV).")
+    ap.add_argument("--add-contrast", action="store_true", help="Expand CSV with contrast variations before processing.")
     args = ap.parse_args(argv)
+
+    # Expand CSV with contrast if requested
+    csv_to_use = args.csv
+    if args.add_contrast:
+        print("Expanding CSV with contrast variations...", file=sys.stderr)
+        csv_to_use = expand_csv_with_contrast(args.csv)
+        print(f"Expanded CSV written to: {csv_to_use}", file=sys.stderr)
 
     if args.font_key:
         font_key = args.font_key
     else:
         font_key = _load_font_key_from_config(args.config)
 
-    mappings = read_csv_mappings(args.csv)
+    mappings = read_csv_mappings(csv_to_use)
     out = generate_avar2_yaml_section(
         mappings,
         font_key=font_key,
@@ -269,6 +421,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     
     output_path.write_text(out, encoding="utf-8")
     print(f"Generated avar2 section: {output_path}", file=sys.stderr)
+    
+    # Clean up temporary expanded CSV if we created it
+    if args.add_contrast and csv_to_use != args.csv:
+        # Keep the expanded CSV, user might want to review it
+        pass
+    
     return 0
 
 

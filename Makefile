@@ -29,7 +29,8 @@ build.stamp: venv sources/config.yaml sources/avar2-mappings.csv $(SOURCES)
 	. venv/bin/activate && \
 	python3 sources/update_config.py --csv sources/avar2-mappings.csv --config sources/config.yaml --no-backup && \
 	(for config in sources/config*.yaml; do gftools builder $$config; done) && \
-	gftools avar2-to-avar1 fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf -m scripts/mapping.yaml -o fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ]-avar1.ttf && touch build.stamp
+	gftools avar2-to-avar1 "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf" -m scripts/mapping.yaml -o "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ]-avar1.ttf" && \
+	touch build.stamp
 
 venv/touchfile: requirements.txt
 	test -d venv || python3 -m venv venv

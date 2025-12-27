@@ -1,0 +1,23 @@
+# Axis default values for variable fonts
+# These values are used by set_axis_defaults.py to patch fvar table defaults
+#
+# All axes (traditional + parametric) need defaults in the fvar table
+# Values must be within the axis min/max range defined in the font
+#
+# Traditional axes (used as input to avar2 mappings):
+wght: 400.0  # Regular weight
+wdth: 100.0  # Normal width
+opsz: 72.0   # Display optical size
+cntr: 0.0    # Normal contrast
+#
+# Parametric axes (output from avar2, but also need fvar defaults):
+# These values come from avar2 mapping for Regular Display (wght=400, wdth=100, opsz=72, cntr=0)
+SPAC: 25.0   # Spacing (relative advance width)
+XOPQ: 187.672 # X-Opacity (rounded from 187.672)
+XTRA: 627.0  # X-Transparency
+YOPQ: 135.916 # Y-Opacity (rounded from 135.916)
+#
+# Note: Parametric defaults should correspond to the avar2 mapping
+#       for the traditional axis defaults above.
+#       Look up in avar2: in: {wght:400, wdth:100, opsz:72, cntr:0} → out: {SPAC, XOPQ, XTRA, YOPQ}
+

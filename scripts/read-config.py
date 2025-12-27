@@ -32,14 +32,18 @@ for line in data.splitlines():
 		toggle = True
 		continue
 	if toggle:
-		m = re.match(r"^\s+-\s*(.*)", line)
+		# Match both indented and non-indented list items: "  - item" or "- item"
+		m = re.match(r"^\s*-\s*(.*)", line)
 		if m:
 			sources.append("sources/"+m[1])
+		elif line.strip() == "":
+			# Allow blank lines
+			continue
 		else:
 			toggle = False
 if sources:
 	print(" ".join(sources))
 	sys.exit(0)
 else:
-	print("Could not determine sources from config file!")
+	print("Could not determine sources from config file!", file=sys.stderr)
 	sys.exit(1)

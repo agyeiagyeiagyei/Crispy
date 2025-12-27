@@ -42,6 +42,7 @@ def extract_axis_values_from_csv(csv_path: Path) -> Dict[str, Set[int]]:
     wght_vals = set()
     wdth_vals = set()
     opsz_vals = set()
+    cntr_vals = set()
     
     with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
@@ -49,12 +50,20 @@ def extract_axis_values_from_csv(csv_path: Path) -> Dict[str, Set[int]]:
             wght_vals.add(int(float(row["WGHT-e"])))
             wdth_vals.add(int(float(row["WDTH-e"])))
             opsz_vals.add(int(float(row["OPSZ-e"])))
+            # Contrast is optional
+            if "CONTRAST-e" in row and row["CONTRAST-e"].strip():
+                cntr_vals.add(int(float(row["CONTRAST-e"])))
     
-    return {
+    result = {
         "wght": sorted(wght_vals),
         "wdth": sorted(wdth_vals),
         "opsz": sorted(opsz_vals),
     }
+    
+    if cntr_vals:
+        result["cntr"] = sorted(cntr_vals)
+    
+    return result
 
 
 def get_weight_name(value: int) -> str:
@@ -121,6 +130,22 @@ def generate_stat_yaml(
         if wght_val == 400:
             lines.append("      linkedValue: 700")
             lines.append("      flags: 2")
+    
+    # Contrast axis (if present)
+    if "cntr" in axis_values:
+        lines.append("  - name: Contrast")
+        lines.append("    tag: cntr")
+        lines.append("    values:")
+        for cntr_val in axis_values["cntr"]:
+            if cntr_val == -10:
+                lines.append("    - name: Low Contrast")
+            elif cntr_val == 0:
+                lines.append("    - name: Normal")
+            elif cntr_val == 10:
+                lines.append("    - name: High Contrast")
+            else:
+                lines.append(f"    - name: {cntr_val}")
+            lines.append(f"      value: {cntr_val}")
     
     return "\n".join(lines)
 
