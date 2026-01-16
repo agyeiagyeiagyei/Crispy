@@ -1,10 +1,10 @@
 {
-.appVersion = "3508";
+.appVersion = "3509";
 .formatVersion = 3;
 DisplayStrings = (
-eo,
+Seo,
 "",
-S,
+Seo,
 "",
 "",
 "",
@@ -14,10 +14,10 @@ S,
 "",
 "",
 "",
+S,
+"",
 o,
 "",
-o,
-"",
 "",
 "",
 "",
@@ -27,8 +27,7 @@ S,
 "",
 "",
 "",
-"",
-"",
+"/six.001/six.001",
 ""
 );
 axes = (
@@ -696,7 +695,7 @@ glyphs = (
 {
 color = 4;
 glyphname = S;
-lastChange = "2026-01-16 02:57:44 +0000";
+lastChange = "2026-01-16 03:04:54 +0000";
 layers = (
 {
 anchors = (
@@ -1727,9 +1726,9 @@ pos = (754,1600);
 associatedMasterId = "1BCFA072-F94F-498F-956F-3AA5D600A933";
 attr = {
 coordinates = (
-735.1,
-400,
-278
+735.6,
+400.738,
+278.474
 );
 };
 guides = (
@@ -1927,7 +1926,7 @@ unicode = 83;
 {
 color = 4;
 glyphname = e;
-lastChange = "2025-12-27 00:35:14 +0000";
+lastChange = "2026-01-16 03:15:27 +0000";
 layers = (
 {
 anchors = (
@@ -2841,9 +2840,9 @@ pos = (744,1200);
 associatedMasterId = "1BCFA072-F94F-498F-956F-3AA5D600A933";
 attr = {
 coordinates = (
-735.2,
-400,
-278
+735.6,
+400.738,
+278.474
 );
 };
 layerId = "C1225029-2345-4901-808C-CC192260A16C";
@@ -2913,7 +2912,7 @@ unicode = 101;
 {
 color = 4;
 glyphname = o;
-lastChange = "2025-12-27 00:35:14 +0000";
+lastChange = "2026-01-16 03:03:57 +0000";
 layers = (
 {
 anchors = (
@@ -3724,9 +3723,9 @@ pos = (1548,1200);
 associatedMasterId = "0457B203-0D8E-47C5-900E-12B2256A2F18";
 attr = {
 coordinates = (
-735.3,
-400,
-278
+735.6,
+400.738,
+278.474
 );
 };
 layerId = "FD55BD73-E092-4F54-A290-E636C8351962";
