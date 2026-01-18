@@ -465,6 +465,11 @@ def main():
         default="127.0.0.1",
         help="Host to bind to (default: 127.0.0.1)"
     )
+    parser.add_argument(
+        "--no-auto-rebuild",
+        action="store_true",
+        help="Disable auto-rebuild on file save (use manual rebuild button instead)"
+    )
     
     args = parser.parse_args()
     
