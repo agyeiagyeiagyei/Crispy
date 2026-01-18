@@ -57,9 +57,15 @@ def _parse_decimal(raw: str, *, context: str) -> Decimal:
 
 
 def _normalize_in_axis_name(col: str) -> str:
-    # "WGHT-e" -> "wght"
+    # "WGHT-e" -> "wght" (legacy support)
+    # "WGHT" -> "wght" (new format)
     # "CONTRAST-e" -> "cntr"
-    name = col[:-2].strip().lower()
+    # "CONTRAST" -> "cntr"
+    name = col.strip()
+    # Remove "-e" suffix if present (for backward compatibility)
+    if name.endswith("-e"):
+        name = name[:-2]
+    name = name.lower()
     if name == "contrast":
         return "cntr"
     return name
@@ -257,15 +263,18 @@ def expand_csv_with_contrast(
         
         for contrast_val in [-10, 0, 10]:
             new_row = row.copy()
-            new_row["CONTRAST-e"] = str(contrast_val)
+            contrast_col = "CONTRAST" if "CONTRAST" in fieldnames else "CONTRAST-e"
+            new_row[contrast_col] = str(contrast_val)
             
             # Modify instance name based on contrast value
             # Only cntr=0 keeps original name; others get suffix
             gap_orig = xopq_orig - yopq_orig
             
             # Extract width and weight for dynamic splitting
-            wdth = Decimal(str(row.get("WDTH-e", "100")))
-            wght = Decimal(str(row.get("WGHT-e", "400")))
+                wdth_col = "WDTH" if "WDTH" in row else "WDTH-e"
+                wght_col = "WGHT" if "WGHT" in row else "WGHT-e"
+                wdth = Decimal(str(row.get(wdth_col, "100")))
+                wght = Decimal(str(row.get(wght_col, "400")))
             
             # Normalize width and weight to 0-1 range
             # Width range: 40 (Condensed) to 220 (Ultra Extended)

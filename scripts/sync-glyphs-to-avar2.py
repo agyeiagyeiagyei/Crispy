@@ -8,7 +8,7 @@ When the Glyphs file is updated:
 1. Read instances from Glyphs file
 2. Match instances by exact name (case-sensitive) with CSV rows
 3. Update XTRA, XOPQ, YOPQ columns from Glyphs coordinates
-4. Keep SPAC, WGHT-e, WDTH-e, OPSZ-e unchanged
+4. Keep SPAC, WGHT, WDTH, OPSZ unchanged
 5. Remove CSV rows that don't match any Glyphs instance
 6. Write updated CSV
 

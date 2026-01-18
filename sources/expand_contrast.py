@@ -61,20 +61,23 @@ def expand_csv_with_contrast(
         reader = csv.DictReader(f)
         fieldnames = list(reader.fieldnames) if reader.fieldnames else []
         
-        # Check if CONTRAST-e already exists
-        if "CONTRAST-e" not in fieldnames:
-            # Insert CONTRAST-e after OPSZ-e (before parametric axes)
+        # Check if CONTRAST or CONTRAST-e already exists
+        contrast_col = "CONTRAST" if "CONTRAST" in fieldnames else "CONTRAST-e"
+        if contrast_col not in fieldnames:
+            # Insert CONTRAST after OPSZ (before parametric axes)
+            # Support both "OPSZ" and "OPSZ-e" (legacy)
+            opsz_col = "OPSZ" if "OPSZ" in fieldnames else "OPSZ-e"
             try:
-                opsz_idx = fieldnames.index("OPSZ-e")
-                fieldnames.insert(opsz_idx + 1, "CONTRAST-e")
+                opsz_idx = fieldnames.index(opsz_col)
+                fieldnames.insert(opsz_idx + 1, "CONTRAST")
             except ValueError:
-                # OPSZ-e not found, append to end of -e columns
-                in_cols = [c for c in fieldnames if c.endswith("-e")]
+                # OPSZ not found, append to end of traditional axis columns
+                in_cols = [c for c in fieldnames if c in ("WGHT", "WDTH", "OPSZ") or c.endswith("-e")]
                 if in_cols:
                     last_in_idx = fieldnames.index(in_cols[-1])
-                    fieldnames.insert(last_in_idx + 1, "CONTRAST-e")
+                    fieldnames.insert(last_in_idx + 1, "CONTRAST")
                 else:
-                    fieldnames.insert(1, "CONTRAST-e")
+                    fieldnames.insert(1, "CONTRAST")
         
         rows = list(reader)
     
@@ -88,7 +91,8 @@ def expand_csv_with_contrast(
         
         for contrast_val in [-10, 0, 10]:
             new_row = row.copy()
-            new_row["CONTRAST-e"] = str(contrast_val)
+            contrast_col = "CONTRAST" if "CONTRAST" in fieldnames else "CONTRAST-e"
+            new_row[contrast_col] = str(contrast_val)
             
             if contrast_val == 0:
                 # Normal contrast (0): keep original values unchanged
@@ -100,8 +104,10 @@ def expand_csv_with_contrast(
                 gap_orig = xopq_orig - yopq_orig
                 
                 # Extract width and weight for dynamic splitting
-                wdth = Decimal(str(row.get("WDTH-e", "100")))
-                wght = Decimal(str(row.get("WGHT-e", "400")))
+                wdth_col = "WDTH" if "WDTH" in row else "WDTH-e"
+                wght_col = "WGHT" if "WGHT" in row else "WGHT-e"
+                wdth = Decimal(str(row.get(wdth_col, "100")))
+                wght = Decimal(str(row.get(wght_col, "400")))
                 
                 # Normalize width and weight to 0-1 range
                 # Width range: 40 (Condensed) to 220 (Ultra Extended)
@@ -135,8 +141,10 @@ def expand_csv_with_contrast(
                 gap_orig = xopq_orig - yopq_orig
                 
                 # Extract width and weight for dynamic splitting
-                wdth = Decimal(str(row.get("WDTH-e", "100")))
-                wght = Decimal(str(row.get("WGHT-e", "400")))
+                wdth_col = "WDTH" if "WDTH" in row else "WDTH-e"
+                wght_col = "WGHT" if "WGHT" in row else "WGHT-e"
+                wdth = Decimal(str(row.get(wdth_col, "100")))
+                wght = Decimal(str(row.get(wght_col, "400")))
                 
                 # Normalize width and weight to 0-1 range
                 # Width range: 40 (Condensed) to 220 (Ultra Extended)

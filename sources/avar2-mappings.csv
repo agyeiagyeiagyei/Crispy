@@ -1,65 +1,33 @@
-Instance Name,XTRA,XOPQ,YOPQ,SPAC,WGHT-e,WDTH-e,OPSZ-e
-ExtraLight Condensed,248,78,72,25,200,40,72
-ExtraLight Condensed Small,248,87.533,90,75,200,40,12
-Light Condensed,280,95,90,25,300,40,72
-Light Condensed Small,280,106.611,112.5,75,300,40,12
-Regular Condensed,290,147,130,25,400,40,72
-Regular Condensed Small,290,164.967,162.5,75,400,40,12
-Medium Condensed,323,171,163,25,500,40,72
-Medium Condensed Small,323,191.9,203.75,75,500,40,12
-Semibold Condensed,345,240,240,25,600,40,72
-Semibold Condensed Small,345,269.333,300,75,600,40,12
-Bold Condensed,354,322,268,25,700,40,72
-Bold Condensed Small,354,361.356,297.48,75,700,40,12
-Extrabold Condensed,330,380,320,25,800,40,72
-Extrabold Condensed Small,330,426.444,355.2,75,800,40,12
-Black Condensed,318,407,327,25,900,40,72
-Black Condensed Small,318,456.744,362.97,75,900,40,12
-ExtraLight,580,78.575,72.59,25,200,100,72
+Instance Name,XTRA,XOPQ,YOPQ,SPAC,WGHT,WDTH,OPSZ
+ExtraLight Condensed,248.0,78.0,85.0,25,200,40,72
+Light Condensed,280.0,95.0,90.0,25,300,40,72
+Regular Condensed,290.0,147.0,130.0,25,400,40,72
+Medium Condensed,323.0,171.0,163.0,25,500,40,72
+Semibold Condensed,345.0,240.0,240.0,25,600,40,72
+Bold Condensed,354.0,322.0,268.0,25,700,40,72
+Extrabold Condensed,330.0,380.0,320.0,25,800,40,72
+Black Condensed,318.0,407.0,327.0,25,900,40,72
+ExtraLight,580.0,78.575,72.59,25,200,100,72
 Light,603.55,133.124,104.253,25,300,100,72
-Regular,627,187.672,135.916,25,400,100,72
+Regular,627.0,187.672,135.916,25,400,100,72
 Medium,650.5,242.221,167.58,25,500,100,72
 SemiBold,693.05,321.48,223.027,25,600,100,72
 Bold,735.6,400.738,278.474,25,700,100,72
-ExtraBold,770,466.573,308.783,25,800,100,72
+ExtraBold,770.0,466.573,308.783,25,800,100,72
 Black,804.4,532.409,339.093,25,900,100,72
-ExtraLight Small,580,88.17859365,90.7375,75,200,100,12
-Light Small,603.55,149.3946815,130.31625,75,300,100,12
-Regular Small,627,210.6096472,169.895,75,400,100,12
-Medium Small,650.5,271.8257351,209.475,75,500,100,12
-SemiBold Small,693.05,360.7719286,278.78375,75,600,100,12
-Bold Small,735.6,449.7169998,309.10614,75,700,100,12
-ExtraBold Small,770,523.5984852,342.74913,75,800,100,12
-Black Small,804.4,597.4810928,376.39323,75,900,100,12
-ExtraLight Extended,1259,85,84,25,200,160,72
-ExtraLight Extended Small,1259,95.389,105,75,200,160,12
-Light Extended,1259,113,111,25,300,160,72
-Light Extended Small,1259,126.811,138.75,75,300,160,12
-Regular Extended,1259,200,188,25,400,160,72
-Regular Extended Small,1259,224.444,235,75,400,160,12
-Medium Extended,1213,299,273,25,500,160,72
-Medium Extended Small,1213,335.556,341.25,75,500,160,12
-Semibold Extended,1213,370,318,25,600,160,72
-Semibold Extended Small,1213,415.222,397.5,75,600,160,12
-Bold Extended,1200,448,345,25,700,160,72
-Bold Extended Small,1200,502.756,382.95,75,700,160,12
-Extrabold Extended,1275,508,360,25,800,160,72
-Extrabold Extended Small,1275,570.978,399.6,75,800,160,12
-Black Extended,1350,610,405,25,900,160,72
-Black Extended Small,1350,684.556,449.55,75,900,160,12
-ExtraLight Ultra Extended,2300,100,98,25,200,220,72
-ExtraLight Ultra Extended Small,2300,112.222222,122.5,75,200,220,12
-Light Ultra Extended,2290,134,128,25,300,220,72
-Light Ultra Extended Small,2290,150.377778,160,75,300,220,12
-Regular Ultra Extended,2290,176,158,25,400,220,72
-Regular Ultra Extended Small,2290,197.511111,197.5,75,400,220,12
-Medium Ultra Extended,2290,317,259,25,500,220,72
-Medium Ultra Extended Small,2290,355.744444,323.75,75,500,220,12
-Semibold Ultra Extended,2346,359,292,25,600,220,72
-Semibold Ultra Extended Small,2346,402.877778,365,75,600,220,12
-Bold Ultra Extended,2346,419,346,25,700,220,72
-Bold Ultra Extended Small,2346,470.211111,384.06,75,700,220,12
-ExtraBold Ultra Extended,2380,511,374,25,800,220,72
-ExtraBold Ultra Extended Small,2380,573.455556,415.14,75,800,220,12
-Black Ultra Extended,2470,585,441,25,900,220,72
-Black Ultra Extended Small,2470,656.5,489.51,75,900,220,12
+ExtraLight Extended,1259.0,85.0,84.0,25,200,160,72
+Light Extended,1259.0,113.0,111.0,25,300,160,72
+Regular Extended,1259.0,200.0,188.0,25,400,160,72
+Medium Extended,1213.0,299.0,273.0,25,500,160,72
+Semibold Extended,1213.0,370.0,318.0,25,600,160,72
+Bold Extended,1200.0,448.0,345.0,25,700,160,72
+Extrabold Extended,1275.0,508.0,360.0,25,800,160,72
+Black Extended,1350.0,579.8,391.4,25,900,160,72
+ExtraLight Ultra Extended,2300.0,100.0,98.0,25,200,220,72
+Light Ultra Extended,2290.0,134.0,128.0,25,300,220,72
+Regular Ultra Extended,2290.0,176.0,158.0,25,400,220,72
+Medium Ultra Extended,2290.0,317.0,259.0,25,500,220,72
+Semibold Ultra Extended,2346.0,359.0,292.0,25,600,220,72
+Bold Ultra Extended,2346.0,419.0,346.0,25,700,220,72
+ExtraBold Ultra Extended,2380.0,600.0,420.0,25,800,220,72
+Black Ultra Extended,2470.0,585.0,441.0,25,900,220,72

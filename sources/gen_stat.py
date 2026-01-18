@@ -47,12 +47,17 @@ def extract_axis_values_from_csv(csv_path: Path) -> Dict[str, Set[int]]:
     with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            wght_vals.add(int(float(row["WGHT-e"])))
-            wdth_vals.add(int(float(row["WDTH-e"])))
-            opsz_vals.add(int(float(row["OPSZ-e"])))
+            # Support both "WGHT" and "WGHT-e" (legacy)
+            wght_col = "WGHT" if "WGHT" in row else "WGHT-e"
+            wdth_col = "WDTH" if "WDTH" in row else "WDTH-e"
+            opsz_col = "OPSZ" if "OPSZ" in row else "OPSZ-e"
+            wght_vals.add(int(float(row[wght_col])))
+            wdth_vals.add(int(float(row[wdth_col])))
+            opsz_vals.add(int(float(row[opsz_col])))
             # Contrast is optional
-            if "CONTRAST-e" in row and row["CONTRAST-e"].strip():
-                cntr_vals.add(int(float(row["CONTRAST-e"])))
+            contrast_col = "CONTRAST" if "CONTRAST" in row else "CONTRAST-e"
+            if contrast_col in row and row[contrast_col].strip():
+                cntr_vals.add(int(float(row[contrast_col])))
     
     result = {
         "wght": sorted(wght_vals),
