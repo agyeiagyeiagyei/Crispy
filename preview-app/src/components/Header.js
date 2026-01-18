@@ -6,15 +6,13 @@ function Header({ onBuildFont, onRefresh, building, fontLoaded, familyName }) {
     <header className="header">
       {familyName && <h1>{familyName}</h1>}
       <div className="header-actions">
-        {!fontLoaded && (
-          <button
-            onClick={onBuildFont}
-            disabled={building}
-            className="btn btn-primary"
-          >
-            {building ? 'Building...' : 'Build Font'}
-          </button>
-        )}
+        <button
+          onClick={onBuildFont}
+          disabled={building}
+          className="btn btn-primary"
+        >
+          {building ? 'Building...' : fontLoaded ? 'Rebuild Font' : 'Build Font'}
+        </button>
         <button
           onClick={onRefresh}
           disabled={building}

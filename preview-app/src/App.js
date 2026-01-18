@@ -21,6 +21,7 @@ function App() {
   const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE_TEXT);
   const [fontSize, setFontSize] = useState(2); // Default 2rem
   const [familyName, setFamilyName] = useState(null);
+  const [lastBuildTime, setLastBuildTime] = useState(null);
 
   // Load initial data
   useEffect(() => {
@@ -45,9 +46,16 @@ function App() {
       setAxes(axesData.axes);
       setFontLoaded(health.font_built);
       setFamilyName(health.family_name || null);
+      setLastBuildTime(health.last_build_time || null);
+      setBuilding(health.building || false);
 
-      if (health.font_built) {
+      // If font was rebuilt (new build time), reload the font
+      if (health.font_built && health.last_build_time && health.last_build_time !== lastBuildTime) {
         setFontUrl(api.getFontUrl()); // This is synchronous, returns string
+        // Force font reload by updating fontLoaded state
+        setFontLoaded(true);
+      } else if (health.font_built && !fontUrl) {
+        setFontUrl(api.getFontUrl());
       }
     } catch (err) {
       setError(err.message);

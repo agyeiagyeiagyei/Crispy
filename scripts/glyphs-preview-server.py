@@ -17,12 +17,23 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from fontTools.ttLib import TTFont
+
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+    WATCHDOG_AVAILABLE = True
+except ImportError:
+    WATCHDOG_AVAILABLE = False
+    print("Warning: watchdog not available. Auto-rebuild on file save disabled.", file=sys.stderr)
+    print("Install with: pip install watchdog", file=sys.stderr)
 
 try:
     from glyphsLib import GSFont, load
@@ -37,6 +48,9 @@ CORS(app)  # Enable CORS for React frontend
 GLYPHS_PATH: Optional[Path] = None
 BUILD_DIR: Optional[Path] = None
 VARIABLE_FONT_PATH: Optional[Path] = None
+LAST_BUILD_TIME: Optional[float] = None
+BUILDING: bool = False
+OBSERVER: Optional[Observer] = None
 
 
 def get_instances_from_glyphs(glyphs_path: Path) -> List[Dict]:
@@ -297,13 +311,36 @@ def get_axes():
         return jsonify({"error": str(e)}), 500
 
 
+def trigger_build():
+    """Trigger font build (used by both manual and auto-rebuild)."""
+    global VARIABLE_FONT_PATH, LAST_BUILD_TIME, BUILDING
+    
+    if BUILDING:
+        print("Build already in progress, skipping...", file=sys.stderr)
+        return False
+    
+    BUILDING = True
+    try:
+        print(f"Building font from {GLYPHS_PATH}...", file=sys.stderr)
+        VARIABLE_FONT_PATH = build_variable_font(GLYPHS_PATH, BUILD_DIR)
+        LAST_BUILD_TIME = time.time()
+        print(f"Font built successfully: {VARIABLE_FONT_PATH}", file=sys.stderr)
+        return True
+    except Exception as e:
+        print(f"Build failed: {e}", file=sys.stderr)
+        return False
+    finally:
+        BUILDING = False
+
+
 @app.route('/api/build', methods=['POST'])
 def build_font():
     """Build the variable font from Glyphs file using fontmake."""
-    global VARIABLE_FONT_PATH
-    
     try:
-        VARIABLE_FONT_PATH = build_variable_font(GLYPHS_PATH, BUILD_DIR)
+        success = trigger_build()
+        
+        if not success:
+            return jsonify({"error": "Build failed or already in progress"}), 500
         
         # Get axes after building (for verification)
         axes = get_axes_from_built_font(VARIABLE_FONT_PATH)
@@ -311,7 +348,8 @@ def build_font():
         return jsonify({
             "success": True,
             "font_path": str(VARIABLE_FONT_PATH),
-            "axes": axes
+            "axes": axes,
+            "build_time": LAST_BUILD_TIME
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -373,7 +411,9 @@ def health():
         "status": "ok",
         "glyphs_path": str(GLYPHS_PATH) if GLYPHS_PATH else None,
         "font_built": VARIABLE_FONT_PATH.exists() if VARIABLE_FONT_PATH else False,
-        "family_name": family_name
+        "family_name": family_name,
+        "last_build_time": LAST_BUILD_TIME,
+        "building": BUILDING
     })
 
 
