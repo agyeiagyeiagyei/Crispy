@@ -8,18 +8,24 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
   // Load font when available
   useEffect(() => {
     if (fontUrl && fontLoaded) {
+      console.log('Loading font from:', fontUrl);
       // Load font using FontFace API
       // Register with name 'Crispy-VF' so we can reference it in CSS
       const fontFace = new FontFace('Crispy-VF', `url(${fontUrl})`);
       fontFace.load()
         .then((loadedFont) => {
           document.fonts.add(loadedFont);
-          setFontReady(true);
-          console.log('Font loaded successfully. Registered as:', loadedFont.family);
-          console.log('Font status:', document.fonts.check('12px Crispy-VF'));
+          // Wait for font to be ready
+          return document.fonts.ready.then(() => {
+            setFontReady(true);
+            console.log('Font loaded and ready. Registered as:', loadedFont.family);
+            console.log('Font check:', document.fonts.check('12px "Crispy-VF"'));
+            console.log('Available fonts:', Array.from(document.fonts).map(f => f.family));
+          });
         })
         .catch(err => {
           console.error('Failed to load font:', err);
+          console.error('Font URL:', fontUrl);
           setFontReady(false);
         });
     } else {
