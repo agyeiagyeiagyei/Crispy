@@ -4,21 +4,23 @@
 }
 
 .btn-update {
-  padding: 0.75rem 2rem;
-  background-color: #28a745;
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background-color: #6c757d;
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.6375rem;
+  font-family: monospace;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.btn-update:hover {
-  background-color: #218838;
+.btn-update:hover:not(:disabled) {
+  background-color: #5a6268;
 }
 
-.btn-update:active {
-  background-color: #1e7e34;
+.btn-update:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
