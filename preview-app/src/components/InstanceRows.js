@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import './InstanceRows.css';
 import InstanceRow from './InstanceRow';
 
-function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCoordinates, sampleText, fontUrl, fontLoaded }) {
+function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCoordinates, sampleText, fontUrl, fontLoaded, onReorderInstances }) {
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   const [fontReady, setFontReady] = useState(false);
   
   // Load font when available
@@ -44,18 +46,56 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
     );
   }
 
+  const handleDragStart = (index) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    if (draggedIndex === null || dragOverIndex === null || draggedIndex === dragOverIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newInstances = [...instances];
+    const [draggedItem] = newInstances.splice(draggedIndex, 1);
+    newInstances.splice(dragOverIndex, 0, draggedItem);
+    
+    onReorderInstances(newInstances);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
   return (
     <div className="instance-rows-container">
-      {instances.map(instance => (
-        <InstanceRow
+      {instances.map((instance, index) => (
+        <div
           key={instance.name}
-          instance={instance}
-          isSelected={selectedInstance?.name === instance.name}
-          onSelect={() => onSelectInstance(instance)}
-          editingCoordinates={editingCoordinates}
-          sampleText={sampleText}
-          fontLoaded={fontLoaded && fontReady}
-        />
+          draggable
+          onDragStart={() => handleDragStart(index)}
+          onDragOver={(e) => handleDragOver(e, index)}
+          onDragEnd={handleDragEnd}
+          onDragLeave={handleDragLeave}
+          className={`instance-row-wrapper ${draggedIndex === index ? 'dragging' : ''} ${dragOverIndex === index ? 'drag-over' : ''}`}
+        >
+          <InstanceRow
+            instance={instance}
+            isSelected={selectedInstance?.name === instance.name}
+            onSelect={() => onSelectInstance(instance)}
+            editingCoordinates={editingCoordinates}
+            sampleText={sampleText}
+            fontLoaded={fontLoaded && fontReady}
+          />
+        </div>
       ))}
     </div>
   );

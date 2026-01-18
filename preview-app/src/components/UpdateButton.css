@@ -1,9 +1,6 @@
 .update-button-container {
-  padding: 1rem 2rem;
-  background-color: #f5f5f5;
-  border-top: 1px solid #ddd;
-  display: flex;
-  justify-content: center;
+  /* Container styles removed - button is now in sidebar */
+  width: 100%;
 }
 
 .btn-update {

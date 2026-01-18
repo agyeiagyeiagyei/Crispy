@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import './Sidebar.css';
 import AxisControl from './AxisControl';
+import UpdateButton from './UpdateButton';
 
 const DEFAULT_SAMPLE_TEXT = "the quick brown fox jumps over the lazy dog 0123456789 &!";
 
-function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange }) {
+function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates }) {
   return (
     <aside className="sidebar">
       <h2>Axes</h2>
@@ -23,6 +24,18 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
         ))}
       </div>
       
+      {!disabled && (
+        <div className="reset-button-section">
+          <button
+            onClick={onResetCoordinates}
+            className="btn btn-reset"
+            disabled={!selectedInstance}
+          >
+            Reset to Original
+          </button>
+        </div>
+      )}
+      
       <div className="sample-text-section">
         <h3>Sample Text</h3>
         <textarea
@@ -33,6 +46,15 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
           rows={3}
         />
       </div>
+      
+      {selectedInstance && (
+        <div className="update-button-section">
+          <UpdateButton
+            onClick={onUpdateInstance}
+            instanceName={selectedInstance.name}
+          />
+        </div>
+      )}
     </aside>
   );
 }

@@ -7,6 +7,21 @@
   gap: 1rem;
 }
 
+.instance-row-wrapper {
+  cursor: move;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.instance-row-wrapper.dragging {
+  opacity: 0.5;
+}
+
+.instance-row-wrapper.drag-over {
+  transform: translateY(10px);
+  border-top: 2px dashed #007bff;
+  margin-top: -2px;
+}
+
 .no-font-message {
   display: flex;
   align-items: center;

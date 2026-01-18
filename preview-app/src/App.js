@@ -72,10 +72,14 @@ function App() {
     }
   };
 
+  const [originalCoordinates, setOriginalCoordinates] = useState({});
+
   const handleSelectInstance = useCallback((instance) => {
     setSelectedInstance(instance);
     // Initialize editing coordinates with instance coordinates
     setEditingCoordinates({ ...instance.coordinates });
+    // Store original coordinates for reset
+    setOriginalCoordinates({ ...instance.coordinates });
   }, []);
 
   const handleAxisChange = useCallback((tag, value) => {
@@ -111,6 +115,7 @@ function App() {
       if (updated) {
         setSelectedInstance(updated);
         setEditingCoordinates({ ...updated.coordinates });
+        setOriginalCoordinates({ ...updated.coordinates });
       }
 
       // Auto-rebuild font after update
@@ -120,6 +125,11 @@ function App() {
       console.error('Update failed:', err);
     }
   };
+
+  const handleResetCoordinates = useCallback(() => {
+    if (!selectedInstance) return;
+    setEditingCoordinates({ ...originalCoordinates });
+  }, [selectedInstance, originalCoordinates]);
 
   if (loading) {
     return (
@@ -152,6 +162,10 @@ function App() {
           disabled={!selectedInstance}
           sampleText={sampleText}
           onSampleTextChange={setSampleText}
+          selectedInstance={selectedInstance}
+          onUpdateInstance={handleUpdateInstance}
+          onResetCoordinates={handleResetCoordinates}
+          originalCoordinates={originalCoordinates}
         />
         
         <div className="content-area">
@@ -163,14 +177,8 @@ function App() {
             sampleText={sampleText}
             fontUrl={fontUrl}
             fontLoaded={fontLoaded}
+            onReorderInstances={setInstances}
           />
-          
-          {selectedInstance && (
-            <UpdateButton
-              onClick={handleUpdateInstance}
-              instanceName={selectedInstance.name}
-            />
-          )}
         </div>
       </div>
     </div>
