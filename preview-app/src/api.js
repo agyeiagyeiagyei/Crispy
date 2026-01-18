@@ -2,7 +2,9 @@
  * API client for Glyphs Preview Server
  */
 
-const API_BASE = process.env.REACT_APP_API_URL || '/api';
+// Use full backend URL in production, or proxy path in development
+const API_BASE = process.env.REACT_APP_API_URL || 
+  (process.env.NODE_ENV === 'production' ? 'http://localhost:5001/api' : '/api');
 
 // Helper to parse JSON response with error handling
 async function parseJSON(response) {
