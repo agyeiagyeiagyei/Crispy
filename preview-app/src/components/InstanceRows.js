@@ -36,6 +36,24 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
     }
   }, [fontUrl, fontLoaded]);
 
+  // Handle wheel scrolling during drag
+  useEffect(() => {
+    if (draggedIndex === null) return;
+    
+    const handleWheel = (e) => {
+      // Allow normal scrolling when dragging
+      e.stopPropagation();
+    };
+    
+    const container = document.querySelector('.instance-rows-container');
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: true });
+      return () => {
+        container.removeEventListener('wheel', handleWheel);
+      };
+    }
+  }, [draggedIndex]);
+
   if (!fontLoaded) {
     return (
       <div className="instance-rows-container">
@@ -91,24 +109,6 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
   const handleDragLeave = () => {
     setDragOverIndex(null);
   };
-  
-  // Handle wheel scrolling during drag
-  useEffect(() => {
-    if (draggedIndex === null) return;
-    
-    const handleWheel = (e) => {
-      // Allow normal scrolling when dragging
-      e.stopPropagation();
-    };
-    
-    const container = document.querySelector('.instance-rows-container');
-    if (container) {
-      container.addEventListener('wheel', handleWheel, { passive: true });
-      return () => {
-        container.removeEventListener('wheel', handleWheel);
-      };
-    }
-  }, [draggedIndex]);
 
   return (
     <div className="instance-rows-container">
