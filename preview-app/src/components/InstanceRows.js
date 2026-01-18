@@ -1,18 +1,27 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './InstanceRows.css';
 import InstanceRow from './InstanceRow';
 
-function InstanceRows({ instances, selectedInstance, onSelectInstance, coordinates, fontUrl, fontLoaded }) {
+function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCoordinates, sampleText, fontUrl, fontLoaded }) {
+  const [fontReady, setFontReady] = useState(false);
+  
   // Load font when available
   useEffect(() => {
     if (fontUrl && fontLoaded) {
       // Load font using FontFace API
       const font = new FontFace('Crispy-VF', `url(${fontUrl})`);
-      font.load().then(() => {
-        document.fonts.add(font);
-      }).catch(err => {
-        console.error('Failed to load font:', err);
-      });
+      font.load()
+        .then(() => {
+          document.fonts.add(font);
+          setFontReady(true);
+          console.log('Font loaded successfully:', font.family);
+        })
+        .catch(err => {
+          console.error('Failed to load font:', err);
+          setFontReady(false);
+        });
+    } else {
+      setFontReady(false);
     }
   }, [fontUrl, fontLoaded]);
 
@@ -34,8 +43,9 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, coordinat
           instance={instance}
           isSelected={selectedInstance?.name === instance.name}
           onSelect={() => onSelectInstance(instance)}
-          coordinates={coordinates}
-          fontLoaded={fontLoaded}
+          editingCoordinates={editingCoordinates}
+          sampleText={sampleText}
+          fontLoaded={fontLoaded && fontReady}
         />
       ))}
     </div>

@@ -6,6 +6,8 @@ import Sidebar from './components/Sidebar';
 import InstanceRows from './components/InstanceRows';
 import UpdateButton from './components/UpdateButton';
 
+const DEFAULT_SAMPLE_TEXT = "the quick brown fox jumps over the lazy dog 0123456789 &!";
+
 function App() {
   const [instances, setInstances] = useState([]);
   const [axes, setAxes] = useState([]);
@@ -16,6 +18,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [building, setBuilding] = useState(false);
+  const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE_TEXT);
 
   // Load initial data
   useEffect(() => {
@@ -147,6 +150,8 @@ function App() {
           coordinates={editingCoordinates}
           onAxisChange={handleAxisChange}
           disabled={!selectedInstance}
+          sampleText={sampleText}
+          onSampleTextChange={setSampleText}
         />
         
         <div className="content-area">
@@ -154,7 +159,8 @@ function App() {
             instances={instances}
             selectedInstance={selectedInstance}
             onSelectInstance={handleSelectInstance}
-            coordinates={editingCoordinates}
+            editingCoordinates={editingCoordinates}
+            sampleText={sampleText}
             fontUrl={fontUrl}
             fontLoaded={fontLoaded}
           />

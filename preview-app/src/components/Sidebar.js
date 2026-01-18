@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './Sidebar.css';
 import AxisControl from './AxisControl';
 
-function Sidebar({ axes, coordinates, onAxisChange, disabled }) {
+const DEFAULT_SAMPLE_TEXT = "the quick brown fox jumps over the lazy dog 0123456789 &!";
+
+function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange }) {
   return (
     <aside className="sidebar">
       <h2>Axes</h2>
@@ -19,6 +21,17 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled }) {
             disabled={disabled}
           />
         ))}
+      </div>
+      
+      <div className="sample-text-section">
+        <h3>Sample Text</h3>
+        <textarea
+          value={sampleText}
+          onChange={(e) => onSampleTextChange(e.target.value)}
+          className="sample-text-input"
+          placeholder="Enter sample text..."
+          rows={3}
+        />
       </div>
     </aside>
   );

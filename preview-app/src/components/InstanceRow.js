@@ -1,16 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './InstanceRow.css';
 
-const DEFAULT_SAMPLE_TEXT = "the quick brown fox jumps over the lazy dog 0123456789 &!";
-
-function InstanceRow({ instance, isSelected, onSelect, coordinates, fontLoaded }) {
-  const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE_TEXT);
-
+function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampleText, fontLoaded }) {
   // Build font-variation-settings CSS from coordinates
   // If this row is selected, use editing coordinates (from sliders)
   // Otherwise, use the instance's own coordinates
-  const activeCoordinates = isSelected && Object.keys(coordinates).length > 0
-    ? coordinates
+  const activeCoordinates = isSelected && Object.keys(editingCoordinates).length > 0
+    ? editingCoordinates
     : instance.coordinates;
   
   const fontVariationSettings = Object.entries(activeCoordinates)
@@ -25,7 +21,7 @@ function InstanceRow({ instance, isSelected, onSelect, coordinates, fontLoaded }
       <div className="instance-row-header">
         <h3 className="instance-name">{instance.name}</h3>
         <div className="instance-coordinates">
-          {Object.entries(coordinates).map(([tag, value]) => (
+          {Object.entries(instance.coordinates).map(([tag, value]) => (
             <span key={tag} className="coordinate">
               {tag}: {value.toFixed(1)}
             </span>
@@ -34,15 +30,6 @@ function InstanceRow({ instance, isSelected, onSelect, coordinates, fontLoaded }
       </div>
       
       <div className="instance-row-content">
-        <input
-          type="text"
-          value={sampleText}
-          onChange={(e) => setSampleText(e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          className="sample-text-input"
-          placeholder="Enter sample text..."
-        />
-        
         <div
           className="preview-text"
           style={{
@@ -50,7 +37,7 @@ function InstanceRow({ instance, isSelected, onSelect, coordinates, fontLoaded }
             fontVariationSettings: fontLoaded ? fontVariationSettings : undefined,
           }}
         >
-          {sampleText || DEFAULT_SAMPLE_TEXT}
+          {sampleText}
         </div>
       </div>
     </div>
