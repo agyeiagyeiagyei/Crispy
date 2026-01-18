@@ -14,12 +14,19 @@
 
 .instance-row-wrapper.dragging {
   opacity: 0.5;
+  pointer-events: none; /* Allow events to pass through to container for scrolling */
 }
 
 .instance-row-wrapper.drag-over {
   transform: translateY(10px);
   border-top: 2px dashed #007bff;
   margin-top: -2px;
+}
+
+/* Ensure container can scroll during drag */
+.instance-rows-container.dragging-active {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .no-font-message {

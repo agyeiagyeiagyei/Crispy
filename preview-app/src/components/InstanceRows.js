@@ -53,6 +53,23 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
   const handleDragOver = (e, index) => {
     e.preventDefault();
     setDragOverIndex(index);
+    
+    // Enable scrolling during drag
+    const container = e.currentTarget.closest('.instance-rows-container');
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      const scrollThreshold = 50; // pixels from edge
+      const scrollSpeed = 10; // pixels per scroll
+      
+      // Check if near top edge
+      if (e.clientY - rect.top < scrollThreshold) {
+        container.scrollTop -= scrollSpeed;
+      }
+      // Check if near bottom edge
+      else if (rect.bottom - e.clientY < scrollThreshold) {
+        container.scrollTop += scrollSpeed;
+      }
+    }
   };
 
   const handleDragEnd = () => {
@@ -74,6 +91,24 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
   const handleDragLeave = () => {
     setDragOverIndex(null);
   };
+  
+  // Handle wheel scrolling during drag
+  useEffect(() => {
+    if (draggedIndex === null) return;
+    
+    const handleWheel = (e) => {
+      // Allow normal scrolling when dragging
+      e.stopPropagation();
+    };
+    
+    const container = document.querySelector('.instance-rows-container');
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: true });
+      return () => {
+        container.removeEventListener('wheel', handleWheel);
+      };
+    }
+  }, [draggedIndex]);
 
   return (
     <div className="instance-rows-container">
@@ -85,6 +120,10 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
           onDragOver={(e) => handleDragOver(e, index)}
           onDragEnd={handleDragEnd}
           onDragLeave={handleDragLeave}
+          onWheel={(e) => {
+            // Allow wheel scrolling to work during drag
+            e.stopPropagation();
+          }}
           className={`instance-row-wrapper ${draggedIndex === index ? 'dragging' : ''} ${dragOverIndex === index ? 'drag-over' : ''}`}
         >
           <InstanceRow
