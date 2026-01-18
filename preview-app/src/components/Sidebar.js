@@ -31,7 +31,7 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
         <input
           type="range"
           min="0.5"
-          max="5"
+          max="7"
           step="0.1"
           value={fontSize}
           onChange={(e) => onFontSizeChange(parseFloat(e.target.value))}
