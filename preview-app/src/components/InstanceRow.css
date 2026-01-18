@@ -30,6 +30,12 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: fit-content;
+  visibility: hidden; /* Reserve space but hide when not selected */
+}
+
+.instance-row.selected .instance-header-right {
+  visibility: visible; /* Show when selected */
 }
 
 .instance-name {
