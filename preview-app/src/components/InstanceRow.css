@@ -23,6 +23,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
+  min-height: 2rem; /* Prevent height jump when icons appear */
 }
 
 .instance-header-right {

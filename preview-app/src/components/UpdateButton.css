@@ -6,7 +6,7 @@
 .btn-update {
   width: 100%;
   padding: 0.5rem 1rem;
-  background-color: #6c757d;
+  background-color: #28a745;
   color: white;
   border: none;
   border-radius: 4px;
@@ -17,7 +17,7 @@
 }
 
 .btn-update:hover:not(:disabled) {
-  background-color: #5a6268;
+  background-color: #218838;
 }
 
 .btn-update:disabled {
