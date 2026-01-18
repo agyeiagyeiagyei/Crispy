@@ -121,8 +121,6 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampl
           </div>
         </div>
       )}
-        </div>
-      </div>
       
       <div className="instance-row-content">
         <div
