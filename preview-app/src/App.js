@@ -20,6 +20,7 @@ function App() {
   const [building, setBuilding] = useState(false);
   const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE_TEXT);
   const [fontSize, setFontSize] = useState(2); // Default 2rem
+  const [familyName, setFamilyName] = useState(null);
 
   // Load initial data
   useEffect(() => {
@@ -43,6 +44,7 @@ function App() {
       setInstances(instancesData.instances);
       setAxes(axesData.axes);
       setFontLoaded(health.font_built);
+      setFamilyName(health.family_name || null);
 
       if (health.font_built) {
         setFontUrl(api.getFontUrl()); // This is synchronous, returns string
@@ -202,6 +204,7 @@ function App() {
         onRefresh={loadData}
         building={building}
         fontLoaded={fontLoaded}
+        familyName={familyName}
       />
       
       {error && (

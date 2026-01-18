@@ -1,10 +1,10 @@
 import React from 'react';
 import './Header.css';
 
-function Header({ onBuildFont, onRefresh, building, fontLoaded }) {
+function Header({ onBuildFont, onRefresh, building, fontLoaded, familyName }) {
   return (
     <header className="header">
-      <h1>Glyphs Preview Tool</h1>
+      {familyName && <h1>{familyName}</h1>}
       <div className="header-actions">
         {!fontLoaded && (
           <button

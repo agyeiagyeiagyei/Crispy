@@ -8,7 +8,11 @@ const DEFAULT_SAMPLE_TEXT = "the quick brown fox jumps over the lazy dog 0123456
 function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange }) {
   return (
     <aside className="sidebar">
-      <h2>Axes</h2>
+      {selectedInstance ? (
+        <h2>{selectedInstance.name}</h2>
+      ) : (
+        <h2>Axes</h2>
+      )}
       {disabled && (
         <p className="sidebar-hint">Select an instance to edit</p>
       )}

@@ -153,8 +153,12 @@ def build_variable_font(glyphs_path: Path, output_dir: Path) -> Path:
     )
     
     if result.returncode != 0:
-        print(f"fontmake error: {result.stderr}", file=sys.stderr)
-        raise RuntimeError(f"fontmake failed: {result.stderr}")
+        error_msg = result.stderr or result.stdout or "Unknown error"
+        print(f"fontmake failed with exit code {result.returncode}", file=sys.stderr)
+        print(f"fontmake stderr: {error_msg}", file=sys.stderr)
+        if result.stdout:
+            print(f"fontmake stdout: {result.stdout}", file=sys.stderr)
+        raise RuntimeError(f"fontmake failed: {error_msg}")
     
     # Find the generated variable font
     # fontmake may create files directly in output_dir or in a subdirectory
