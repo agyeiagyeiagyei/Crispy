@@ -15,7 +15,7 @@
 .instance-row.selected {
   border-color: #007bff;
   box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
-  background-color: #f0f7ff;
+  background-color: white;
 }
 
 .instance-row-header {
