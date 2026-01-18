@@ -1,0 +1,27 @@
+.update-button-container {
+  padding: 1rem 2rem;
+  background-color: #f5f5f5;
+  border-top: 1px solid #ddd;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-update {
+  padding: 0.75rem 2rem;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-update:hover {
+  background-color: #218838;
+}
+
+.btn-update:active {
+  background-color: #1e7e34;
+}

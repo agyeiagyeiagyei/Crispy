@@ -1,0 +1,26 @@
+.sidebar {
+  width: 300px;
+  padding: 1.5rem;
+  background-color: #fafafa;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.sidebar-hint {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.axis-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}

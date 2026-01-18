@@ -1,0 +1,94 @@
+.instance-row {
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.instance-row:hover {
+  border-color: #999;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.instance-row.selected {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+  background-color: #f0f7ff;
+}
+
+.instance-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.instance-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.instance-coordinates {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.coordinate {
+  font-family: monospace;
+  color: #666;
+  background-color: #f0f0f0;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+}
+
+.instance-row-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sample-text-input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.sample-text-input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.preview-text {
+  font-size: 2rem;
+  line-height: 1.4;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding: 0.5rem 0;
+  min-height: 3rem;
+  border-top: 1px solid #eee;
+  padding-top: 0.5rem;
+}
+
+.preview-text::-webkit-scrollbar {
+  height: 6px;
+}
+
+.preview-text::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.preview-text::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.preview-text::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

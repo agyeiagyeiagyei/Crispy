@@ -124,28 +124,16 @@ App
    - User can select different rows and adjust each
    - Changes saved individually per instance
 
-## Questions for Clarification
+## Design Decisions (Confirmed)
 
-1. **Sample Text Scope**
-   - Should sample text be editable per-row only, or also globally?
-   - Should there be a "default text" that can be applied to all rows?
+1. **Sample Text Scope**: Per-row only (no global default)
 
-2. **Font Rebuild After Update**
-   - Should the font automatically rebuild after updating an instance?
-   - Or should there be a separate "Rebuild Font" button?
+2. **Font Rebuild After Update**: Auto-rebuild after instance update (but instance update is manual via button)
 
-3. **Row Layout**
-   - Should rows be vertically stacked (scrollable)?
-   - Or horizontally arranged (side-by-side)?
+3. **Row Layout**: Vertical stack of rows, each row horizontally scrollable (for overflow based on font size)
 
-4. **Update Confirmation**
-   - Should there be a confirmation dialog before saving to Glyphs file?
-   - Or just a success/error notification?
+4. **Update Confirmation**: Yes, confirmation dialog before saving to Glyphs file
 
-5. **Multiple Selection**
-   - Can multiple instances be selected at once?
-   - Or single selection only?
+5. **Multiple Selection**: Single instance selection only
 
-6. **Styling/Theme**
-   - Any specific design requirements?
-   - Dark/light theme preference?
+6. **Styling**: No specific requirements for now
