@@ -39,7 +39,7 @@
 .instance-coordinates {
   display: flex;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  font-size: 0.6375rem;
 }
 
 .coordinate {
