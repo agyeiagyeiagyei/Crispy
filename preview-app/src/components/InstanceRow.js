@@ -31,37 +31,40 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampl
               </span>
             ))}
           </div>
-          {isSelected && (
-            <>
-              {onMove && (
-                <button
-                  className="move-instance-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMoveControls(!showMoveControls);
-                    if (!showMoveControls) {
-                      setTargetInstance(null);
-                      setMovePosition('before');
-                    }
-                  }}
-                  title="Move this instance"
-                >
-                  ⇅
-                </button>
-              )}
-              {onDelete && (
-                <button
-                  className="delete-instance-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(instance);
-                  }}
-                  title="Remove this instance"
-                >
-                  🗑️
-                </button>
-              )}
-            </>
+          {/* Always render icons but hide when not selected to prevent layout shift */}
+          {onMove && (
+            <button
+              className="move-instance-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isSelected) {
+                  setShowMoveControls(!showMoveControls);
+                  if (!showMoveControls) {
+                    setTargetInstance(null);
+                    setMovePosition('before');
+                  }
+                }
+              }}
+              title="Move this instance"
+              style={{ visibility: isSelected ? 'visible' : 'hidden' }}
+            >
+              ⇅
+            </button>
+          )}
+          {onDelete && (
+            <button
+              className="delete-instance-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isSelected) {
+                  onDelete(instance);
+                }
+              }}
+              title="Remove this instance"
+              style={{ visibility: isSelected ? 'visible' : 'hidden' }}
+            >
+              🗑️
+            </button>
           )}
         </div>
       </div>
