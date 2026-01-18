@@ -30,21 +30,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  position: relative;
-}
-
-/* Reserve space for icons to prevent height jump */
-.instance-row .instance-header-right::after {
-  content: '';
-  width: 3.5rem; /* Approximate width of move + delete icons */
-  height: 1.2rem;
-  flex-shrink: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.instance-row.selected .instance-header-right::after {
-  display: none; /* Remove spacer when icons are visible */
+  min-width: 3.5rem; /* Reserve space for icons to prevent height jump */
 }
 
 .instance-name {
