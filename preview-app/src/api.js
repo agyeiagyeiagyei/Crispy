@@ -4,22 +4,42 @@
 
 const API_BASE = process.env.REACT_APP_API_URL || '/api';
 
+// Helper to parse JSON response with error handling
+async function parseJSON(response) {
+  const text = await response.text();
+  if (!text) {
+    throw new Error(`Empty response from server (status: ${response.status})`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+  }
+}
+
 export const api = {
   async health() {
     const response = await fetch(`${API_BASE}/health`);
-    return response.json();
+    if (!response.ok) {
+      throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
   },
 
   async getInstances() {
     const response = await fetch(`${API_BASE}/instances`);
-    if (!response.ok) throw new Error('Failed to fetch instances');
-    return response.json();
+    if (!response.ok) {
+      throw new Error(`Failed to fetch instances: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
   },
 
   async getAxes() {
     const response = await fetch(`${API_BASE}/axes`);
-    if (!response.ok) throw new Error('Failed to fetch axes');
-    return response.json();
+    if (!response.ok) {
+      throw new Error(`Failed to fetch axes: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
   },
 
   async buildFont() {
@@ -27,10 +47,14 @@ export const api = {
       method: 'POST',
     });
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Build failed');
+      try {
+        const error = await parseJSON(response);
+        throw new Error(error.error || 'Build failed');
+      } catch (e) {
+        throw new Error(`Build failed: ${response.status} ${response.statusText}`);
+      }
     }
-    return response.json();
+    return parseJSON(response);
   },
 
   async getFontUrl() {
@@ -46,9 +70,13 @@ export const api = {
       body: JSON.stringify({ coordinates }),
     });
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Update failed');
+      try {
+        const error = await parseJSON(response);
+        throw new Error(error.error || 'Update failed');
+      } catch (e) {
+        throw new Error(`Update failed: ${response.status} ${response.statusText}`);
+      }
     }
-    return response.json();
+    return parseJSON(response);
   },
 };
