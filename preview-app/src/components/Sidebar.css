@@ -91,7 +91,8 @@
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.6375rem;
+  font-family: monospace;
   cursor: pointer;
   transition: background-color 0.2s;
 }
