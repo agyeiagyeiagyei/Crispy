@@ -9,12 +9,14 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
   useEffect(() => {
     if (fontUrl && fontLoaded) {
       // Load font using FontFace API
-      const font = new FontFace('Crispy-VF', `url(${fontUrl})`);
-      font.load()
-        .then(() => {
-          document.fonts.add(font);
+      // Register with name 'Crispy-VF' so we can reference it in CSS
+      const fontFace = new FontFace('Crispy-VF', `url(${fontUrl})`);
+      fontFace.load()
+        .then((loadedFont) => {
+          document.fonts.add(loadedFont);
           setFontReady(true);
-          console.log('Font loaded successfully:', font.family);
+          console.log('Font loaded successfully. Registered as:', loadedFont.family);
+          console.log('Font status:', document.fonts.check('12px Crispy-VF'));
         })
         .catch(err => {
           console.error('Failed to load font:', err);

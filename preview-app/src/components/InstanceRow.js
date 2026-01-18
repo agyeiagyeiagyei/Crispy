@@ -33,8 +33,9 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampl
         <div
           className="preview-text"
           style={{
-            fontFamily: fontLoaded ? 'Crispy-VF' : 'sans-serif',
+            fontFamily: fontLoaded ? '"Crispy-VF", sans-serif' : 'sans-serif',
             fontVariationSettings: fontLoaded ? fontVariationSettings : undefined,
+            fontFeatureSettings: 'normal',
           }}
         >
           {sampleText}
