@@ -8,14 +8,11 @@ const DEFAULT_SAMPLE_TEXT = "The Quick Brown Fox Jumps Over The Lazy Dog 0123456
 function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange }) {
   return (
     <aside className="sidebar">
-      {selectedInstance ? (
+      {selectedInstance && (
         <h2>{selectedInstance.name}</h2>
-      ) : (
-        <h2>Axes</h2>
       )}
       
       <div className="sample-text-section">
-        <h3>Sample Text</h3>
         <textarea
           value={sampleText}
           onChange={(e) => onSampleTextChange(e.target.value)}
