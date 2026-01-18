@@ -13,6 +13,18 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
       ) : (
         <h2>Axes</h2>
       )}
+      
+      <div className="sample-text-section">
+        <h3>Sample Text</h3>
+        <textarea
+          value={sampleText}
+          onChange={(e) => onSampleTextChange(e.target.value)}
+          className="sample-text-input"
+          placeholder="Enter sample text..."
+          rows={3}
+        />
+      </div>
+      
       {disabled && (
         <p className="sidebar-hint">Select an instance to edit</p>
       )}
@@ -54,17 +66,6 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
           </button>
         </div>
       )}
-      
-      <div className="sample-text-section">
-        <h3>Sample Text</h3>
-        <textarea
-          value={sampleText}
-          onChange={(e) => onSampleTextChange(e.target.value)}
-          className="sample-text-input"
-          placeholder="Enter sample text..."
-          rows={3}
-        />
-      </div>
       
       {selectedInstance && (
         <div className="update-button-section">

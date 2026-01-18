@@ -107,9 +107,10 @@
 }
 
 .sample-text-section {
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid #ddd;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #ddd;
 }
 
 .sample-text-section h3 {
@@ -138,9 +139,8 @@
 }
 
 .update-button-section {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #ddd;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .update-button-section .btn-update {
