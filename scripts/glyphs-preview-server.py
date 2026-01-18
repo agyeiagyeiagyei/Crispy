@@ -32,6 +32,9 @@ try:
     WATCHDOG_AVAILABLE = True
 except ImportError:
     WATCHDOG_AVAILABLE = False
+    # Create dummy types for type hints when watchdog is not available
+    Observer = None
+    FileSystemEventHandler = None
     print("Warning: watchdog not available. Auto-rebuild on file save disabled.", file=sys.stderr)
     print("Install with: pip install watchdog", file=sys.stderr)
 
