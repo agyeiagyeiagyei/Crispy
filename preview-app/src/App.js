@@ -44,7 +44,7 @@ function App() {
       setFontLoaded(health.font_built);
 
       if (health.font_built) {
-        setFontUrl(api.getFontUrl());
+        setFontUrl(api.getFontUrl()); // This is synchronous, returns string
       }
     } catch (err) {
       setError(err.message);
@@ -60,7 +60,7 @@ function App() {
       setError(null);
       await api.buildFont();
       setFontLoaded(true);
-      setFontUrl(api.getFontUrl());
+      setFontUrl(api.getFontUrl()); // This is synchronous, returns string
       // Reload axes from built font
       const axesData = await api.getAxes();
       setAxes(axesData.axes);

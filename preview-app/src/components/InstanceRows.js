@@ -7,7 +7,7 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
   
   // Load font when available
   useEffect(() => {
-    if (fontUrl && fontLoaded) {
+    if (fontUrl && fontLoaded && typeof fontUrl === 'string') {
       console.log('Loading font from:', fontUrl);
       // Load font using FontFace API
       // Register with name 'Crispy-VF' so we can reference it in CSS
@@ -26,6 +26,7 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
         .catch(err => {
           console.error('Failed to load font:', err);
           console.error('Font URL:', fontUrl);
+          console.error('Font URL type:', typeof fontUrl);
           setFontReady(false);
         });
     } else {

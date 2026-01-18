@@ -57,7 +57,7 @@ export const api = {
     return parseJSON(response);
   },
 
-  async getFontUrl() {
+  getFontUrl() {
     return `${API_BASE}/font`;
   },
 
