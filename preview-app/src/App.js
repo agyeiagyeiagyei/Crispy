@@ -55,7 +55,7 @@ function App() {
     try {
       setBuilding(true);
       setError(null);
-      const result = await api.buildFont();
+      await api.buildFont();
       setFontLoaded(true);
       setFontUrl(api.getFontUrl());
       // Reload axes from built font
