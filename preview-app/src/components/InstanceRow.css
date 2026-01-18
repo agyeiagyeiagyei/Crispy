@@ -1,0 +1,196 @@
+.instance-row {
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.instance-row:hover {
+  border-color: #999;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.instance-row.selected {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+  background-color: white;
+}
+
+.instance-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  min-height: 2rem; /* Prevent height jump when icons appear */
+}
+
+.instance-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.instance-name {
+  font-family: monospace;
+  font-size: 0.6375rem; /* 0.85rem * 0.75 = 25% reduction */
+  color: #666;
+  background-color: #f0f0f0;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  margin: 0;
+  display: inline-block;
+}
+
+.instance-coordinates {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.6375rem;
+}
+
+.coordinate {
+  font-family: monospace;
+  color: #666;
+  background-color: #f0f0f0;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+}
+
+.move-instance-btn,
+.delete-instance-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  width: 1.5rem; /* Fixed width to prevent layout shift */
+  height: 1.5rem; /* Fixed height to prevent layout shift */
+  flex-shrink: 0;
+}
+
+.move-instance-btn:hover {
+  background-color: #eef;
+}
+
+.move-instance-btn:active {
+  background-color: #ddf;
+}
+
+.delete-instance-btn:hover {
+  background-color: #fee;
+}
+
+.delete-instance-btn:active {
+  background-color: #fcc;
+}
+
+.move-controls {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.move-controls-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.move-position-select,
+.move-target-select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  background: white;
+  cursor: pointer;
+}
+
+.move-position-select {
+  min-width: 80px;
+}
+
+.move-target-select {
+  flex: 1;
+  min-width: 150px;
+}
+
+.move-apply-btn,
+.move-cancel-btn {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.move-apply-btn {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.move-apply-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.move-apply-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.move-cancel-btn {
+  background-color: white;
+  color: #666;
+}
+
+.move-cancel-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.instance-row-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.preview-text {
+  /* font-size is set inline via fontSize prop */
+  line-height: 1.4;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding: 0.5rem 0;
+  min-height: 3rem;
+  border-top: 1px solid #eee;
+  padding-top: 0.5rem;
+}
+
+.preview-text::-webkit-scrollbar {
+  height: 6px;
+}
+
+.preview-text::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.preview-text::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.preview-text::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

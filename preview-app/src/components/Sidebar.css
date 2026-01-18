@@ -1,0 +1,150 @@
+.sidebar {
+  width: 300px;
+  padding: 1.5rem;
+  background-color: #fafafa;
+  border-right: 1px solid #ddd;
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.sidebar-hint {
+  color: #666;
+  font-size: 0.6375rem;
+  font-family: monospace;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.axis-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.font-size-control {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.font-size-label {
+  display: block;
+  font-size: 0.6375rem;
+  font-family: monospace;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #666;
+}
+
+.font-size-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.font-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+  cursor: grab;
+}
+
+.font-size-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+}
+
+.font-size-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+  border: none;
+}
+
+.font-size-slider::-moz-range-thumb:active {
+  cursor: grabbing;
+}
+
+.reset-button-section {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.btn-reset {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.796875rem; /* Match sample text size */
+  font-family: monospace;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-reset:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.btn-reset:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sample-text-section {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.sample-text-section h3 {
+  font-size: 0.6375rem;
+  font-family: monospace;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #666;
+}
+
+.sample-text-input {
+  text-transform: capitalize;
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.796875rem; /* Increased by 25% from 0.6375rem */
+  font-family: monospace;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.sample-text-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.update-button-section {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.update-button-section .btn-update {
+  width: 100%;
+  padding: 0.75rem 1rem;
+}
