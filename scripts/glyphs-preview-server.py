@@ -479,49 +479,43 @@ def main():
     print(f"Glyphs file: {GLYPHS_PATH}", file=sys.stderr)
     print(f"Build directory: {BUILD_DIR}", file=sys.stderr)
     
-    # Set up file watching for auto-rebuild (can be disabled with --no-auto-rebuild)
-    AUTO_REBUILD = not args.no_auto_rebuild if hasattr(args, 'no_auto_rebuild') else True
+    # Set up periodic file checking (every 15 seconds) instead of file watching
+    # This checks file modification time and only rebuilds if file changed
+    PERIODIC_CHECK_INTERVAL = 15  # seconds
     
-    if WATCHDOG_AVAILABLE and AUTO_REBUILD:
-        class GlyphsFileHandler(FileSystemEventHandler):
-            def __init__(self):
-                self.last_modified = 0
-                self.debounce_seconds = 2.0  # Wait 2 seconds after last change (increased)
-                self.pending_rebuild = False  # Track if rebuild is already queued
-            
-            def on_modified(self, event):
-                if event.is_directory:
-                    return
-                
-                if event.src_path == str(GLYPHS_PATH):
-                    current_time = time.time()
-                    # Debounce: only rebuild if file hasn't changed in the last 2 seconds
-                    # and no rebuild is already pending
-                    if (current_time - self.last_modified > self.debounce_seconds and 
-                        not self.pending_rebuild and not BUILDING):
-                        self.last_modified = current_time
-                        self.pending_rebuild = True
-                        # Wait a bit more to ensure file write is complete
-                        time.sleep(1.0)  # Increased wait time
-                        print(f"\nGlyphs file changed, auto-rebuilding font...", file=sys.stderr)
-                        # Run build in a separate thread to avoid blocking
-                        def build_and_reset():
-                            try:
-                                trigger_build()
-                            finally:
-                                self.pending_rebuild = False
-                        threading.Thread(target=build_and_reset, daemon=True).start()
+    def check_and_rebuild_periodically():
+        """Check if Glyphs file was modified and rebuild if needed."""
+        global VARIABLE_FONT_PATH, LAST_BUILD_TIME
         
-        event_handler = GlyphsFileHandler()
-        global OBSERVER
-        OBSERVER = Observer()
-        OBSERVER.schedule(event_handler, path=str(GLYPHS_PATH.parent), recursive=False)
-        OBSERVER.start()
-        print(f"File watching enabled: auto-rebuild on save", file=sys.stderr)
-    elif WATCHDOG_AVAILABLE and not AUTO_REBUILD:
-        print(f"File watching disabled: auto-rebuild disabled (use --no-auto-rebuild to disable)", file=sys.stderr)
-    else:
-        print(f"File watching disabled: install watchdog for auto-rebuild", file=sys.stderr)
+        if BUILDING:
+            return
+        
+        try:
+            if not GLYPHS_PATH.exists():
+                return
+            
+            current_mtime = GLYPHS_PATH.stat().st_mtime
+            
+            # Only rebuild if file was modified since last build
+            if LAST_BUILD_TIME is None or current_mtime > LAST_BUILD_TIME:
+                print(f"\nGlyphs file modified, rebuilding font...", file=sys.stderr)
+                trigger_build()
+        except Exception as e:
+            print(f"Error in periodic check: {e}", file=sys.stderr)
+    
+    def start_periodic_checker():
+        """Start background thread to periodically check for file changes."""
+        def periodic_loop():
+            while True:
+                time.sleep(PERIODIC_CHECK_INTERVAL)
+                check_and_rebuild_periodically()
+        
+        checker_thread = threading.Thread(target=periodic_loop, daemon=True)
+        checker_thread.start()
+        print(f"Periodic file checking enabled: checking every {PERIODIC_CHECK_INTERVAL} seconds", file=sys.stderr)
+    
+    # Start periodic checker
+    start_periodic_checker()
     
     try:
         app.run(host=args.host, port=args.port, debug=True)
