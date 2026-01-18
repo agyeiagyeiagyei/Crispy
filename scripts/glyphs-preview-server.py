@@ -394,27 +394,36 @@ def update_instance(instance_name: str):
 def get_font_family_name(glyphs_path: Path) -> Optional[str]:
     """Get font family name from Glyphs file."""
     try:
+        if not glyphs_path or not glyphs_path.exists():
+            return None
         font = load(str(glyphs_path))
         return font.familyName
-    except Exception:
+    except Exception as e:
+        print(f"Error getting font family name: {e}", file=sys.stderr)
         return None
 
 
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint."""
-    family_name = None
-    if GLYPHS_PATH:
-        family_name = get_font_family_name(GLYPHS_PATH)
-    
-    return jsonify({
-        "status": "ok",
-        "glyphs_path": str(GLYPHS_PATH) if GLYPHS_PATH else None,
-        "font_built": VARIABLE_FONT_PATH.exists() if VARIABLE_FONT_PATH else False,
-        "family_name": family_name,
-        "last_build_time": LAST_BUILD_TIME,
-        "building": BUILDING
-    })
+    try:
+        family_name = None
+        if GLYPHS_PATH:
+            family_name = get_font_family_name(GLYPHS_PATH)
+        
+        return jsonify({
+            "status": "ok",
+            "glyphs_path": str(GLYPHS_PATH) if GLYPHS_PATH else None,
+            "font_built": VARIABLE_FONT_PATH.exists() if VARIABLE_FONT_PATH else False,
+            "family_name": family_name,
+            "last_build_time": LAST_BUILD_TIME,
+            "building": BUILDING
+        })
+    except Exception as e:
+        print(f"Error in health endpoint: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 def main():
