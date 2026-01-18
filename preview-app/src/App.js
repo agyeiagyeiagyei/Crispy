@@ -6,7 +6,7 @@ import Sidebar from './components/Sidebar';
 import InstanceRows from './components/InstanceRows';
 import UpdateButton from './components/UpdateButton';
 
-const DEFAULT_SAMPLE_TEXT = "the quick brown fox jumps over the lazy dog 0123456789 &!";
+const DEFAULT_SAMPLE_TEXT = "The Quick Brown Fox Jumps Over The Lazy Dog 0123456789 &!";
 
 function App() {
   const [instances, setInstances] = useState([]);
