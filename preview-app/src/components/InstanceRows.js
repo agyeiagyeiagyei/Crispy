@@ -40,18 +40,18 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
   useEffect(() => {
     if (draggedIndex === null) return;
     
+    const container = document.querySelector('.instance-rows-container');
+    if (!container) return;
+    
+    // Allow wheel scrolling on the container during drag
     const handleWheel = (e) => {
-      // Allow normal scrolling when dragging
-      e.stopPropagation();
+      // Don't prevent default - allow normal scrolling
     };
     
-    const container = document.querySelector('.instance-rows-container');
-    if (container) {
-      container.addEventListener('wheel', handleWheel, { passive: true });
-      return () => {
-        container.removeEventListener('wheel', handleWheel);
-      };
-    }
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
   }, [draggedIndex]);
 
   if (!fontLoaded) {
@@ -120,10 +120,6 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
           onDragOver={(e) => handleDragOver(e, index)}
           onDragEnd={handleDragEnd}
           onDragLeave={handleDragLeave}
-          onWheel={(e) => {
-            // Allow wheel scrolling to work during drag
-            e.stopPropagation();
-          }}
           className={`instance-row-wrapper ${draggedIndex === index ? 'dragging' : ''} ${dragOverIndex === index ? 'drag-over' : ''}`}
         >
           <InstanceRow

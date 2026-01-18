@@ -14,7 +14,6 @@
 
 .instance-row-wrapper.dragging {
   opacity: 0.5;
-  pointer-events: none; /* Allow events to pass through to container for scrolling */
 }
 
 .instance-row-wrapper.drag-over {
