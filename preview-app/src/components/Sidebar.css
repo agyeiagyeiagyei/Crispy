@@ -127,7 +127,7 @@
   padding: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 0.6375rem;
+  font-size: 0.95625rem; /* Increased by 50% from 0.6375rem */
   font-family: monospace;
   resize: vertical;
   min-height: 60px;
