@@ -116,7 +116,7 @@ echo "Backend server started (PID: $SERVER_PID)"
 # Start React frontend
 echo "Starting React frontend on port 3000..."
 cd preview-app
-npm start > /tmp/preview-app.log 2>&1 &
+HOST=127.0.0.1 PORT=3000 BROWSER=none npm start > /tmp/preview-app.log 2>&1 &
 REACT_PID=$!
 cd ..
 echo $REACT_PID > /tmp/preview-app.pid
