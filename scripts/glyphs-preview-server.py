@@ -378,8 +378,8 @@ def main():
     parser.add_argument(
         "--port",
         type=int,
-        default=5000,
-        help="Port to run server on (default: 5000)"
+        default=5001,
+        help="Port to run server on (default: 5001, avoiding macOS AirPlay on 5000)"
     )
     parser.add_argument(
         "--host",
