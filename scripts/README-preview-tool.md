@@ -30,7 +30,14 @@ A web-based preview tool for examining and editing variable font instances from 
 ### Option 1: Using the Launch Script (Recommended)
 
 ```bash
+# With default Glyphs file (sources/Crispy.glyphs)
 ./scripts/launch-preview.sh
+
+# With a specific Glyphs file
+./scripts/launch-preview.sh sources/Crispy.glyphs
+
+# With an absolute path
+./scripts/launch-preview.sh /path/to/other-font.glyphs
 ```
 
 This will:
@@ -48,8 +55,12 @@ Press `Ctrl+C` to stop both servers.
 # Activate virtual environment
 source venv/bin/activate
 
-# Start server
+# Start server with default Glyphs file
 python3 scripts/glyphs-preview-server.py
+
+# Or specify a Glyphs file
+python3 scripts/glyphs-preview-server.py --glyphs sources/Crispy.glyphs
+python3 scripts/glyphs-preview-server.py --glyphs /path/to/other-font.glyphs
 ```
 
 The server will run on `http://localhost:5001`

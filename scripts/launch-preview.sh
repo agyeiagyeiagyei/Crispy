@@ -1,6 +1,14 @@
 #!/bin/bash
 # Launch script for Glyphs Preview Tool
 # Starts both the backend server and React frontend
+#
+# Usage:
+#   ./scripts/launch-preview.sh [GLYPHS_FILE]
+#
+# Examples:
+#   ./scripts/launch-preview.sh
+#   ./scripts/launch-preview.sh sources/Crispy.glyphs
+#   ./scripts/launch-preview.sh /path/to/other-font.glyphs
 
 set -e
 
@@ -9,6 +17,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$PROJECT_DIR"
+
+# Parse command-line arguments
+GLYPHS_FILE="${1:-sources/Crispy.glyphs}"
+
+# Resolve to absolute path if relative
+if [[ "$GLYPHS_FILE" != /* ]]; then
+    GLYPHS_FILE="$PROJECT_DIR/$GLYPHS_FILE"
+fi
+
+# Check if Glyphs file exists
+if [ ! -f "$GLYPHS_FILE" ]; then
+    echo "Error: Glyphs file not found: $GLYPHS_FILE"
+    echo ""
+    echo "Usage: $0 [GLYPHS_FILE]"
+    echo "  GLYPHS_FILE: Path to .glyphs file (default: sources/Crispy.glyphs)"
+    exit 1
+fi
+
+echo "Using Glyphs file: $GLYPHS_FILE"
 
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
@@ -71,7 +98,7 @@ trap cleanup SIGINT SIGTERM
 
 # Start backend server
 echo "Starting backend server on port 5001..."
-python3 scripts/glyphs-preview-server.py > /tmp/preview-server.log 2>&1 &
+python3 scripts/glyphs-preview-server.py --glyphs "$GLYPHS_FILE" > /tmp/preview-server.log 2>&1 &
 SERVER_PID=$!
 echo $SERVER_PID > /tmp/preview-server.pid
 
