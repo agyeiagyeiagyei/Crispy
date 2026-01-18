@@ -94,11 +94,20 @@ def _detect_columns(fieldnames: List[str]) -> Tuple[str, List[str], List[str]]:
     if name_col not in fieldnames:
         raise ValueError(f"CSV must include a '{name_col}' column. Found: {fieldnames}")
 
-    in_cols = [c for c in fieldnames if c.endswith("-e")]
+    # Detect in: columns (traditional axes, with or without "-e" suffix)
+    # Support both "WGHT" and "WGHT-e" formats
+    in_cols = []
+    traditional_axes = {"WGHT", "WDTH", "OPSZ", "CONTRAST"}
+    for c in fieldnames:
+        # Check if column is a traditional axis (with or without -e suffix)
+        col_upper = c.upper()
+        if col_upper in traditional_axes or col_upper.endswith("-E"):
+            in_cols.append(c)
+    
     if not in_cols:
-        raise ValueError("CSV contains no '*-e' columns; cannot build 'in:' locations")
+        raise ValueError("CSV contains no traditional axis columns (WGHT/WDTH/OPSZ or WGHT-e/WDTH-e/OPSZ-e); cannot build 'in:' locations")
 
-    # Parametric columns are everything else (except name and *-e)
+    # Parametric columns are everything else (except name and traditional axes)
     out_cols = [c for c in fieldnames if c not in (name_col,) and c not in in_cols]
     if not out_cols:
         raise ValueError("CSV contains no parametric axis columns for 'out:'")
