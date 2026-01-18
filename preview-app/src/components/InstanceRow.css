@@ -30,7 +30,6 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  min-width: 3.5rem; /* Reserve space for icons to prevent height jump */
 }
 
 .instance-name {
@@ -71,6 +70,9 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
+  width: 1.5rem; /* Fixed width to prevent layout shift */
+  height: 1.5rem; /* Fixed height to prevent layout shift */
+  flex-shrink: 0;
 }
 
 .move-instance-btn:hover {
