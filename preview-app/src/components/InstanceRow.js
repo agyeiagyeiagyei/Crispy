@@ -133,6 +133,7 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampl
             fontVariationSettings: fontLoaded ? fontVariationSettings : undefined,
             fontFeatureSettings: 'normal',
             fontSize: `${fontSize}rem`,
+            textTransform: 'capitalize',
           }}
         >
           {sampleText}
