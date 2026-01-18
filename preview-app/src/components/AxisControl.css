@@ -12,15 +12,17 @@
 
 .axis-name {
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 0.6375rem;
+  font-family: monospace;
+  color: #666;
 }
 
 .axis-tag {
   font-family: monospace;
-  font-size: 0.85rem;
+  font-size: 0.6375rem;
   color: #666;
-  background-color: #e9e9e9;
-  padding: 0.2rem 0.5rem;
+  background-color: #f0f0f0;
+  padding: 0.2rem 0.4rem;
   border-radius: 3px;
 }
 
@@ -66,7 +68,8 @@
 .axis-values {
   display: flex;
   justify-content: space-between;
-  font-size: 0.85rem;
+  font-size: 0.6375rem;
+  font-family: monospace;
   color: #666;
 }
 

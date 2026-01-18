@@ -14,7 +14,8 @@
 
 .sidebar-hint {
   color: #666;
-  font-size: 0.9rem;
+  font-size: 0.6375rem;
+  font-family: monospace;
   margin-bottom: 1rem;
   font-style: italic;
 }
@@ -34,10 +35,11 @@
 
 .font-size-label {
   display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.6375rem;
+  font-family: monospace;
+  font-weight: 500;
   margin-bottom: 0.5rem;
-  color: #333;
+  color: #666;
 }
 
 .font-size-slider {
@@ -110,9 +112,11 @@
 }
 
 .sample-text-section h3 {
-  font-size: 1rem;
+  font-size: 0.6375rem;
+  font-family: monospace;
   margin-bottom: 0.5rem;
-  font-weight: 600;
+  font-weight: 500;
+  color: #666;
 }
 
 .sample-text-input {
@@ -120,8 +124,8 @@
   padding: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 0.9rem;
-  font-family: inherit;
+  font-size: 0.6375rem;
+  font-family: monospace;
   resize: vertical;
   min-height: 60px;
 }
