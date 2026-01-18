@@ -28,6 +28,35 @@ function App() {
     loadData();
   }, []);
 
+  // Poll for font rebuilds (check every 2 seconds)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const health = await api.health();
+        setBuilding(health.building || false);
+        
+        // If font was rebuilt (new build time), reload
+        if (health.font_built && health.last_build_time && health.last_build_time !== lastBuildTime) {
+          setLastBuildTime(health.last_build_time);
+          setFontLoaded(true);
+          setFontUrl(api.getFontUrl());
+          // Reload instances and axes in case they changed
+          const [instancesData, axesData] = await Promise.all([
+            api.getInstances(),
+            api.getAxes(),
+          ]);
+          setInstances(instancesData.instances);
+          setAxes(axesData.axes);
+        }
+      } catch (err) {
+        // Silently fail polling errors
+        console.debug('Polling error:', err);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [lastBuildTime]);
+
   const loadData = async () => {
     try {
       setLoading(true);
