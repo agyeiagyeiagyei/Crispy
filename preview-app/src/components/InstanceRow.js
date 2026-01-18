@@ -1,7 +1,7 @@
 import React from 'react';
 import './InstanceRow.css';
 
-function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampleText, fontLoaded, fontSize }) {
+function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampleText, fontLoaded, fontSize, onDelete }) {
   // Build font-variation-settings CSS from coordinates
   // If this row is selected, use editing coordinates (from sliders)
   // Otherwise, use the instance's own coordinates
@@ -20,12 +20,26 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampl
     >
       <div className="instance-row-header">
         <h3 className="instance-name">{instance.name}</h3>
-        <div className="instance-coordinates">
-          {Object.entries(instance.coordinates).map(([tag, value]) => (
-            <span key={tag} className="coordinate">
-              {tag}: {value.toFixed(1)}
-            </span>
-          ))}
+        <div className="instance-header-right">
+          <div className="instance-coordinates">
+            {Object.entries(instance.coordinates).map(([tag, value]) => (
+              <span key={tag} className="coordinate">
+                {tag}: {value.toFixed(1)}
+              </span>
+            ))}
+          </div>
+          {isSelected && onDelete && (
+            <button
+              className="delete-instance-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(instance);
+              }}
+              title="Remove this instance"
+            >
+              🗑️
+            </button>
+          )}
         </div>
       </div>
       

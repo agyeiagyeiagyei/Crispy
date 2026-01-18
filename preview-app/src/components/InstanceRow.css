@@ -25,6 +25,12 @@
   margin-bottom: 0.5rem;
 }
 
+.instance-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .instance-name {
   font-family: monospace;
   font-size: 0.6375rem; /* 0.85rem * 0.75 = 25% reduction */
@@ -48,6 +54,28 @@
   background-color: #f0f0f0;
   padding: 0.2rem 0.4rem;
   border-radius: 3px;
+}
+
+.delete-instance-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.delete-instance-btn:hover {
+  background-color: #fee;
+}
+
+.delete-instance-btn:active {
+  background-color: #fcc;
 }
 
 .instance-row-content {

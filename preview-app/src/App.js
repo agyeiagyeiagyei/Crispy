@@ -132,6 +132,26 @@ function App() {
     setEditingCoordinates({ ...originalCoordinates });
   }, [selectedInstance, originalCoordinates]);
 
+  const handleDeleteInstance = useCallback((instanceToDelete) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Remove instance "${instanceToDelete.name}" from preview?\n\n` +
+      `This will only remove it from the preview. Refresh the page to restore it.`
+    );
+
+    if (!confirmed) return;
+
+    // Remove from instances list
+    setInstances(prev => prev.filter(inst => inst.name !== instanceToDelete.name));
+    
+    // Clear selection if the deleted instance was selected
+    if (selectedInstance && selectedInstance.name === instanceToDelete.name) {
+      setSelectedInstance(null);
+      setEditingCoordinates({});
+      setOriginalCoordinates({});
+    }
+  }, [selectedInstance]);
+
   if (loading) {
     return (
       <div className="App">
@@ -182,6 +202,7 @@ function App() {
             fontLoaded={fontLoaded}
             onReorderInstances={setInstances}
             fontSize={fontSize}
+            onDeleteInstance={handleDeleteInstance}
           />
         </div>
       </div>
