@@ -152,6 +152,41 @@ function App() {
     }
   }, [selectedInstance]);
 
+  const handleMoveInstance = useCallback((instanceToMove, targetInstance, position) => {
+    if (!instanceToMove || !targetInstance) return;
+    
+    // Find current indices
+    const currentIndex = instances.findIndex(inst => inst.name === instanceToMove.name);
+    const targetIndex = instances.findIndex(inst => inst.name === targetInstance.name);
+    
+    // If already in the correct position, silently ignore
+    if (currentIndex === targetIndex || 
+        (position === 'before' && currentIndex === targetIndex - 1) ||
+        (position === 'after' && currentIndex === targetIndex + 1)) {
+      return;
+    }
+    
+    // Calculate new index
+    let newIndex;
+    if (position === 'before') {
+      newIndex = targetIndex;
+    } else {
+      newIndex = targetIndex + 1;
+    }
+    
+    // Adjust if moving from before the target position
+    if (currentIndex < newIndex) {
+      newIndex--;
+    }
+    
+    // Perform move
+    const newInstances = [...instances];
+    const [movedItem] = newInstances.splice(currentIndex, 1);
+    newInstances.splice(newIndex, 0, movedItem);
+    
+    setInstances(newInstances);
+  }, [instances]);
+
   if (loading) {
     return (
       <div className="App">
@@ -203,6 +238,7 @@ function App() {
             onReorderInstances={setInstances}
             fontSize={fontSize}
             onDeleteInstance={handleDeleteInstance}
+            onMoveInstance={handleMoveInstance}
           />
         </div>
       </div>
