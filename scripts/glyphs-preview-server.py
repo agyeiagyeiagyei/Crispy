@@ -459,7 +459,43 @@ def main():
     print(f"Glyphs file: {GLYPHS_PATH}", file=sys.stderr)
     print(f"Build directory: {BUILD_DIR}", file=sys.stderr)
     
-    app.run(host=args.host, port=args.port, debug=True)
+    # Set up file watching for auto-rebuild
+    if WATCHDOG_AVAILABLE:
+        class GlyphsFileHandler(FileSystemEventHandler):
+            def __init__(self):
+                self.last_modified = 0
+                self.debounce_seconds = 1.0  # Wait 1 second after last change
+            
+            def on_modified(self, event):
+                if event.is_directory:
+                    return
+                
+                if event.src_path == str(GLYPHS_PATH):
+                    current_time = time.time()
+                    # Debounce: only rebuild if file hasn't changed in the last second
+                    if current_time - self.last_modified > self.debounce_seconds:
+                        self.last_modified = current_time
+                        # Wait a bit more to ensure file write is complete
+                        time.sleep(0.5)
+                        print(f"\nGlyphs file changed, auto-rebuilding font...", file=sys.stderr)
+                        # Run build in a separate thread to avoid blocking
+                        threading.Thread(target=trigger_build, daemon=True).start()
+        
+        event_handler = GlyphsFileHandler()
+        global OBSERVER
+        OBSERVER = Observer()
+        OBSERVER.schedule(event_handler, path=str(GLYPHS_PATH.parent), recursive=False)
+        OBSERVER.start()
+        print(f"File watching enabled: auto-rebuild on save", file=sys.stderr)
+    else:
+        print(f"File watching disabled: install watchdog for auto-rebuild", file=sys.stderr)
+    
+    try:
+        app.run(host=args.host, port=args.port, debug=True)
+    finally:
+        if OBSERVER:
+            OBSERVER.stop()
+            OBSERVER.join()
 
 
 if __name__ == "__main__":
