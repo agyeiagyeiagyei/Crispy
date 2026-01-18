@@ -19,6 +19,7 @@ function App() {
   const [error, setError] = useState(null);
   const [building, setBuilding] = useState(false);
   const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE_TEXT);
+  const [fontSize, setFontSize] = useState(2); // Default 2rem
 
   // Load initial data
   useEffect(() => {
@@ -166,6 +167,8 @@ function App() {
           onUpdateInstance={handleUpdateInstance}
           onResetCoordinates={handleResetCoordinates}
           originalCoordinates={originalCoordinates}
+          fontSize={fontSize}
+          onFontSizeChange={setFontSize}
         />
         
         <div className="content-area">
@@ -178,6 +181,7 @@ function App() {
             fontUrl={fontUrl}
             fontLoaded={fontLoaded}
             onReorderInstances={setInstances}
+            fontSize={fontSize}
           />
         </div>
       </div>

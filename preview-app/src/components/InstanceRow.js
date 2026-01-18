@@ -1,7 +1,7 @@
 import React from 'react';
 import './InstanceRow.css';
 
-function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampleText, fontLoaded }) {
+function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampleText, fontLoaded, fontSize }) {
   // Build font-variation-settings CSS from coordinates
   // If this row is selected, use editing coordinates (from sliders)
   // Otherwise, use the instance's own coordinates
@@ -36,6 +36,8 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampl
             fontFamily: fontLoaded ? '"Crispy-VF", sans-serif' : 'sans-serif',
             fontVariationSettings: fontLoaded ? fontVariationSettings : undefined,
             fontFeatureSettings: 'normal',
+            fontSize: `${fontSize}rem`,
+            textTransform: 'capitalize',
           }}
         >
           {sampleText}

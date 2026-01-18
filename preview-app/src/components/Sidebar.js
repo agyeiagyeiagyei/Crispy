@@ -5,7 +5,7 @@ import UpdateButton from './UpdateButton';
 
 const DEFAULT_SAMPLE_TEXT = "the quick brown fox jumps over the lazy dog 0123456789 &!";
 
-function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates }) {
+function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange }) {
   return (
     <aside className="sidebar">
       <h2>Axes</h2>
@@ -22,6 +22,21 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
             disabled={disabled}
           />
         ))}
+      </div>
+      
+      <div className="font-size-control">
+        <label className="font-size-label">
+          Font Size: {fontSize.toFixed(1)}rem
+        </label>
+        <input
+          type="range"
+          min="0.5"
+          max="5"
+          step="0.1"
+          value={fontSize}
+          onChange={(e) => onFontSizeChange(parseFloat(e.target.value))}
+          className="font-size-slider"
+        />
       </div>
       
       {!disabled && (
