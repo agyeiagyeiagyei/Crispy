@@ -26,9 +26,14 @@
 }
 
 .instance-name {
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-family: monospace;
+  font-size: 0.6375rem; /* 0.85rem * 0.75 = 25% reduction */
+  color: #666;
+  background-color: #f0f0f0;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
   margin: 0;
+  display: inline-block;
 }
 
 .instance-coordinates {
