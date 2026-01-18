@@ -479,12 +479,15 @@ def main():
     print(f"Glyphs file: {GLYPHS_PATH}", file=sys.stderr)
     print(f"Build directory: {BUILD_DIR}", file=sys.stderr)
     
-    # Set up file watching for auto-rebuild
-    if WATCHDOG_AVAILABLE:
+    # Set up file watching for auto-rebuild (can be disabled with --no-auto-rebuild)
+    AUTO_REBUILD = not args.no_auto_rebuild if hasattr(args, 'no_auto_rebuild') else True
+    
+    if WATCHDOG_AVAILABLE and AUTO_REBUILD:
         class GlyphsFileHandler(FileSystemEventHandler):
             def __init__(self):
                 self.last_modified = 0
-                self.debounce_seconds = 1.0  # Wait 1 second after last change
+                self.debounce_seconds = 2.0  # Wait 2 seconds after last change (increased)
+                self.pending_rebuild = False  # Track if rebuild is already queued
             
             def on_modified(self, event):
                 if event.is_directory:
@@ -492,14 +495,22 @@ def main():
                 
                 if event.src_path == str(GLYPHS_PATH):
                     current_time = time.time()
-                    # Debounce: only rebuild if file hasn't changed in the last second
-                    if current_time - self.last_modified > self.debounce_seconds:
+                    # Debounce: only rebuild if file hasn't changed in the last 2 seconds
+                    # and no rebuild is already pending
+                    if (current_time - self.last_modified > self.debounce_seconds and 
+                        not self.pending_rebuild and not BUILDING):
                         self.last_modified = current_time
+                        self.pending_rebuild = True
                         # Wait a bit more to ensure file write is complete
-                        time.sleep(0.5)
+                        time.sleep(1.0)  # Increased wait time
                         print(f"\nGlyphs file changed, auto-rebuilding font...", file=sys.stderr)
                         # Run build in a separate thread to avoid blocking
-                        threading.Thread(target=trigger_build, daemon=True).start()
+                        def build_and_reset():
+                            try:
+                                trigger_build()
+                            finally:
+                                self.pending_rebuild = False
+                        threading.Thread(target=build_and_reset, daemon=True).start()
         
         event_handler = GlyphsFileHandler()
         global OBSERVER
@@ -507,6 +518,8 @@ def main():
         OBSERVER.schedule(event_handler, path=str(GLYPHS_PATH.parent), recursive=False)
         OBSERVER.start()
         print(f"File watching enabled: auto-rebuild on save", file=sys.stderr)
+    elif WATCHDOG_AVAILABLE and not AUTO_REBUILD:
+        print(f"File watching disabled: auto-rebuild disabled (use --no-auto-rebuild to disable)", file=sys.stderr)
     else:
         print(f"File watching disabled: install watchdog for auto-rebuild", file=sys.stderr)
     
