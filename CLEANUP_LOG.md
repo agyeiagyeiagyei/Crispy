@@ -40,7 +40,8 @@ Based on the work done for the Glyphs preview tool, here are files that may be c
 ## Summary
 
 ### Files to Remove:
-1. `sources/Crispy-fixed-brace-names.glyphs` - Test file, not needed for production
+1. `sources/Crispy-fixed-brace-names.glyphs` (864KB) - Test file, not needed for production
+2. `sources/preview-fonts-test/` - Temporary test build directory from endpoint testing
 
 ### Files to Keep:
 - All scripts in `scripts/` - All are used by either preview tool or production build

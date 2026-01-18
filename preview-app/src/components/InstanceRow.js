@@ -7,9 +7,10 @@ function InstanceRow({ instance, isSelected, onSelect, coordinates, fontLoaded }
   const [sampleText, setSampleText] = useState(DEFAULT_SAMPLE_TEXT);
 
   // Build font-variation-settings CSS from coordinates
-  // Use coordinates if available (editing), otherwise use instance coordinates
-  const activeCoordinates = Object.keys(coordinates).length > 0 
-    ? coordinates 
+  // If this row is selected, use editing coordinates (from sliders)
+  // Otherwise, use the instance's own coordinates
+  const activeCoordinates = isSelected && Object.keys(coordinates).length > 0
+    ? coordinates
     : instance.coordinates;
   
   const fontVariationSettings = Object.entries(activeCoordinates)
