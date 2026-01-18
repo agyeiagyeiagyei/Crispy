@@ -353,13 +353,27 @@ def update_instance(instance_name: str):
         return jsonify({"error": f"Failed to update instance '{instance_name}'"}), 500
 
 
+def get_font_family_name(glyphs_path: Path) -> Optional[str]:
+    """Get font family name from Glyphs file."""
+    try:
+        font = load(str(glyphs_path))
+        return font.familyName
+    except Exception:
+        return None
+
+
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint."""
+    family_name = None
+    if GLYPHS_PATH:
+        family_name = get_font_family_name(GLYPHS_PATH)
+    
     return jsonify({
         "status": "ok",
         "glyphs_path": str(GLYPHS_PATH) if GLYPHS_PATH else None,
-        "font_built": VARIABLE_FONT_PATH.exists() if VARIABLE_FONT_PATH else False
+        "font_built": VARIABLE_FONT_PATH.exists() if VARIABLE_FONT_PATH else False,
+        "family_name": family_name
     })
 
 
