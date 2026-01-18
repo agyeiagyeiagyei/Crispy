@@ -364,11 +364,19 @@ def get_font():
     if not VARIABLE_FONT_PATH or not VARIABLE_FONT_PATH.exists():
         return jsonify({"error": "Variable font not built yet."}), 404
     
-    return send_file(
+    response = send_file(
         str(VARIABLE_FONT_PATH),
         mimetype='font/ttf',
         as_attachment=False
     )
+    # Add cache control headers to prevent browser caching
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    # Add ETag based on file modification time for cache validation
+    mtime = VARIABLE_FONT_PATH.stat().st_mtime
+    response.headers['ETag'] = f'"{int(mtime)}"'
+    return response
 
 
 @app.route('/api/instance/<instance_name>', methods=['PUT'])

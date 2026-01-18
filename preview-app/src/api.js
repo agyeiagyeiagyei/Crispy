@@ -60,7 +60,9 @@ export const api = {
   },
 
   getFontUrl() {
-    return `${API_BASE}/font`;
+    // Add cache busting timestamp to force reload when font is rebuilt
+    const timestamp = Date.now();
+    return `${API_BASE}/font?t=${timestamp}`;
   },
 
   async updateInstance(instanceName, coordinates) {

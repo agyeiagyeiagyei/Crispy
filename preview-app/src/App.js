@@ -38,8 +38,12 @@ function App() {
         // If font was rebuilt (new build time), reload
         if (health.font_built && health.last_build_time && health.last_build_time !== lastBuildTime) {
           setLastBuildTime(health.last_build_time);
-          setFontLoaded(true);
-          setFontUrl(api.getFontUrl());
+          // Force font reload by generating new URL with timestamp
+          setFontLoaded(false); // Reset first to trigger reload
+          setTimeout(() => {
+            setFontUrl(api.getFontUrl()); // New URL with fresh timestamp
+            setFontLoaded(true);
+          }, 100);
           // Reload instances and axes in case they changed
           const [instancesData, axesData] = await Promise.all([
             api.getInstances(),
