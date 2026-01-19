@@ -845,21 +845,38 @@ def expand_csv_with_opsz(
     new_rows = []
     
     for row in rows:
-        # Keep base row (OPSZ=base_opsz)
-        base_row = row.copy()
-        new_rows.append(base_row)
-        
-        # Only generate opsz rows if this row has the base opsz
-        if int(row.get('OPSZ', base_opsz)) != base_opsz:
+        # Check for missing required values first
+        wght_str = row.get('WGHT', '').strip()
+        wdth_str = row.get('WDTH', '').strip()
+        if not wght_str or not wdth_str:
+            # Skip rows with missing required values entirely from opsz expansion
+            # These rows will remain in the original CSV and won't be expanded
+            # (They can't be used for opsz generation without WGHT/WDTH)
             continue
         
-        # Get values
-        wght = int(row['WGHT'])
-        wdth = int(row['WDTH'])
-        base_xopq = float(row['XOPQ'])
-        base_yopq = float(row['YOPQ'])
-        base_xtra = float(row['XTRA'])
-        instance_name = row['Instance Name']
+        # Only generate opsz rows if this row has the base opsz
+        # Handle empty string or missing OPSZ value
+        opsz_value = row.get('OPSZ', '') or str(base_opsz)
+        if not opsz_value.strip():
+            opsz_value = str(base_opsz)
+        if int(opsz_value) != base_opsz:
+            # Keep non-base-opsz rows as-is
+            new_rows.append(row.copy())
+            continue
+        
+        # Keep base row (OPSZ=base_opsz)
+        base_row = row.copy()
+        # Ensure SPAC is set for base row (0 for base OPSZ)
+        if 'SPAC' in base_row:
+            base_row['SPAC'] = base_row.get('SPAC', '').strip() or '0'
+        new_rows.append(base_row)
+        
+        wght = int(wght_str)
+        wdth = int(wdth_str)
+        base_xopq = float(row.get('XOPQ', '0') or '0')
+        base_yopq = float(row.get('YOPQ', '0') or '0')
+        base_xtra = float(row.get('XTRA', '0') or '0')
+        instance_name = row.get('Instance Name', '')
         
         # Get multipliers
         min_xopq_mult, max_xopq_mult = interpolate_multiplier(wght, 'xopq')
@@ -887,6 +904,8 @@ def expand_csv_with_opsz(
         # Set SPAC: +20 for MinOPSZ
         if 'SPAC' in min_row:
             min_row['SPAC'] = '20'
+        else:
+            min_row['SPAC'] = '20'
         new_rows.append(min_row)
         
         # Create MaxOPSZ row
@@ -898,6 +917,8 @@ def expand_csv_with_opsz(
         max_row['XTRA'] = f"{max_xtra:.3f}"
         # Set SPAC: -20 for MaxOPSZ
         if 'SPAC' in max_row:
+            max_row['SPAC'] = '-20'
+        else:
             max_row['SPAC'] = '-20'
         new_rows.append(max_row)
     
