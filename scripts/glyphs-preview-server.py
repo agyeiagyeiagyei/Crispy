@@ -13,6 +13,7 @@ Provides API endpoints to:
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -54,6 +55,60 @@ VARIABLE_FONT_PATH: Optional[Path] = None
 LAST_BUILD_TIME: Optional[float] = None
 BUILDING: bool = False
 OBSERVER: Optional[Observer] = None
+
+
+def _notify_glyphs_app_of_change(glyphs_path: Path) -> None:
+    """
+    Notify Glyphs.app that the file has been modified externally.
+    
+    This function attempts to trigger Glyphs.app to detect the file change
+    by touching the file's modification time. On macOS, this can help
+    Glyphs.app recognize that the document has been modified externally.
+    
+    Reference: https://forum.glyphsapp.com/t/function-to-reload-glyphs-document/32708/2
+    """
+    try:
+        # Touch the file to update its modification time
+        # This helps trigger file system notifications that Glyphs.app may detect
+        current_time = time.time()
+        os.utime(glyphs_path, (current_time, current_time))
+        
+        # On macOS, try to use AppleScript to notify Glyphs.app
+        # This attempts to reload the document if it's open
+        if sys.platform == 'darwin':
+            try:
+                # Get the absolute path
+                abs_path = glyphs_path.resolve()
+                
+                # AppleScript to tell Glyphs to revert the document
+                # This will prompt the user if there are unsaved changes
+                applescript = f'''
+                tell application "Glyphs"
+                    try
+                        set docPath to POSIX file "{abs_path}" as alias
+                        set openDocs to documents whose path is (docPath as string)
+                        if (count of openDocs) > 0 then
+                            tell document 1
+                                revert
+                            end tell
+                        end if
+                    end try
+                end tell
+                '''
+                
+                # Run AppleScript (silently fail if it doesn't work)
+                subprocess.run(
+                    ['osascript', '-e', applescript],
+                    capture_output=True,
+                    timeout=2,
+                    check=False
+                )
+            except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError):
+                # AppleScript failed or not available - that's okay, file touch should still work
+                pass
+    except Exception as e:
+        # Silently fail - file save already succeeded, this is just a notification
+        print(f"Note: Could not notify Glyphs.app of change: {e}", file=sys.stderr)
 
 
 def get_instances_from_glyphs(glyphs_path: Path) -> List[Dict]:
@@ -240,6 +295,61 @@ def get_axes_from_built_font(font_path: Path) -> List[Dict]:
     return axes
 
 
+def create_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates: Dict[str, float]) -> bool:
+    """
+    Create a new instance in Glyphs file with specified name and coordinates.
+    
+    Returns True if creation was successful, False otherwise.
+    Raises ValueError if instance name already exists.
+    """
+    try:
+        font = load(str(glyphs_path))
+        axes = font.axes
+        
+        # Check if instance name already exists
+        for inst in font.instances:
+            if inst.name == instance_name:
+                raise ValueError(f"Instance '{instance_name}' already exists")
+        
+        # Create new instance
+        from glyphsLib.classes import GSInstance
+        new_instance = GSInstance()
+        new_instance.name = instance_name
+        
+        # Set instance.axes to match font.axes order
+        new_axes = []
+        for i, axis in enumerate(axes):
+            tag = axis.axisTag
+            if tag in coordinates:
+                new_axes.append(coordinates[tag])
+            else:
+                # Default to 0 if coordinate not provided
+                new_axes.append(0.0)
+        
+        new_instance.axes = new_axes
+        
+        # Add instance to font
+        font.instances.append(new_instance)
+        
+        # Save the font
+        font.save(str(glyphs_path))
+        
+        # Touch the file to trigger Glyphs.app to detect the change
+        # This ensures Glyphs.app recognizes the external modification
+        _notify_glyphs_app_of_change(glyphs_path)
+        
+        return True
+    
+    except ValueError:
+        # Re-raise ValueError (duplicate name)
+        raise
+    except Exception as e:
+        print(f"Error creating instance in Glyphs file: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def update_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates: Dict[str, float]) -> bool:
     """
     Update instance coordinates in Glyphs file.
@@ -279,6 +389,10 @@ def update_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates
         
         # Save the font
         font.save(str(glyphs_path))
+        
+        # Touch the file to trigger Glyphs.app to detect the change
+        # This ensures Glyphs.app recognizes the external modification
+        _notify_glyphs_app_of_change(glyphs_path)
         
         return True
     
@@ -379,6 +493,42 @@ def get_font():
     return response
 
 
+@app.route('/api/instance', methods=['POST'])
+def create_instance():
+    """Create a new instance in the Glyphs file."""
+    data = request.get_json()
+    if not data or 'name' not in data or 'coordinates' not in data:
+        return jsonify({"error": "Missing 'name' or 'coordinates' in request body"}), 400
+    
+    instance_name = data['name'].strip()
+    if not instance_name:
+        return jsonify({"error": "Instance name cannot be empty"}), 400
+    
+    coordinates = data['coordinates']
+    
+    # Validate coordinates are numeric
+    try:
+        coordinates = {k: float(v) for k, v in coordinates.items()}
+    except (ValueError, TypeError):
+        return jsonify({"error": "Coordinates must be numeric"}), 400
+    
+    try:
+        success = create_instance_in_glyphs(GLYPHS_PATH, instance_name, coordinates)
+        
+        if success:
+            # Trigger immediate rebuild after creating instance
+            # This ensures font is rebuilt right away, not waiting for periodic check
+            print(f"Instance created, triggering immediate rebuild...", file=sys.stderr)
+            trigger_build()
+            
+            return jsonify({"success": True, "message": f"Created instance '{instance_name}' in Glyphs file"})
+        else:
+            return jsonify({"error": f"Failed to create instance '{instance_name}'"}), 500
+    except ValueError as e:
+        # Duplicate name error
+        return jsonify({"error": str(e)}), 400
+
+
 @app.route('/api/instance/<instance_name>', methods=['PUT'])
 def update_instance(instance_name: str):
     """Update instance coordinates in the Glyphs file."""
@@ -397,6 +547,11 @@ def update_instance(instance_name: str):
     success = update_instance_in_glyphs(GLYPHS_PATH, instance_name, coordinates)
     
     if success:
+        # Trigger immediate rebuild after updating instance
+        # This ensures font is rebuilt right away, not waiting for periodic check
+        print(f"Instance updated, triggering immediate rebuild...", file=sys.stderr)
+        trigger_build()
+        
         return jsonify({"success": True, "message": f"Updated instance '{instance_name}' in Glyphs file"})
     else:
         return jsonify({"error": f"Failed to update instance '{instance_name}'"}), 500

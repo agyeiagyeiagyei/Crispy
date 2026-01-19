@@ -20,6 +20,7 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampl
     <div
       className={`instance-row ${isSelected ? 'selected' : ''}`}
       onClick={onSelect}
+      data-instance-name={instance.name}
     >
       <div className="instance-row-header">
         <h3 className="instance-name">{instance.name}</h3>

@@ -84,6 +84,31 @@
   margin-bottom: 1.5rem;
 }
 
+.duplicate-button-section {
+  margin-bottom: 1rem;
+}
+
+.btn-duplicate {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.796875rem; /* Match sample text size */
+  font-family: monospace;
+  transition: background-color 0.2s;
+}
+
+.btn-duplicate:hover {
+  background-color: #138496;
+}
+
+.btn-duplicate:active {
+  background-color: #117a8b;
+}
+
 .btn-reset {
   width: 100%;
   padding: 0.5rem 1rem;

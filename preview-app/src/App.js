@@ -119,12 +119,17 @@ function App() {
   const [originalCoordinates, setOriginalCoordinates] = useState({});
 
   const handleSelectInstance = useCallback((instance) => {
+    // If clicking the same instance, don't reset coordinates
+    if (selectedInstance && selectedInstance.name === instance.name) {
+      return; // Already selected, keep current editing coordinates
+    }
+    
     setSelectedInstance(instance);
     // Initialize editing coordinates with instance coordinates
     setEditingCoordinates({ ...instance.coordinates });
     // Store original coordinates for reset
     setOriginalCoordinates({ ...instance.coordinates });
-  }, []);
+  }, [selectedInstance]);
 
   const handleAxisChange = useCallback((tag, value) => {
     setEditingCoordinates(prev => ({
@@ -174,6 +179,52 @@ function App() {
     if (!selectedInstance) return;
     setEditingCoordinates({ ...originalCoordinates });
   }, [selectedInstance, originalCoordinates]);
+
+  const handleDuplicateInstance = async (newInstanceName) => {
+    if (!selectedInstance) return;
+
+    try {
+      setError(null);
+      
+      // Use current editing coordinates (if adjusted) or original instance coordinates
+      const coordinatesToUse = Object.keys(editingCoordinates).length > 0 && 
+        JSON.stringify(editingCoordinates) !== JSON.stringify(originalCoordinates)
+        ? editingCoordinates
+        : selectedInstance.coordinates;
+      
+      // Create new instance
+      await api.createInstance(newInstanceName, coordinatesToUse);
+      
+      // Reload instances to get the new one
+      const instancesData = await api.getInstances();
+      setInstances(instancesData.instances);
+      
+      // Find and select the new instance
+      const newInstance = instancesData.instances.find(
+        inst => inst.name === newInstanceName
+      );
+      
+      if (newInstance) {
+        setSelectedInstance(newInstance);
+        setEditingCoordinates({ ...newInstance.coordinates });
+        setOriginalCoordinates({ ...newInstance.coordinates });
+        
+        // Scroll to new instance after a brief delay
+        setTimeout(() => {
+          const element = document.querySelector(`[data-instance-name="${newInstanceName}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 100);
+      }
+      
+      // Auto-rebuild font after creation
+      await handleBuildFont();
+    } catch (err) {
+      setError(err.message);
+      console.error('Duplicate failed:', err);
+    }
+  };
 
   const handleDeleteInstance = useCallback((instanceToDelete) => {
     // Show confirmation dialog
@@ -268,6 +319,7 @@ function App() {
           originalCoordinates={originalCoordinates}
           fontSize={fontSize}
           onFontSizeChange={setFontSize}
+          onDuplicateInstance={handleDuplicateInstance}
         />
         
         <div className="content-area">

@@ -65,6 +65,25 @@ export const api = {
     return `${API_BASE}/font?t=${timestamp}`;
   },
 
+  async createInstance(instanceName, coordinates) {
+    const response = await fetch(`${API_BASE}/instance`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: instanceName, coordinates }),
+    });
+    if (!response.ok) {
+      try {
+        const error = await parseJSON(response);
+        throw new Error(error.error || 'Create failed');
+      } catch (e) {
+        throw new Error(`Create failed: ${response.status} ${response.statusText}`);
+      }
+    }
+    return parseJSON(response);
+  },
+
   async updateInstance(instanceName, coordinates) {
     const response = await fetch(`${API_BASE}/instance/${encodeURIComponent(instanceName)}`, {
       method: 'PUT',
