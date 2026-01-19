@@ -344,9 +344,16 @@ def get_axes_from_built_font(font_path: Path) -> List[Dict]:
     return axes
 
 
-def create_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates: Dict[str, float]) -> bool:
+def create_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates: Dict[str, float], insert_after_instance_name: Optional[str] = None) -> bool:
     """
     Create a new instance in Glyphs file with specified name and coordinates.
+    
+    Args:
+        glyphs_path: Path to the Glyphs file
+        instance_name: Name for the new instance
+        coordinates: Dictionary of axis tag -> value coordinates
+        insert_after_instance_name: Optional name of instance to insert after.
+                                    If None, appends to end of list.
     
     Returns True if creation was successful, False otherwise.
     Raises ValueError if instance name already exists.
@@ -377,8 +384,24 @@ def create_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates
         
         new_instance.axes = new_axes
         
-        # Add instance to font
-        font.instances.append(new_instance)
+        # Insert instance at the correct position
+        if insert_after_instance_name:
+            # Find the index of the instance to insert after
+            insert_index = None
+            for i, inst in enumerate(font.instances):
+                if inst.name == insert_after_instance_name:
+                    insert_index = i + 1
+                    break
+            
+            if insert_index is not None:
+                # Insert after the found instance
+                font.instances.insert(insert_index, new_instance)
+            else:
+                # Instance not found, append to end
+                font.instances.append(new_instance)
+        else:
+            # No insert position specified, append to end
+            font.instances.append(new_instance)
         
         # Save the font
         font.save(str(glyphs_path))
@@ -561,8 +584,13 @@ def create_instance():
     except (ValueError, TypeError):
         return jsonify({"error": "Coordinates must be numeric"}), 400
     
+    # Optional: insert after a specific instance
+    insert_after = data.get('insert_after', None)
+    if insert_after:
+        insert_after = insert_after.strip()
+    
     try:
-        success = create_instance_in_glyphs(GLYPHS_PATH, instance_name, coordinates)
+        success = create_instance_in_glyphs(GLYPHS_PATH, instance_name, coordinates, insert_after_instance_name=insert_after)
         
         if success:
             # Trigger immediate rebuild after creating instance

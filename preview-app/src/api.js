@@ -65,13 +65,17 @@ export const api = {
     return `${API_BASE}/font?t=${timestamp}`;
   },
 
-  async createInstance(instanceName, coordinates) {
+  async createInstance(instanceName, coordinates, insertAfter = null) {
+    const body = { name: instanceName, coordinates };
+    if (insertAfter) {
+      body.insert_after = insertAfter;
+    }
     const response = await fetch(`${API_BASE}/instance`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name: instanceName, coordinates }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       try {

@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import './InstanceRow.css';
 
-function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, sampleText, fontLoaded, fontSize, onDelete, onMove, allInstances }) {
+function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, instanceEditingCoordinates, sampleText, fontLoaded, fontSize, onDelete, onMove, allInstances }) {
   const [showMoveControls, setShowMoveControls] = useState(false);
   const [movePosition, setMovePosition] = useState('before');
   const [targetInstance, setTargetInstance] = useState(null);
   // Build font-variation-settings CSS from coordinates
   // If this row is selected, use editing coordinates (from sliders)
-  // Otherwise, use the instance's own coordinates
+  // Otherwise, use persisted editing coordinates if they exist, or instance coordinates
   const activeCoordinates = isSelected && Object.keys(editingCoordinates).length > 0
     ? editingCoordinates
-    : instance.coordinates;
+    : (instanceEditingCoordinates[instance.name] || instance.coordinates);
   
   const fontVariationSettings = Object.entries(activeCoordinates)
     .map(([tag, value]) => `"${tag}" ${value}`)

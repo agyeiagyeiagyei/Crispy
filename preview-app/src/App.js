@@ -13,6 +13,8 @@ function App() {
   const [axes, setAxes] = useState([]);
   const [selectedInstance, setSelectedInstance] = useState(null);
   const [editingCoordinates, setEditingCoordinates] = useState({});
+  // Store editing coordinates per instance to persist when deselected
+  const [instanceEditingCoordinates, setInstanceEditingCoordinates] = useState({});
   const [fontLoaded, setFontLoaded] = useState(false);
   const [fontUrl, setFontUrl] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -124,19 +126,44 @@ function App() {
       return; // Already selected, keep current editing coordinates
     }
     
+    // Save current editing coordinates for the previously selected instance
+    if (selectedInstance) {
+      setInstanceEditingCoordinates(prev => ({
+        ...prev,
+        [selectedInstance.name]: { ...editingCoordinates }
+      }));
+    }
+    
     setSelectedInstance(instance);
-    // Initialize editing coordinates with instance coordinates
-    setEditingCoordinates({ ...instance.coordinates });
+    
+    // Restore editing coordinates for this instance if they exist, otherwise use instance coordinates
+    const savedCoordinates = instanceEditingCoordinates[instance.name];
+    if (savedCoordinates) {
+      setEditingCoordinates({ ...savedCoordinates });
+    } else {
+      setEditingCoordinates({ ...instance.coordinates });
+    }
+    
     // Store original coordinates for reset
     setOriginalCoordinates({ ...instance.coordinates });
-  }, [selectedInstance]);
+  }, [selectedInstance, editingCoordinates, instanceEditingCoordinates]);
 
   const handleAxisChange = useCallback((tag, value) => {
-    setEditingCoordinates(prev => ({
-      ...prev,
-      [tag]: value,
-    }));
-  }, []);
+    setEditingCoordinates(prev => {
+      const updated = {
+        ...prev,
+        [tag]: value,
+      };
+      // Also update the stored coordinates for the current instance
+      if (selectedInstance) {
+        setInstanceEditingCoordinates(prevStored => ({
+          ...prevStored,
+          [selectedInstance.name]: updated
+        }));
+      }
+      return updated;
+    });
+  }, [selectedInstance]);
 
   const handleUpdateInstance = async () => {
     if (!selectedInstance) return;
@@ -192,8 +219,8 @@ function App() {
         ? editingCoordinates
         : selectedInstance.coordinates;
       
-      // Create new instance
-      await api.createInstance(newInstanceName, coordinatesToUse);
+      // Create new instance, inserting after the selected instance
+      await api.createInstance(newInstanceName, coordinatesToUse, selectedInstance.name);
       
       // Reload instances to get the new one
       const instancesData = await api.getInstances();
@@ -209,7 +236,7 @@ function App() {
         setEditingCoordinates({ ...newInstance.coordinates });
         setOriginalCoordinates({ ...newInstance.coordinates });
         
-        // Scroll to new instance after a brief delay
+        // Scroll to new instance after a brief delay (it should be right below the selected one)
         setTimeout(() => {
           const element = document.querySelector(`[data-instance-name="${newInstanceName}"]`);
           if (element) {
@@ -328,6 +355,7 @@ function App() {
             selectedInstance={selectedInstance}
             onSelectInstance={handleSelectInstance}
             editingCoordinates={editingCoordinates}
+            instanceEditingCoordinates={instanceEditingCoordinates}
             sampleText={sampleText}
             fontUrl={fontUrl}
             fontLoaded={fontLoaded}
