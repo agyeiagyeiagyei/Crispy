@@ -57,58 +57,107 @@ BUILDING: bool = False
 OBSERVER: Optional[Observer] = None
 
 
-def _notify_glyphs_app_of_change(glyphs_path: Path) -> None:
+def _force_reload_glyphs_document(glyphs_path: Path, font_object=None) -> None:
     """
-    Notify Glyphs.app that the file has been modified externally.
+    Force Glyphs.app to reload the document by saving unsaved changes, 
+    then closing and reopening all windows of the document.
     
-    This function attempts to trigger Glyphs.app to detect the file change
-    by touching the file's modification time. On macOS, this can help
-    Glyphs.app recognize that the document has been modified externally.
+    This ensures the document reflects external changes without save conflicts.
     
-    Reference: https://forum.glyphsapp.com/t/function-to-reload-glyphs-document/32708/2
+    Flow:
+    1. Save any unsaved changes in Glyphs.app (preserves user work)
+    2. Re-save our changes (since Glyphs.app may have overwritten them)
+    3. Close all windows of the document
+    4. Wait briefly for close to complete
+    5. Reopen the document
+    
+    Args:
+        glyphs_path: Path to the Glyphs file
+        font_object: Optional font object to re-save after Glyphs.app saves
+                    (if None, will reload and save from disk)
     """
     try:
         # Touch the file to update its modification time
-        # This helps trigger file system notifications that Glyphs.app may detect
         current_time = time.time()
         os.utime(glyphs_path, (current_time, current_time))
         
-        # On macOS, try to use AppleScript to notify Glyphs.app
-        # This attempts to reload the document if it's open
+        # On macOS, use AppleScript to handle save/close/reopen
         if sys.platform == 'darwin':
             try:
-                # Get the absolute path
                 abs_path = glyphs_path.resolve()
                 
-                # AppleScript to tell Glyphs to revert the document
-                # This will prompt the user if there are unsaved changes
+                # Step 1: Save any unsaved changes in Glyphs.app
+                # Step 2: Re-save our changes (reload from disk and save)
+                # Step 3: Close all windows of the document
+                # Step 4: Wait briefly
+                # Step 5: Reopen the document
                 applescript = f'''
                 tell application "Glyphs"
                     try
                         set docPath to POSIX file "{abs_path}" as alias
                         set openDocs to documents whose path is (docPath as string)
-                        if (count of openDocs) > 0 then
-                            tell document 1
-                                revert
-                            end tell
+                        set docCount to count of openDocs
+                        
+                        if docCount > 0 then
+                            -- Step 1: Save any unsaved changes in all open windows
+                            -- Reference documents from the openDocs list
+                            repeat with aDoc in openDocs
+                                tell aDoc
+                                    if modified then
+                                        save
+                                    end if
+                                end tell
+                            end repeat
+                            
+                            -- Step 2: Close all windows of this document
+                            -- Close all documents from the openDocs list
+                            repeat with aDoc in openDocs
+                                tell aDoc
+                                    close saving no
+                                end tell
+                            end repeat
+                            
+                            -- Step 3: Wait for close to complete
+                            delay 0.5
+                            
+                            -- Step 4: Reopen the document
+                            open docPath
                         end if
                     end try
                 end tell
                 '''
                 
-                # Run AppleScript (silently fail if it doesn't work)
-                subprocess.run(
+                # Run AppleScript with longer timeout for save/close/reopen operations
+                result = subprocess.run(
                     ['osascript', '-e', applescript],
                     capture_output=True,
-                    timeout=2,
+                    timeout=10,
                     check=False
                 )
-            except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError):
-                # AppleScript failed or not available - that's okay, file touch should still work
-                pass
+                
+                # After Glyphs.app saves, we need to re-save our changes
+                # (since Glyphs.app may have overwritten them with its in-memory state)
+                if result.returncode == 0 and font_object is not None:
+                    # Small delay to ensure Glyphs.app has finished saving
+                    time.sleep(0.3)
+                    # Re-save our changes
+                    font_object.save(str(glyphs_path))
+                    print(f"Re-saved changes after Glyphs.app save", file=sys.stderr)
+                elif result.returncode == 0:
+                    # If no font object provided, reload from disk and save
+                    # This ensures our changes are preserved
+                    time.sleep(0.3)
+                    from glyphsLib import load
+                    font = load(str(glyphs_path))
+                    font.save(str(glyphs_path))
+                    print(f"Re-saved changes after Glyphs.app save", file=sys.stderr)
+                    
+            except (subprocess.TimeoutExpired, subprocess.SubprocessError, FileNotFoundError) as e:
+                # AppleScript failed - log but don't fail
+                print(f"Warning: Could not force reload Glyphs document: {e}", file=sys.stderr)
     except Exception as e:
         # Silently fail - file save already succeeded, this is just a notification
-        print(f"Note: Could not notify Glyphs.app of change: {e}", file=sys.stderr)
+        print(f"Warning: Could not force reload Glyphs document: {e}", file=sys.stderr)
 
 
 def get_instances_from_glyphs(glyphs_path: Path) -> List[Dict]:
@@ -334,9 +383,9 @@ def create_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates
         # Save the font
         font.save(str(glyphs_path))
         
-        # Touch the file to trigger Glyphs.app to detect the change
-        # This ensures Glyphs.app recognizes the external modification
-        _notify_glyphs_app_of_change(glyphs_path)
+        # Force Glyphs.app to reload the document (save unsaved changes, close, reopen)
+        # Pass font object so we can re-save after Glyphs.app saves
+        _force_reload_glyphs_document(glyphs_path, font_object=font)
         
         return True
     
@@ -390,9 +439,9 @@ def update_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates
         # Save the font
         font.save(str(glyphs_path))
         
-        # Touch the file to trigger Glyphs.app to detect the change
-        # This ensures Glyphs.app recognizes the external modification
-        _notify_glyphs_app_of_change(glyphs_path)
+        # Force Glyphs.app to reload the document (save unsaved changes, close, reopen)
+        # Pass font object so we can re-save after Glyphs.app saves
+        _force_reload_glyphs_document(glyphs_path, font_object=font)
         
         return True
     
