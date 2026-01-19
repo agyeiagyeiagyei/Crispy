@@ -21,13 +21,15 @@ venv: venv/touchfile
 customize: venv
 	. venv/bin/activate; python3 scripts/customize.py
 
+# Step 0: Sync avar2-mappings.csv from Glyphs file (updates XTRA, XOPQ, YOPQ)
 # Step 1: Update config.yaml with STAT and avar2 sections from CSV
 # Steps 2-7: Build fonts (gftools builder generates build.ninja with 6 steps: buildVariable, fix, BuildSTAT, AddSpacingAxis, BuildAvar2, BuildFvarInstances)
 # Step 8: Convert avar2 to avar1
-build.stamp: venv sources/config.yaml sources/avar2-mappings.csv $(SOURCES)
+build.stamp: venv sources/config.yaml sources/avar2-mappings.csv sources/Crispy.glyphs $(SOURCES)
 	rm -rf fonts;
 	. venv/bin/activate && \
-	python3 sources/update_config.py --csv sources/avar2-mappings.csv --config sources/config.yaml --no-backup && \
+	python3 scripts/sync-glyphs-to-avar2.py --glyphs sources/Crispy.glyphs --csv sources/avar2-mappings.csv --once && \
+	python3 sources/update_config.py --csv sources/avar2-mappings.csv --config sources/config.yaml --no-backup --add-opsz && \
 	(for config in sources/config*.yaml; do gftools builder $$config; done) && \
 	gftools avar2-to-avar1 "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf" -m scripts/mapping.yaml -o "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ]-avar1.ttf" && \
 	touch build.stamp

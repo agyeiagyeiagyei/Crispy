@@ -44,7 +44,7 @@ def get_glyphs_instances(glyphs_path: Path) -> Dict[str, Dict[str, float]]:
     Read instances from Glyphs file.
     
     Returns dict mapping instance name -> {axis_tag: value}
-    Only includes axes that exist in the Glyphs file (XTRA, XOPQ, YOPQ).
+    Includes all axes found in the Glyphs file instances.
     """
     try:
         font = load(str(glyphs_path))
@@ -118,19 +118,47 @@ def update_csv_from_glyphs(
             print(f"CSV missing '{instance_name_col}' column", file=sys.stderr)
             return False
         
-        # Glyphs axes that we'll update (only ones that exist in Glyphs file)
-        glyphs_axes = {"XTRA", "XOPQ", "YOPQ"}
+        # Dynamically determine which axes to sync:
+        # - All axes found in Glyphs file instances
+        all_glyphs_axes = set()
+        for coords in glyphs_instances.values():
+            all_glyphs_axes.update(coords.keys())
+        
+        # Find axes in Glyphs that aren't in CSV (new axes to add)
+        csv_axes = set(fieldnames) - {instance_name_col}
+        new_axes = all_glyphs_axes - csv_axes
+        
+        # Axes to sync (both existing and new)
+        glyphs_axes = all_glyphs_axes
+        
+        if new_axes:
+            print(f"New axes found in Glyphs file (will add to CSV): {sorted(new_axes)}", file=sys.stderr)
+            # Add new axis columns to fieldnames
+            fieldnames = list(fieldnames) + sorted(new_axes)
+            # Initialize new axis columns for all existing rows
+            for row in csv_rows:
+                for axis in new_axes:
+                    row[axis] = ""
+        
+        existing_axes = all_glyphs_axes.intersection(csv_axes)
+        if existing_axes:
+            print(f"Syncing existing axes from Glyphs file: {sorted(existing_axes)}", file=sys.stderr)
         
         # Build mapping of instance name -> Glyphs coordinates
         glyphs_coords = {}
         for name, coords in glyphs_instances.items():
             glyphs_coords[name] = {axis: coords.get(axis) for axis in glyphs_axes if axis in coords}
         
+        # Build set of instance names from Glyphs file
+        glyphs_instance_names = set(glyphs_coords.keys())
+        
         # Update CSV rows
         updated_rows = []
         updated_count = 0
         removed_count = 0
+        added_count = 0
         
+        # Process existing CSV rows
         for row in csv_rows:
             instance_name = row.get(instance_name_col, "").strip()
             
@@ -147,24 +175,61 @@ def update_csv_from_glyphs(
                             updated_count += 1
                 
                 updated_rows.append(row)
+                # Remove from set so we know which instances are already in CSV
+                glyphs_instance_names.discard(instance_name)
             else:
                 # Remove row - instance not in Glyphs file
                 removed_count += 1
                 if not dry_run:
                     print(f"Removing row: {instance_name} (not in Glyphs file)", file=sys.stderr)
         
+        # Add new instances from Glyphs file that aren't in CSV
+        for instance_name in glyphs_instance_names:
+            coords = glyphs_coords[instance_name]
+            new_row = {instance_name_col: instance_name}
+            # Initialize all columns
+            for col in fieldnames:
+                if col != instance_name_col:
+                    if col in coords:
+                        new_row[col] = str(coords[col])
+                    else:
+                        new_row[col] = ""
+            updated_rows.append(new_row)
+            added_count += 1
+            if not dry_run:
+                print(f"Adding new instance: {instance_name}", file=sys.stderr)
+        
         if dry_run:
-            print(f"Dry run: Would update {updated_count} values, remove {removed_count} rows", file=sys.stderr)
-            return updated_count > 0 or removed_count > 0
+            changes = []
+            if updated_count > 0:
+                changes.append(f"update {updated_count} values")
+            if removed_count > 0:
+                changes.append(f"remove {removed_count} rows")
+            if added_count > 0:
+                changes.append(f"add {added_count} instances")
+            if new_axes:
+                changes.append(f"add {len(new_axes)} new axis columns")
+            if changes:
+                print(f"Dry run: Would {', '.join(changes)}", file=sys.stderr)
+            return updated_count > 0 or removed_count > 0 or added_count > 0 or bool(new_axes)
         
         # Write updated CSV
-        if updated_count > 0 or removed_count > 0:
+        if updated_count > 0 or removed_count > 0 or added_count > 0 or new_axes:
             with csv_path.open("w", encoding="utf-8", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(updated_rows)
             
-            print(f"Updated CSV: {updated_count} values updated, {removed_count} rows removed", file=sys.stderr)
+            changes = []
+            if updated_count > 0:
+                changes.append(f"{updated_count} values updated")
+            if removed_count > 0:
+                changes.append(f"{removed_count} rows removed")
+            if added_count > 0:
+                changes.append(f"{added_count} instances added")
+            if new_axes:
+                changes.append(f"{len(new_axes)} new axis columns added")
+            print(f"Updated CSV: {', '.join(changes)}", file=sys.stderr)
             return True
         else:
             print("No changes needed", file=sys.stderr)
@@ -241,9 +306,42 @@ def main():
         print(f"Error: Glyphs file not found: {args.glyphs}", file=sys.stderr)
         sys.exit(1)
     
+    # Create CSV if it doesn't exist
     if not args.csv.exists():
-        print(f"Error: CSV file not found: {args.csv}", file=sys.stderr)
-        sys.exit(1)
+        print(f"CSV file not found: {args.csv}", file=sys.stderr)
+        print(f"Creating new CSV from Glyphs file...", file=sys.stderr)
+        
+        # Read Glyphs instances to create CSV structure
+        glyphs_instances = get_glyphs_instances(args.glyphs)
+        if not glyphs_instances:
+            print(f"Error: No instances found in Glyphs file", file=sys.stderr)
+            sys.exit(1)
+        
+        # Determine all axes from Glyphs file
+        all_axes = set()
+        for coords in glyphs_instances.values():
+            all_axes.update(coords.keys())
+        
+        # Create CSV with Instance Name and all axes
+        fieldnames = ["Instance Name"] + sorted(all_axes)
+        rows = []
+        for name, coords in sorted(glyphs_instances.items()):
+            row = {"Instance Name": name}
+            for axis in sorted(all_axes):
+                row[axis] = str(coords.get(axis, ""))
+            rows.append(row)
+        
+        # Write new CSV
+        with args.csv.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        print(f"Created new CSV with {len(rows)} instances and {len(all_axes)} axes: {sorted(all_axes)}", file=sys.stderr)
+        
+        # If --once or not watching, exit after creating CSV
+        if args.once or not args.watch:
+            sys.exit(0)
     
     # Update once
     if args.once or not args.watch:

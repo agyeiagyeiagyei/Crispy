@@ -22,6 +22,7 @@ import argparse
 import csv
 import shutil
 import sys
+import tempfile
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -272,32 +273,40 @@ def get_width_name(value: int) -> str:
 def generate_stat_section(axis_values: Dict[str, List[int]], font_key: str) -> Dict:
     """Generate STAT table as dict structure."""
     stat_data = {
-        font_key: [
-            {
-                "name": "Optical Size",
-                "tag": "opsz",
-                "values": [{"name": f"{v}pt", "value": v} for v in axis_values["opsz"]],
-            },
-            {
-                "name": "Width",
-                "tag": "wdth",
-                "values": [{"name": get_width_name(v), "value": v} for v in axis_values["wdth"]],
-            },
-            {
-                "name": "Weight",
-                "tag": "wght",
-                "values": [],
-            },
-        ]
+        font_key: []
     }
+    
+    # Add Optical Size axis only if there's variation (more than one value)
+    if "opsz" in axis_values and len(axis_values["opsz"]) > 1:
+        stat_data[font_key].append({
+            "name": "Optical Size",
+            "tag": "opsz",
+            "values": [{"name": f"{v}pt", "value": v} for v in axis_values["opsz"]],
+        })
+    
+    # Width axis (always present)
+    stat_data[font_key].append({
+        "name": "Width",
+        "tag": "wdth",
+        "values": [{"name": get_width_name(v), "value": v} for v in axis_values["wdth"]],
+    })
+    
+    # Weight axis (always present)
+    stat_data[font_key].append({
+        "name": "Weight",
+        "tag": "wght",
+        "values": [],
+    })
 
     # Add weight values with style linking
+    # Find weight axis (it's the last axis in the list)
+    weight_axis_idx = len(stat_data[font_key]) - 1
     for wght_val in axis_values["wght"]:
         weight_entry = {"name": get_weight_name(wght_val), "value": wght_val}
         if wght_val == 400:  # Regular links to Bold
             weight_entry["linkedValue"] = 700
             weight_entry["flags"] = 2
-        stat_data[font_key][2]["values"].append(weight_entry)
+        stat_data[font_key][weight_axis_idx]["values"].append(weight_entry)
 
     # Add Contrast axis if present
     if "cntr" in axis_values:
@@ -329,7 +338,8 @@ def validate_stat_section(stat_data: Dict, font_key: str) -> None:
     if not isinstance(axes, list):
         raise ValueError("STAT axes must be a list")
 
-    required_tags = {"opsz", "wdth", "wght"}
+    # opsz is optional (only included if there's variation)
+    required_tags = {"wdth", "wght"}
     found_tags = {ax.get("tag") for ax in axes if isinstance(ax, dict)}
     missing = required_tags - found_tags
     if missing:
@@ -386,9 +396,27 @@ def generate_avar2_yaml_string(
     mappings: List[RowMapping],
     font_key: str,
     include_group_headers: bool = True,
+    skip_opsz_if_no_variation: bool = True,
 ) -> str:
-    """Generate avar2 section as YAML string (preserves comments and formatting)."""
+    """Generate avar2 section as YAML string (preserves comments and formatting).
+    
+    If skip_opsz_if_no_variation is True, removes opsz from in_axes if all mappings
+    have the same opsz value.
+    """
     _dedupe_check(mappings)
+    
+    # Check for opsz variation if requested
+    if skip_opsz_if_no_variation:
+        opsz_values = {m.in_axes.get("opsz") for m in mappings if "opsz" in m.in_axes}
+        if len(opsz_values) <= 1:
+            # Remove opsz from all mappings
+            for m in mappings:
+                if "opsz" in m.in_axes:
+                    # Create new dict without opsz
+                    new_in_axes = {k: v for k, v in m.in_axes.items() if k != "opsz"}
+                    # Replace the in_axes (RowMapping is frozen, so we need to recreate)
+                    # Actually, we can't modify frozen dataclass, so we'll filter during output
+    
     mappings = sorted(mappings, key=_sort_key)
 
     lines: List[str] = []
@@ -397,10 +425,14 @@ def generate_avar2_yaml_string(
 
     current_wdth: Optional[Decimal] = None
     current_opsz: Optional[Decimal] = None
+    
+    # Determine if we should skip opsz in output
+    opsz_values = {m.in_axes.get("opsz") for m in mappings if "opsz" in m.in_axes}
+    skip_opsz = skip_opsz_if_no_variation and len(opsz_values) <= 1
 
     for m in mappings:
         wdth = m.in_axes["wdth"]
-        opsz = m.in_axes["opsz"]
+        opsz = m.in_axes.get("opsz")  # May not exist if skipped
 
         if include_group_headers:
             if current_wdth is None or wdth != current_wdth:
@@ -411,7 +443,7 @@ def generate_avar2_yaml_string(
                 current_wdth = wdth
                 current_opsz = None
 
-            if current_opsz is None or opsz != current_opsz:
+            if opsz is not None and (current_opsz is None or opsz != current_opsz):
                 lines.append("")
                 lines.append(f"  # OPSZ = {_fmt_decimal(opsz)}")
                 current_opsz = opsz
@@ -423,8 +455,10 @@ def generate_avar2_yaml_string(
         lines.append("  - in:")
 
         # Stable ordering for in: (sorted by axis name)
-        for k in sorted(m.in_axes.keys()):
-            lines.append(f"      {k}: {_fmt_decimal(m.in_axes[k])}")
+        # Skip opsz if no variation
+        in_axes_to_output = {k: v for k, v in m.in_axes.items() if not (skip_opsz and k == "opsz")}
+        for k in sorted(in_axes_to_output.keys()):
+            lines.append(f"      {k}: {_fmt_decimal(in_axes_to_output[k])}")
 
         lines.append("    out:")
         # Preserve out-axis order from CSV header
@@ -735,7 +769,157 @@ except ImportError:
         spec.loader.exec_module(expand_contrast)
         expand_csv_with_contrast = expand_contrast.expand_csv_with_contrast
     else:
-        raise ImportError("expand_contrast.py not found. Contrast expansion requires this module.")
+        expand_csv_with_contrast = None
+
+
+def expand_csv_with_opsz(
+    csv_path: Path, 
+    opsz_config_path: Optional[Path] = None,
+    output_path: Optional[Path] = None
+) -> Path:
+    """
+    Expand CSV with MinOPSZ and MaxOPSZ rows based on opsz.yaml configuration.
+    
+    For each base row (OPSZ=48), creates 2 additional rows:
+    - MinOPSZ (OPSZ=12): Adjusted XOPQ/YOPQ/XTRA with -MinOPSZ suffix
+    - MaxOPSZ (OPSZ=72): Adjusted XOPQ/YOPQ/XTRA with -MaxOPSZ suffix
+    
+    Returns path to expanded CSV.
+    """
+    if opsz_config_path is None:
+        opsz_config_path = csv_path.parent / "opsz.yaml"
+    
+    if not opsz_config_path.exists():
+        raise FileNotFoundError(f"opsz.yaml not found at {opsz_config_path}")
+    
+    # Load opsz config
+    with opsz_config_path.open('r') as f:
+        config = yaml.safe_load(f)
+    
+    base_opsz = config['base_opsz']
+    min_opsz = config['min_opsz']
+    max_opsz = config['max_opsz']
+    weight_points = sorted(config['weight_adjustments'], key=lambda x: x['weight'])
+    xtra_condensed = config['xtra_adjustments']['condensed_widths']
+    
+    def interpolate_multiplier(weight: int, axis: str) -> Tuple[float, float]:
+        """Interpolate multiplier for given weight and axis."""
+        if weight <= weight_points[0]['weight']:
+            return (
+                weight_points[0]['min_opsz_multipliers'][axis],
+                weight_points[0]['max_opsz_multipliers'][axis]
+            )
+        if weight >= weight_points[-1]['weight']:
+            return (
+                weight_points[-1]['min_opsz_multipliers'][axis],
+                weight_points[-1]['max_opsz_multipliers'][axis]
+            )
+        
+        for i in range(len(weight_points) - 1):
+            w1, w2 = weight_points[i]['weight'], weight_points[i+1]['weight']
+            if w1 <= weight <= w2:
+                t = (weight - w1) / (w2 - w1)
+                min_m1 = weight_points[i]['min_opsz_multipliers'][axis]
+                min_m2 = weight_points[i+1]['min_opsz_multipliers'][axis]
+                max_m1 = weight_points[i]['max_opsz_multipliers'][axis]
+                max_m2 = weight_points[i+1]['max_opsz_multipliers'][axis]
+                min_mult = min_m1 + (min_m2 - min_m1) * t
+                max_mult = max_m1 + (max_m2 - max_m1) * t
+                return min_mult, max_mult
+        
+        return 1.0, 1.0
+    
+    # Determine output path
+    if output_path is None:
+        # Use temporary file if no output path specified
+        output_path = Path(tempfile.mktemp(suffix='.csv', prefix='avar2-mappings_with_opsz_'))
+    
+    rows = []
+    with csv_path.open('r', encoding='utf-8-sig') as f:
+        reader = csv.DictReader(f)
+        fieldnames = list(reader.fieldnames)
+        for row in reader:
+            rows.append(row)
+    
+    # Generate new rows
+    new_rows = []
+    
+    for row in rows:
+        # Keep base row (OPSZ=base_opsz)
+        base_row = row.copy()
+        new_rows.append(base_row)
+        
+        # Only generate opsz rows if this row has the base opsz
+        if int(row.get('OPSZ', base_opsz)) != base_opsz:
+            continue
+        
+        # Get values
+        wght = int(row['WGHT'])
+        wdth = int(row['WDTH'])
+        base_xopq = float(row['XOPQ'])
+        base_yopq = float(row['YOPQ'])
+        base_xtra = float(row['XTRA'])
+        instance_name = row['Instance Name']
+        
+        # Get multipliers
+        min_xopq_mult, max_xopq_mult = interpolate_multiplier(wght, 'xopq')
+        min_yopq_mult, max_yopq_mult = interpolate_multiplier(wght, 'yopq')
+        
+        # Apply XTRA adjustments for condensed
+        min_xtra_mult = xtra_condensed['min_opsz_multiplier'] if wdth < 100 else 1.0
+        max_xtra_mult = xtra_condensed['max_opsz_multiplier'] if wdth < 100 else 1.0
+        
+        # Calculate adjusted values
+        min_xopq = base_xopq * min_xopq_mult
+        max_xopq = base_xopq * max_xopq_mult
+        min_yopq = base_yopq * min_yopq_mult
+        max_yopq = base_yopq * max_yopq_mult
+        min_xtra = base_xtra * min_xtra_mult
+        max_xtra = base_xtra * max_xtra_mult
+        
+        # Create MinOPSZ row
+        min_row = row.copy()
+        min_row['Instance Name'] = f"{instance_name}-MinOPSZ"
+        min_row['OPSZ'] = str(min_opsz)
+        min_row['XOPQ'] = f"{min_xopq:.3f}"
+        min_row['YOPQ'] = f"{min_yopq:.3f}"
+        min_row['XTRA'] = f"{min_xtra:.3f}"
+        # Set SPAC: +20 for MinOPSZ
+        if 'SPAC' in min_row:
+            min_row['SPAC'] = '20'
+        new_rows.append(min_row)
+        
+        # Create MaxOPSZ row
+        max_row = row.copy()
+        max_row['Instance Name'] = f"{instance_name}-MaxOPSZ"
+        max_row['OPSZ'] = str(max_opsz)
+        max_row['XOPQ'] = f"{max_xopq:.3f}"
+        max_row['YOPQ'] = f"{max_yopq:.3f}"
+        max_row['XTRA'] = f"{max_xtra:.3f}"
+        # Set SPAC: -20 for MaxOPSZ
+        if 'SPAC' in max_row:
+            max_row['SPAC'] = '-20'
+        new_rows.append(max_row)
+    
+    # Write output
+    with output_path.open('w', encoding='utf-8', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(new_rows)
+    
+    return output_path
+
+
+def check_opsz_variation(csv_path: Path) -> bool:
+    """Check if CSV has variation in OPSZ column (more than one unique value)."""
+    opsz_values = set()
+    with csv_path.open('r', encoding='utf-8-sig') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            opsz = row.get('OPSZ', '').strip()
+            if opsz:
+                opsz_values.add(opsz)
+    return len(opsz_values) > 1
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -748,6 +932,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--no-backup", action="store_true", help="Don't create backup of config.yaml.")
     ap.add_argument("--dry-run", action="store_true", help="Validate only, don't write changes.")
     ap.add_argument("--add-contrast", action="store_true", help="Expand CSV with contrast variations before processing.")
+    ap.add_argument("--add-opsz", action="store_true", help="Expand CSV with MinOPSZ and MaxOPSZ rows based on opsz.yaml.")
+    ap.add_argument("--save-opsz-csv", action="store_true", help="Save expanded opsz CSV to file (default: use temporary file, auto-deleted).")
     args = ap.parse_args(argv)
 
     try:
@@ -756,13 +942,30 @@ def main(argv: Optional[List[str]] = None) -> int:
         validate_csv_structure(args.csv)
         print("  ✓ CSV structure valid", file=sys.stderr)
 
-        # Step 2: Read CSV mappings (with optional contrast expansion)
+        # Step 2: Read CSV mappings (with optional contrast/opsz expansion)
         print("Step 2: Reading CSV mappings...", file=sys.stderr)
         csv_to_use = args.csv
+        
+        # Check opsz variation before expansion (for avar2 generation later)
+        has_opsz_variation_before = check_opsz_variation(csv_to_use)
+        
+        if args.add_opsz:
+            print("  Expanding CSV with opsz variations...", file=sys.stderr)
+            # Determine output path based on flag
+            if args.save_opsz_csv:
+                opsz_output = csv_to_use.parent / f"{csv_to_use.stem}_with_opsz{csv_to_use.suffix}"
+            else:
+                opsz_output = None  # Will use temporary file
+            csv_to_use = expand_csv_with_opsz(csv_to_use, output_path=opsz_output)
+            if args.save_opsz_csv:
+                print(f"  ✓ Expanded CSV written to: {csv_to_use}", file=sys.stderr)
+            else:
+                print(f"  ✓ Expanded CSV generated (temporary file)", file=sys.stderr)
+        
         if args.add_contrast:
             print("  Expanding CSV with contrast variations...", file=sys.stderr)
             csv_to_use = expand_csv_with_contrast(
-                args.csv,
+                csv_to_use,
                 # Asymmetric scaling for balanced perceptual impact
                 # Negative side needs stronger scaling to match positive side's visual impact
                 negative_factor=Decimal("1.20"),  # Higher factor for negative (less contrast) side
@@ -771,8 +974,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                 positive_offset=Decimal("30"),    # Moderate offset for positive side
             )
             print(f"  ✓ Expanded CSV written to: {csv_to_use}", file=sys.stderr)
+        
         mappings = read_csv_mappings(csv_to_use)
         print(f"  ✓ Read {len(mappings)} mappings", file=sys.stderr)
+        
+        # Store path for cleanup if temporary file was used
+        temp_opsz_file = None
+        if args.add_opsz and not args.save_opsz_csv:
+            temp_opsz_file = csv_to_use
 
         # Step 3: Load and validate existing config
         print("Step 3: Loading existing config.yaml...", file=sys.stderr)
@@ -788,16 +997,27 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         # Step 5: Generate STAT section
         print("Step 5: Generating STAT section...", file=sys.stderr)
-        # Use expanded CSV if contrast was added, otherwise use original
-        stat_csv = csv_to_use if args.add_contrast else args.csv
+        # Use expanded CSV if opsz or contrast was added, otherwise use original
+        stat_csv = csv_to_use if (args.add_opsz or args.add_contrast) else args.csv
         axis_values = extract_axis_values_from_csv(stat_csv)
+        # Remove opsz from STAT if there's no variation (only one value)
+        if len(axis_values.get("opsz", [])) <= 1:
+            axis_values.pop("opsz", None)
+            print("  ℹ OPSZ axis skipped in STAT (no variation)", file=sys.stderr)
         stat_data = generate_stat_section(axis_values, font_key)
         validate_stat_section(stat_data, font_key)
         print(f"  ✓ STAT section generated ({len(stat_data[font_key])} axes)", file=sys.stderr)
 
         # Step 6: Generate avar2 section
         print("Step 6: Generating avar2 section...", file=sys.stderr)
-        avar2_yaml = generate_avar2_yaml_string(mappings, font_key, include_group_headers=True)
+        # Check if opsz has variation (after expansions)
+        has_opsz_variation_after = check_opsz_variation(csv_to_use)
+        avar2_yaml = generate_avar2_yaml_string(
+            mappings, 
+            font_key,
+            include_group_headers=True,
+            skip_opsz_if_no_variation=not has_opsz_variation_after
+        )
         validate_avar2_yaml(avar2_yaml, font_key)
         # Count entries
         avar2_parsed = yaml.safe_load(avar2_yaml)
@@ -825,6 +1045,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"  ✓ Config written: {args.config}", file=sys.stderr)
 
         print("\n✓ All steps completed successfully!", file=sys.stderr)
+        
+        # Clean up temporary opsz file if it was created
+        if 'temp_opsz_file' in locals() and temp_opsz_file and temp_opsz_file.exists():
+            try:
+                temp_opsz_file.unlink()
+            except Exception:
+                pass  # Ignore cleanup errors
+        
         return 0
 
     except Exception as e:

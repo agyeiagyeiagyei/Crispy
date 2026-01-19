@@ -9,42 +9,42 @@ fvarInstances:
   Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
   - name: ExtraLight
     coordinates:
-      opsz: 12
+      opsz: 48
       wdth: 100
       wght: 200
   - name: Light
     coordinates:
-      opsz: 12
+      opsz: 48
       wdth: 100
       wght: 300
   - name: Regular
     coordinates:
-      opsz: 12
+      opsz: 48
       wdth: 100
       wght: 400
   - name: Medium
     coordinates:
-      opsz: 12
+      opsz: 48
       wdth: 100
       wght: 500
   - name: SemiBold
     coordinates:
-      opsz: 12
+      opsz: 48
       wdth: 100
       wght: 600
   - name: Bold
     coordinates:
-      opsz: 12
+      opsz: 48
       wdth: 100
       wght: 700
   - name: ExtraBold
     coordinates:
-      opsz: 12
+      opsz: 48
       wdth: 100
       wght: 800
   - name: Black
     coordinates:
-      opsz: 12
+      opsz: 48
       wdth: 100
       wght: 900
 
@@ -53,6 +53,10 @@ stat:
   - name: Optical Size
     tag: opsz
     values:
+    - name: 12pt
+      value: 12
+    - name: 48pt
+      value: 48
     - name: 72pt
       value: 72
   - name: Width
@@ -97,9 +101,22 @@ avar2:
 
   # OPSZ = 72
 
-  # ExtraLight Condensed
+  # ExtraLight Condensed-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 40
+      wght: 200
+    out:
+      XTRA: 248
+      XOPQ: 74.1
+      YOPQ: 80.75
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # ExtraLight Condensed
+  - in:
+      opsz: 48
       wdth: 40
       wght: 200
     out:
@@ -108,9 +125,37 @@ avar2:
       YOPQ: 85
       SPAC: 25
 
-  # Light Condensed
+  # OPSZ = 12
+
+  # ExtraLight Condensed-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 40
+      wght: 200
+    out:
+      XTRA: 260.4
+      XOPQ: 81.9
+      YOPQ: 89.25
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Light Condensed-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 40
+      wght: 300
+    out:
+      XTRA: 280
+      XOPQ: 92.625
+      YOPQ: 87.75
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Light Condensed
+  - in:
+      opsz: 48
       wdth: 40
       wght: 300
     out:
@@ -119,7 +164,22 @@ avar2:
       YOPQ: 90
       SPAC: 25
 
-  # Regular Condensed
+  # OPSZ = 12
+
+  # Light Condensed-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 40
+      wght: 300
+    out:
+      XTRA: 294
+      XOPQ: 97.375
+      YOPQ: 92.25
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Regular Condensed-MaxOPSZ
   - in:
       opsz: 72
       wdth: 40
@@ -128,11 +188,52 @@ avar2:
       XTRA: 290
       XOPQ: 147
       YOPQ: 130
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Regular Condensed
+  - in:
+      opsz: 48
+      wdth: 40
+      wght: 400
+    out:
+      XTRA: 290
+      XOPQ: 147
+      YOPQ: 130
       SPAC: 25
+
+  # OPSZ = 12
+
+  # Regular Condensed-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 40
+      wght: 400
+    out:
+      XTRA: 304.5
+      XOPQ: 147
+      YOPQ: 130
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Medium Condensed-MaxOPSZ
+  - in:
+      opsz: 72
+      wdth: 40
+      wght: 500
+    out:
+      XTRA: 323
+      XOPQ: 173.85
+      YOPQ: 165.717
+      SPAC: -20
+
+  # OPSZ = 48
 
   # Medium Condensed
   - in:
-      opsz: 72
+      opsz: 48
       wdth: 40
       wght: 500
     out:
@@ -141,9 +242,37 @@ avar2:
       YOPQ: 163
       SPAC: 25
 
-  # Semibold Condensed
+  # OPSZ = 12
+
+  # Medium Condensed-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 40
+      wght: 500
+    out:
+      XTRA: 339.15
+      XOPQ: 168.15
+      YOPQ: 160.283
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Semibold Condensed-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 40
+      wght: 600
+    out:
+      XTRA: 345
+      XOPQ: 248
+      YOPQ: 248
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Semibold Condensed
+  - in:
+      opsz: 48
       wdth: 40
       wght: 600
     out:
@@ -152,9 +281,37 @@ avar2:
       YOPQ: 240
       SPAC: 25
 
-  # Bold Condensed
+  # OPSZ = 12
+
+  # Semibold Condensed-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 40
+      wght: 600
+    out:
+      XTRA: 362.25
+      XOPQ: 232
+      YOPQ: 232
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Bold Condensed-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 40
+      wght: 700
+    out:
+      XTRA: 354
+      XOPQ: 338.1
+      YOPQ: 281.4
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Bold Condensed
+  - in:
+      opsz: 48
       wdth: 40
       wght: 700
     out:
@@ -163,9 +320,37 @@ avar2:
       YOPQ: 268
       SPAC: 25
 
-  # Extrabold Condensed
+  # OPSZ = 12
+
+  # Bold Condensed-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 40
+      wght: 700
+    out:
+      XTRA: 371.7
+      XOPQ: 305.9
+      YOPQ: 254.6
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Extrabold Condensed-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 40
+      wght: 800
+    out:
+      XTRA: 330
+      XOPQ: 404.7
+      YOPQ: 340.8
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Extrabold Condensed
+  - in:
+      opsz: 48
       wdth: 40
       wght: 800
     out:
@@ -174,9 +359,37 @@ avar2:
       YOPQ: 320
       SPAC: 25
 
-  # Black Condensed
+  # OPSZ = 12
+
+  # Extrabold Condensed-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 40
+      wght: 800
+    out:
+      XTRA: 346.5
+      XOPQ: 355.3
+      YOPQ: 299.2
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Black Condensed-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 40
+      wght: 900
+    out:
+      XTRA: 318
+      XOPQ: 439.56
+      YOPQ: 353.16
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Black Condensed
+  - in:
+      opsz: 48
       wdth: 40
       wght: 900
     out:
@@ -185,15 +398,41 @@ avar2:
       YOPQ: 327
       SPAC: 25
 
+  # OPSZ = 12
+
+  # Black Condensed-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 40
+      wght: 900
+    out:
+      XTRA: 333.9
+      XOPQ: 374.44
+      YOPQ: 300.84
+      SPAC: 20
+
   # =========================
   # Width = 100
   # =========================
 
   # OPSZ = 72
 
-  # ExtraLight
+  # ExtraLight-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 100
+      wght: 200
+    out:
+      XTRA: 580
+      XOPQ: 74.646
+      YOPQ: 68.96
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # ExtraLight
+  - in:
+      opsz: 48
       wdth: 100
       wght: 200
     out:
@@ -202,9 +441,37 @@ avar2:
       YOPQ: 72.59
       SPAC: 25
 
-  # Light
+  # OPSZ = 12
+
+  # ExtraLight-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 200
+    out:
+      XTRA: 580
+      XOPQ: 82.504
+      YOPQ: 76.22
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Light-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 100
+      wght: 300
+    out:
+      XTRA: 603.55
+      XOPQ: 129.796
+      YOPQ: 101.647
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Light
+  - in:
+      opsz: 48
       wdth: 100
       wght: 300
     out:
@@ -213,7 +480,22 @@ avar2:
       YOPQ: 104.253
       SPAC: 25
 
-  # Regular
+  # OPSZ = 12
+
+  # Light-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 300
+    out:
+      XTRA: 603.55
+      XOPQ: 136.452
+      YOPQ: 106.859
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Regular-MaxOPSZ
   - in:
       opsz: 72
       wdth: 100
@@ -222,11 +504,52 @@ avar2:
       XTRA: 627
       XOPQ: 187.672
       YOPQ: 135.916
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Regular
+  - in:
+      opsz: 48
+      wdth: 100
+      wght: 400
+    out:
+      XTRA: 627
+      XOPQ: 187.672
+      YOPQ: 135.916
       SPAC: 25
+
+  # OPSZ = 12
+
+  # Regular-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 400
+    out:
+      XTRA: 627
+      XOPQ: 187.672
+      YOPQ: 135.916
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Medium-MaxOPSZ
+  - in:
+      opsz: 72
+      wdth: 100
+      wght: 500
+    out:
+      XTRA: 650.5
+      XOPQ: 246.258
+      YOPQ: 170.373
+      SPAC: -20
+
+  # OPSZ = 48
 
   # Medium
   - in:
-      opsz: 72
+      opsz: 48
       wdth: 100
       wght: 500
     out:
@@ -235,9 +558,37 @@ avar2:
       YOPQ: 167.58
       SPAC: 25
 
-  # SemiBold
+  # OPSZ = 12
+
+  # Medium-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 500
+    out:
+      XTRA: 650.5
+      XOPQ: 238.184
+      YOPQ: 164.787
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # SemiBold-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 100
+      wght: 600
+    out:
+      XTRA: 693.05
+      XOPQ: 332.196
+      YOPQ: 230.461
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # SemiBold
+  - in:
+      opsz: 48
       wdth: 100
       wght: 600
     out:
@@ -246,9 +597,37 @@ avar2:
       YOPQ: 223.027
       SPAC: 25
 
-  # Bold
+  # OPSZ = 12
+
+  # SemiBold-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 600
+    out:
+      XTRA: 693.05
+      XOPQ: 310.764
+      YOPQ: 215.593
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Bold-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 100
+      wght: 700
+    out:
+      XTRA: 735.6
+      XOPQ: 420.775
+      YOPQ: 292.398
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Bold
+  - in:
+      opsz: 48
       wdth: 100
       wght: 700
     out:
@@ -257,9 +636,37 @@ avar2:
       YOPQ: 278.474
       SPAC: 25
 
-  # ExtraBold
+  # OPSZ = 12
+
+  # Bold-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 700
+    out:
+      XTRA: 735.6
+      XOPQ: 380.701
+      YOPQ: 264.55
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # ExtraBold-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 100
+      wght: 800
+    out:
+      XTRA: 770
+      XOPQ: 496.9
+      YOPQ: 328.854
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # ExtraBold
+  - in:
+      opsz: 48
       wdth: 100
       wght: 800
     out:
@@ -268,9 +675,37 @@ avar2:
       YOPQ: 308.783
       SPAC: 25
 
-  # Black
+  # OPSZ = 12
+
+  # ExtraBold-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 800
+    out:
+      XTRA: 770
+      XOPQ: 436.246
+      YOPQ: 288.712
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Black-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 100
+      wght: 900
+    out:
+      XTRA: 804.4
+      XOPQ: 575.002
+      YOPQ: 366.22
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Black
+  - in:
+      opsz: 48
       wdth: 100
       wght: 900
     out:
@@ -279,15 +714,41 @@ avar2:
       YOPQ: 339.093
       SPAC: 25
 
+  # OPSZ = 12
+
+  # Black-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 900
+    out:
+      XTRA: 804.4
+      XOPQ: 489.816
+      YOPQ: 311.966
+      SPAC: 20
+
   # =========================
   # Width = 160
   # =========================
 
   # OPSZ = 72
 
-  # ExtraLight Extended
+  # ExtraLight Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 160
+      wght: 200
+    out:
+      XTRA: 1259
+      XOPQ: 80.75
+      YOPQ: 79.8
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # ExtraLight Extended
+  - in:
+      opsz: 48
       wdth: 160
       wght: 200
     out:
@@ -296,9 +757,37 @@ avar2:
       YOPQ: 84
       SPAC: 25
 
-  # Light Extended
+  # OPSZ = 12
+
+  # ExtraLight Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 160
+      wght: 200
+    out:
+      XTRA: 1259
+      XOPQ: 89.25
+      YOPQ: 88.2
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Light Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 160
+      wght: 300
+    out:
+      XTRA: 1259
+      XOPQ: 110.175
+      YOPQ: 108.225
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Light Extended
+  - in:
+      opsz: 48
       wdth: 160
       wght: 300
     out:
@@ -307,7 +796,22 @@ avar2:
       YOPQ: 111
       SPAC: 25
 
-  # Regular Extended
+  # OPSZ = 12
+
+  # Light Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 160
+      wght: 300
+    out:
+      XTRA: 1259
+      XOPQ: 115.825
+      YOPQ: 113.775
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Regular Extended-MaxOPSZ
   - in:
       opsz: 72
       wdth: 160
@@ -316,11 +820,52 @@ avar2:
       XTRA: 1259
       XOPQ: 200
       YOPQ: 188
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Regular Extended
+  - in:
+      opsz: 48
+      wdth: 160
+      wght: 400
+    out:
+      XTRA: 1259
+      XOPQ: 200
+      YOPQ: 188
       SPAC: 25
+
+  # OPSZ = 12
+
+  # Regular Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 160
+      wght: 400
+    out:
+      XTRA: 1259
+      XOPQ: 200
+      YOPQ: 188
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Medium Extended-MaxOPSZ
+  - in:
+      opsz: 72
+      wdth: 160
+      wght: 500
+    out:
+      XTRA: 1213
+      XOPQ: 303.983
+      YOPQ: 277.55
+      SPAC: -20
+
+  # OPSZ = 48
 
   # Medium Extended
   - in:
-      opsz: 72
+      opsz: 48
       wdth: 160
       wght: 500
     out:
@@ -329,9 +874,37 @@ avar2:
       YOPQ: 273
       SPAC: 25
 
-  # Semibold Extended
+  # OPSZ = 12
+
+  # Medium Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 160
+      wght: 500
+    out:
+      XTRA: 1213
+      XOPQ: 294.017
+      YOPQ: 268.45
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Semibold Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 160
+      wght: 600
+    out:
+      XTRA: 1213
+      XOPQ: 382.333
+      YOPQ: 328.6
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Semibold Extended
+  - in:
+      opsz: 48
       wdth: 160
       wght: 600
     out:
@@ -340,9 +913,37 @@ avar2:
       YOPQ: 318
       SPAC: 25
 
-  # Bold Extended
+  # OPSZ = 12
+
+  # Semibold Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 160
+      wght: 600
+    out:
+      XTRA: 1213
+      XOPQ: 357.667
+      YOPQ: 307.4
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Bold Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 160
+      wght: 700
+    out:
+      XTRA: 1200
+      XOPQ: 470.4
+      YOPQ: 362.25
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Bold Extended
+  - in:
+      opsz: 48
       wdth: 160
       wght: 700
     out:
@@ -351,9 +952,37 @@ avar2:
       YOPQ: 345
       SPAC: 25
 
-  # Extrabold Extended
+  # OPSZ = 12
+
+  # Bold Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 160
+      wght: 700
+    out:
+      XTRA: 1200
+      XOPQ: 425.6
+      YOPQ: 327.75
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Extrabold Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 160
+      wght: 800
+    out:
+      XTRA: 1275
+      XOPQ: 541.02
+      YOPQ: 383.4
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Extrabold Extended
+  - in:
+      opsz: 48
       wdth: 160
       wght: 800
     out:
@@ -362,9 +991,37 @@ avar2:
       YOPQ: 360
       SPAC: 25
 
-  # Black Extended
+  # OPSZ = 12
+
+  # Extrabold Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 160
+      wght: 800
+    out:
+      XTRA: 1275
+      XOPQ: 474.98
+      YOPQ: 336.6
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Black Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 160
+      wght: 900
+    out:
+      XTRA: 1350
+      XOPQ: 626.184
+      YOPQ: 422.712
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Black Extended
+  - in:
+      opsz: 48
       wdth: 160
       wght: 900
     out:
@@ -373,15 +1030,41 @@ avar2:
       YOPQ: 391.4
       SPAC: 25
 
+  # OPSZ = 12
+
+  # Black Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 160
+      wght: 900
+    out:
+      XTRA: 1350
+      XOPQ: 533.416
+      YOPQ: 360.088
+      SPAC: 20
+
   # =========================
   # Width = 220
   # =========================
 
   # OPSZ = 72
 
-  # ExtraLight Ultra Extended
+  # ExtraLight Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 220
+      wght: 200
+    out:
+      XTRA: 2300
+      XOPQ: 95
+      YOPQ: 93.1
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # ExtraLight Ultra Extended
+  - in:
+      opsz: 48
       wdth: 220
       wght: 200
     out:
@@ -390,9 +1073,37 @@ avar2:
       YOPQ: 98
       SPAC: 25
 
-  # Light Ultra Extended
+  # OPSZ = 12
+
+  # ExtraLight Ultra Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 220
+      wght: 200
+    out:
+      XTRA: 2300
+      XOPQ: 105
+      YOPQ: 102.9
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Light Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 220
+      wght: 300
+    out:
+      XTRA: 2290
+      XOPQ: 130.65
+      YOPQ: 124.8
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Light Ultra Extended
+  - in:
+      opsz: 48
       wdth: 220
       wght: 300
     out:
@@ -401,7 +1112,22 @@ avar2:
       YOPQ: 128
       SPAC: 25
 
-  # Regular Ultra Extended
+  # OPSZ = 12
+
+  # Light Ultra Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 220
+      wght: 300
+    out:
+      XTRA: 2290
+      XOPQ: 137.35
+      YOPQ: 131.2
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Regular Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
       wdth: 220
@@ -410,11 +1136,52 @@ avar2:
       XTRA: 2290
       XOPQ: 176
       YOPQ: 158
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Regular Ultra Extended
+  - in:
+      opsz: 48
+      wdth: 220
+      wght: 400
+    out:
+      XTRA: 2290
+      XOPQ: 176
+      YOPQ: 158
       SPAC: 25
+
+  # OPSZ = 12
+
+  # Regular Ultra Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 220
+      wght: 400
+    out:
+      XTRA: 2290
+      XOPQ: 176
+      YOPQ: 158
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Medium Ultra Extended-MaxOPSZ
+  - in:
+      opsz: 72
+      wdth: 220
+      wght: 500
+    out:
+      XTRA: 2290
+      XOPQ: 322.283
+      YOPQ: 263.317
+      SPAC: -20
+
+  # OPSZ = 48
 
   # Medium Ultra Extended
   - in:
-      opsz: 72
+      opsz: 48
       wdth: 220
       wght: 500
     out:
@@ -423,9 +1190,37 @@ avar2:
       YOPQ: 259
       SPAC: 25
 
-  # Semibold Ultra Extended
+  # OPSZ = 12
+
+  # Medium Ultra Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 220
+      wght: 500
+    out:
+      XTRA: 2290
+      XOPQ: 311.717
+      YOPQ: 254.683
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Semibold Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 220
+      wght: 600
+    out:
+      XTRA: 2346
+      XOPQ: 370.967
+      YOPQ: 301.733
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Semibold Ultra Extended
+  - in:
+      opsz: 48
       wdth: 220
       wght: 600
     out:
@@ -434,9 +1229,37 @@ avar2:
       YOPQ: 292
       SPAC: 25
 
-  # Bold Ultra Extended
+  # OPSZ = 12
+
+  # Semibold Ultra Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 220
+      wght: 600
+    out:
+      XTRA: 2346
+      XOPQ: 347.033
+      YOPQ: 282.267
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Bold Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 220
+      wght: 700
+    out:
+      XTRA: 2346
+      XOPQ: 439.95
+      YOPQ: 363.3
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Bold Ultra Extended
+  - in:
+      opsz: 48
       wdth: 220
       wght: 700
     out:
@@ -445,9 +1268,37 @@ avar2:
       YOPQ: 346
       SPAC: 25
 
-  # ExtraBold Ultra Extended
+  # OPSZ = 12
+
+  # Bold Ultra Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 220
+      wght: 700
+    out:
+      XTRA: 2346
+      XOPQ: 398.05
+      YOPQ: 328.7
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # ExtraBold Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 220
+      wght: 800
+    out:
+      XTRA: 2380
+      XOPQ: 639
+      YOPQ: 447.3
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # ExtraBold Ultra Extended
+  - in:
+      opsz: 48
       wdth: 220
       wght: 800
     out:
@@ -456,9 +1307,37 @@ avar2:
       YOPQ: 420
       SPAC: 25
 
-  # Black Ultra Extended
+  # OPSZ = 12
+
+  # ExtraBold Ultra Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 220
+      wght: 800
+    out:
+      XTRA: 2380
+      XOPQ: 561
+      YOPQ: 392.7
+      SPAC: 20
+
+  # OPSZ = 72
+
+  # Black Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
+      wdth: 220
+      wght: 900
+    out:
+      XTRA: 2470
+      XOPQ: 631.8
+      YOPQ: 476.28
+      SPAC: -20
+
+  # OPSZ = 48
+
+  # Black Ultra Extended
+  - in:
+      opsz: 48
       wdth: 220
       wght: 900
     out:
@@ -466,5 +1345,18 @@ avar2:
       XOPQ: 585
       YOPQ: 441
       SPAC: 25
+
+  # OPSZ = 12
+
+  # Black Ultra Extended-MinOPSZ
+  - in:
+      opsz: 12
+      wdth: 220
+      wght: 900
+    out:
+      XTRA: 2470
+      XOPQ: 538.2
+      YOPQ: 405.72
+      SPAC: 20
 
 includeSourceFixes: false
