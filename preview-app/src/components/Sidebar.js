@@ -1,11 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import './Sidebar.css';
 import AxisControl from './AxisControl';
 import UpdateButton from './UpdateButton';
+import DuplicateModal from './DuplicateModal';
 
 const DEFAULT_SAMPLE_TEXT = "The Quick Brown Fox Jumps Over The Lazy Dog 0123456789 &!";
 
-function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange }) {
+function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance }) {
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  
+  // Check if coordinates have been modified from original
+  const coordinatesChanged = React.useMemo(() => {
+    if (!selectedInstance || !originalCoordinates || Object.keys(originalCoordinates).length === 0) {
+      return false;
+    }
+    // Check if any coordinate differs from original
+    return Object.keys(originalCoordinates).some(
+      key => {
+        const current = coordinates[key] ?? 0;
+        const original = originalCoordinates[key] ?? 0;
+        return Math.abs(current - original) > 0.01;
+      }
+    );
+  }, [selectedInstance, coordinates, originalCoordinates]);
+  
+  const duplicateButtonText = coordinatesChanged ? "Add New Instance" : "Duplicate Instance";
+  
   return (
     <aside className="sidebar">
       {selectedInstance ? (
@@ -46,7 +66,7 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
         <input
           type="range"
           min="0.5"
-          max="8"
+          max="12"
           step="0.1"
           value={fontSize}
           onChange={(e) => onFontSizeChange(parseFloat(e.target.value))}
@@ -67,13 +87,33 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
       )}
       
       {selectedInstance && (
-        <div className="update-button-section">
-          <UpdateButton
-            onClick={onUpdateInstance}
-            instanceName={selectedInstance.name}
-          />
-        </div>
+        <>
+          <div className="duplicate-button-section">
+            <button
+              onClick={() => setShowDuplicateModal(true)}
+              className="btn btn-duplicate"
+            >
+              {duplicateButtonText}
+            </button>
+          </div>
+          <div className="update-button-section">
+            <UpdateButton
+              onClick={onUpdateInstance}
+              instanceName={selectedInstance.name}
+            />
+          </div>
+        </>
       )}
+      
+      <DuplicateModal
+        isOpen={showDuplicateModal}
+        onClose={() => setShowDuplicateModal(false)}
+        onConfirm={(newName) => {
+          setShowDuplicateModal(false);
+          onDuplicateInstance(newName);
+        }}
+        instanceName={selectedInstance?.name || ''}
+      />
     </aside>
   );
 }
