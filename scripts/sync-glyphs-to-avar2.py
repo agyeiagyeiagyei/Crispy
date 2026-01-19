@@ -233,7 +233,7 @@ def update_csv_from_glyphs(
             return True
         else:
             print("No changes needed", file=sys.stderr)
-            return False
+            return True  # Success even if no changes (for build process)
     
     except Exception as e:
         print(f"Error updating CSV: {e}", file=sys.stderr)
