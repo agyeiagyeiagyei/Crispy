@@ -190,28 +190,16 @@
 }
 
 .traditional-axes-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.75rem;
 }
 
 .traditional-axis-item {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
-
-.traditional-axis-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.traditional-axis-name {
-  font-weight: 500;
-  font-size: 0.6375rem;
-  font-family: monospace;
-  color: #666;
+  gap: 0.25rem;
+  align-items: flex-start;
 }
 
 .traditional-axis-tag {

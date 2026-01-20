@@ -100,13 +100,9 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
               return (
                 <div className="traditional-axes-list">
                   {Object.entries(traditionalAxes).map(([tag, value]) => {
-                    const axisMeta = getAxisMetadata(tag);
                     return (
                       <div key={tag} className="traditional-axis-item">
-                        <div className="traditional-axis-header">
-                          <label className="traditional-axis-name">{axisNames[tag] || tag}</label>
-                          <span className="traditional-axis-tag">{tag}</span>
-                        </div>
+                        <div className="traditional-axis-tag">{tag}</div>
                         <div className="traditional-axis-value">
                           {value.toFixed(1)}
                         </div>
