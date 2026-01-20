@@ -58,10 +58,12 @@
 ## Browser Compatibility
 
 ### Preview Tool Testing
-- [ ] fontc output loads correctly
-- [ ] Axes detected correctly
-- [ ] Sliders work correctly
-- [ ] Rendering matches fontmake
+- [x] fontc integration complete ✅
+- [x] Build API tested ✅
+- [x] Font axes verified ✅
+- [ ] Frontend browser test (pending user testing)
+- [ ] Sliders work correctly (pending user testing)
+- [ ] Rendering matches fontmake (pending user testing)
 
 ## Next Steps
 
