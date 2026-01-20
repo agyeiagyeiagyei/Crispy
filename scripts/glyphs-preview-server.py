@@ -56,6 +56,7 @@ LAST_BUILD_TIME: Optional[float] = None
 BUILDING: bool = False
 OBSERVER: Optional[Observer] = None
 CSV_PATH: Optional[Path] = None  # Path to avar2-mappings.csv
+USE_FONTC: bool = True  # Use fontc by default, fallback to fontmake
 
 
 def _force_reload_glyphs_document(glyphs_path: Path, font_object=None) -> None:
@@ -250,15 +251,48 @@ def get_axes_from_glyphs(glyphs_path: Path) -> List[Dict]:
         raise
 
 
-def build_variable_font(glyphs_path: Path, output_dir: Path) -> Path:
+def build_variable_font(glyphs_path: Path, output_dir: Path, use_fontc: bool = True) -> Path:
     """
-    Build variable font from Glyphs file using fontmake.
+    Build variable font from Glyphs file using fontc (with fontmake fallback).
+    
+    Args:
+        glyphs_path: Path to Glyphs file
+        output_dir: Directory to output the font
+        use_fontc: If True, try fontc first, fallback to fontmake on failure
     
     Returns path to the built variable font TTF.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Build using fontmake directly
+    # Try fontc first if enabled
+    if use_fontc:
+        fontc_path = Path(__file__).parent.parent / "bin" / "fontc"
+        if fontc_path.exists():
+            output_file = output_dir / "Crispy-VF.ttf"
+            cmd = [
+                str(fontc_path),
+                "--output-file", str(output_file),
+                str(glyphs_path)
+            ]
+            
+            print(f"Building variable font with fontc: {' '.join(cmd)}", file=sys.stderr)
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=glyphs_path.parent
+            )
+            
+            if result.returncode == 0 and output_file.exists():
+                print("✅ fontc compilation successful", file=sys.stderr)
+                return output_file
+            else:
+                error_msg = result.stderr or result.stdout or "Unknown error"
+                print(f"fontc failed, falling back to fontmake: {error_msg}", file=sys.stderr)
+        else:
+            print(f"fontc binary not found at {fontc_path}, using fontmake", file=sys.stderr)
+    
+    # Fallback to fontmake
     cmd = [
         "fontmake",
         "-o", "variable",
@@ -266,7 +300,7 @@ def build_variable_font(glyphs_path: Path, output_dir: Path) -> Path:
         "--output-dir", str(output_dir)
     ]
     
-    print(f"Building variable font: {' '.join(cmd)}", file=sys.stderr)
+    print(f"Building variable font with fontmake: {' '.join(cmd)}", file=sys.stderr)
     result = subprocess.run(
         cmd,
         capture_output=True,
@@ -503,7 +537,7 @@ def get_axes():
 
 def trigger_build():
     """Trigger font build (used by both manual and auto-rebuild)."""
-    global VARIABLE_FONT_PATH, LAST_BUILD_TIME, BUILDING
+    global VARIABLE_FONT_PATH, LAST_BUILD_TIME, BUILDING, USE_FONTC
     
     if BUILDING:
         print("Build already in progress, skipping...", file=sys.stderr)
@@ -512,7 +546,7 @@ def trigger_build():
     BUILDING = True
     try:
         print(f"Building font from {GLYPHS_PATH}...", file=sys.stderr)
-        VARIABLE_FONT_PATH = build_variable_font(GLYPHS_PATH, BUILD_DIR)
+        VARIABLE_FONT_PATH = build_variable_font(GLYPHS_PATH, BUILD_DIR, use_fontc=USE_FONTC)
         LAST_BUILD_TIME = time.time()
         print(f"Font built successfully: {VARIABLE_FONT_PATH}", file=sys.stderr)
         return True
@@ -928,11 +962,18 @@ def main():
         default=None,
         help="Path to avar2-mappings.csv (default: same directory as Glyphs file)"
     )
+    parser.add_argument(
+        "--no-fontc",
+        action="store_true",
+        help="Disable fontc and use fontmake only"
+    )
     
     args = parser.parse_args()
     
+    global USE_FONTC
     GLYPHS_PATH = args.glyphs.resolve()
     BUILD_DIR = args.build_dir.resolve()
+    USE_FONTC = not args.no_fontc  # Use fontc unless --no-fontc is specified
     
     if args.csv:
         CSV_PATH = args.csv.resolve()
@@ -946,6 +987,7 @@ def main():
     print(f"Starting server on {args.host}:{args.port}", file=sys.stderr)
     print(f"Glyphs file: {GLYPHS_PATH}", file=sys.stderr)
     print(f"Build directory: {BUILD_DIR}", file=sys.stderr)
+    print(f"Compiler: {'fontc (with fontmake fallback)' if USE_FONTC else 'fontmake only'}", file=sys.stderr)
     if CSV_PATH:
         print(f"CSV file: {CSV_PATH}", file=sys.stderr)
     else:
