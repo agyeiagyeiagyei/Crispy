@@ -147,7 +147,6 @@
 }
 
 .sample-text-input {
-  text-transform: capitalize;
   width: 100%;
   padding: 0.5rem;
   border: 1px solid #ddd;
@@ -156,6 +155,7 @@
   font-family: monospace;
   resize: vertical;
   min-height: 60px;
+  text-transform: none !important; /* Explicitly disable any capitalization */
 }
 
 .sample-text-input:focus {
