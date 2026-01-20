@@ -24,7 +24,9 @@ mkdir -p "$FONTC_OUTPUT" "$FONTMAKE_OUTPUT"
 # Test fontc compilation
 echo "1. Testing fontc compilation..."
 FONTC_START=$(date +%s)
-if "$PROJECT_ROOT/bin/fontc" "$GLYPHS_FILE" --output-dir "$FONTC_OUTPUT" 2>&1; then
+mkdir -p "$FONTC_OUTPUT"
+FONTC_OUTPUT_FILE="$FONTC_OUTPUT/Crispy-VF.ttf"
+if "$PROJECT_ROOT/bin/fontc" --output-file "$FONTC_OUTPUT_FILE" "$GLYPHS_FILE" 2>&1; then
     FONTC_END=$(date +%s)
     FONTC_TIME=$((FONTC_END - FONTC_START))
     echo "✅ fontc compilation successful (${FONTC_TIME}s)"
@@ -47,7 +49,10 @@ else
 fi
 
 # Find output fonts
-FONTC_FONT=$(find "$FONTC_OUTPUT" -name "*.ttf" | head -1)
+FONTC_FONT="$FONTC_OUTPUT_FILE"
+if [ ! -f "$FONTC_FONT" ]; then
+    FONTC_FONT=$(find "$FONTC_OUTPUT" -name "*.ttf" | head -1)
+fi
 FONTMAKE_FONT=$(find "$FONTMAKE_OUTPUT" -name "*.ttf" | head -1)
 
 if [ -z "$FONTC_FONT" ]; then
