@@ -6,7 +6,14 @@ import DuplicateModal from './DuplicateModal';
 
 const DEFAULT_SAMPLE_TEXT = "The Quick Brown Fox Jumps Over The Lazy Dog 0123456789 &!";
 
-function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance }) {
+function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance, avar2Mode, avar2Instances, avar2Axes }) {
+  // Map axis tags to names for avar2 display
+  const axisNames = {
+    wght: 'Weight',
+    wdth: 'Width',
+    opsz: 'Optical Size',
+    cntr: 'Contrast'
+  };
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   
   // Check if coordinates have been modified from original
@@ -44,21 +51,6 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
         />
       </div>
       
-      {disabled && (
-        <p className="sidebar-hint">Select an instance to edit</p>
-      )}
-      <div className="axis-controls">
-        {axes.map(axis => (
-          <AxisControl
-            key={axis.tag}
-            axis={axis}
-            value={coordinates[axis.tag] ?? axis.default}
-            onChange={(value) => onAxisChange(axis.tag, value)}
-            disabled={disabled}
-          />
-        ))}
-      </div>
-      
       <div className="font-size-control">
         <label className="font-size-label">
           Font Size: {fontSize.toFixed(1)}rem
@@ -73,6 +65,65 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
           className="font-size-slider"
         />
       </div>
+      
+      <div className="axis-controls">
+        {axes.map(axis => (
+          <AxisControl
+            key={axis.tag}
+            axis={axis}
+            value={coordinates[axis.tag] ?? axis.default}
+            onChange={(value) => onAxisChange(axis.tag, value)}
+            disabled={disabled}
+          />
+        ))}
+      </div>
+      
+      {avar2Mode && selectedInstance && avar2Instances.length > 0 && (
+        <div className="avar2-traditional-axes">
+          <h3 className="avar2-section-title">AVAR2 MAPPINGS</h3>
+          {(() => {
+            const mapping = avar2Instances.find(
+              inst => inst.instance_name === selectedInstance.name
+            );
+            if (mapping && mapping.avar2_mapping && mapping.avar2_mapping.in) {
+              const traditionalAxes = mapping.avar2_mapping.in;
+              const axisNames = {
+                wght: 'Weight',
+                wdth: 'Width',
+                opsz: 'Optical Size',
+                cntr: 'Contrast'
+              };
+              // Find axis metadata from axes array to get min/max
+              const getAxisMetadata = (tag) => {
+                return axes.find(ax => ax.tag === tag) || { min: 0, max: 1000 };
+              };
+              return (
+                <div className="traditional-axes-list">
+                  {Object.entries(traditionalAxes).map(([tag, value]) => {
+                    const axisMeta = getAxisMetadata(tag);
+                    return (
+                      <div key={tag} className="traditional-axis-item">
+                        <div className="traditional-axis-header">
+                          <label className="traditional-axis-name">{axisNames[tag] || tag}</label>
+                          <span className="traditional-axis-tag">{tag}</span>
+                        </div>
+                        <div className="traditional-axis-value">
+                          {value.toFixed(1)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }
+            return (
+              <div className="avar2-no-mapping">
+                No mapping available for this instance
+              </div>
+            );
+          })()}
+        </div>
+      )}
       
       {!disabled && (
         <div className="reset-button-section">

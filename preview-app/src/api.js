@@ -106,4 +106,20 @@ export const api = {
     }
     return parseJSON(response);
   },
+
+  async getAvar2Instances() {
+    const response = await fetch(`${API_BASE}/avar2/instances`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch avar2 instances: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
+  async getAvar2Axes() {
+    const response = await fetch(`${API_BASE}/avar2/axes`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch avar2 axes: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
 };

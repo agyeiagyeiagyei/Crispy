@@ -55,6 +55,7 @@ VARIABLE_FONT_PATH: Optional[Path] = None
 LAST_BUILD_TIME: Optional[float] = None
 BUILDING: bool = False
 OBSERVER: Optional[Observer] = None
+CSV_PATH: Optional[Path] = None  # Path to avar2-mappings.csv
 
 
 def _force_reload_glyphs_document(glyphs_path: Path, font_object=None) -> None:
@@ -669,8 +670,232 @@ def health():
         return jsonify({"error": str(e)}), 500
 
 
+# ============================================================================
+# Avar2 API Endpoints
+# ============================================================================
+
+def _get_avar2_csv_path() -> Optional[Path]:
+    """Get path to avar2-mappings.csv (relative to Glyphs file or explicit)."""
+    global CSV_PATH
+    if CSV_PATH:
+        return CSV_PATH
+    
+    # Default: look for avar2-mappings.csv in same directory as Glyphs file
+    if GLYPHS_PATH:
+        default_csv = GLYPHS_PATH.parent / "avar2-mappings.csv"
+        if default_csv.exists():
+            return default_csv
+    
+    return None
+
+
+def _add_missing_instance_to_csv(instance_name: str, glyphs_coords: Dict[str, float], csv_path: Path) -> bool:
+    """Add a missing instance to CSV with blank traditional axis values."""
+    import csv
+    try:
+        # Read existing CSV
+        rows = []
+        fieldnames = []
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+            for row in reader:
+                rows.append(row)
+        
+        if not fieldnames:
+            return False
+        
+        # Detect traditional axes (WGHT, WDTH, OPSZ, etc.)
+        traditional_axes = {"WGHT", "WDTH", "OPSZ", "CONTRAST"}
+        in_cols = [c for c in fieldnames if c.upper() in traditional_axes or c.upper().endswith("-E")]
+        
+        # Create new row with instance name
+        new_row = {"Instance Name": instance_name}
+        
+        # Initialize all columns
+        for col in fieldnames:
+            if col == "Instance Name":
+                continue
+            elif col in in_cols:
+                # Traditional axes: blank
+                new_row[col] = ""
+            elif col in glyphs_coords:
+                # Parametric axes: use value from Glyphs
+                new_row[col] = str(glyphs_coords[col])
+            else:
+                # Other columns: blank
+                new_row[col] = ""
+        
+        # Add new row
+        rows.append(new_row)
+        
+        # Write updated CSV
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        return True
+    except Exception as e:
+        print(f"Error adding instance to CSV: {e}", file=sys.stderr)
+        return False
+
+
+@app.route('/api/avar2/instances', methods=['GET'])
+def get_avar2_instances():
+    """Get instances matched to avar2 mappings. Automatically adds missing instances to CSV."""
+    try:
+        csv_path = _get_avar2_csv_path()
+        if not csv_path or not csv_path.exists():
+            return jsonify({
+                "error": "avar2-mappings.csv not found",
+                "suggestion": "Set CSV path or place avar2-mappings.csv in same directory as Glyphs file"
+            }), 404
+        
+        # Import matching function
+        import importlib.util
+        match_script = Path(__file__).parent / "match-instances-to-avar2.py"
+        spec = importlib.util.spec_from_file_location("match_instances_to_avar2", match_script)
+        match_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(match_module)
+        
+        # Get Glyphs instances
+        glyphs_instances = match_module.get_glyphs_instances(GLYPHS_PATH)
+        
+        # Get matches
+        matches = match_module.match_instances(GLYPHS_PATH, csv_path)
+        
+        # Add missing instances to CSV
+        added_count = 0
+        for match in matches:
+            if match.get("match_status") == "missing_in_csv":
+                instance_name = match["instance_name"]
+                glyphs_coords = match.get("glyphs_coordinates", {})
+                if _add_missing_instance_to_csv(instance_name, glyphs_coords, csv_path):
+                    added_count += 1
+        
+        # If we added instances, reload matches
+        if added_count > 0:
+            matches = match_module.match_instances(GLYPHS_PATH, csv_path)
+        
+        return jsonify({
+            "instances": matches,
+            "csv_path": str(csv_path),
+            "added_instances": added_count
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/avar2/mappings', methods=['GET'])
+def get_avar2_mappings():
+    """Get all avar2 mappings from CSV."""
+    try:
+        csv_path = _get_avar2_csv_path()
+        if not csv_path or not csv_path.exists():
+            return jsonify({
+                "error": "avar2-mappings.csv not found"
+            }), 404
+        
+        import importlib.util
+        match_script = Path(__file__).parent / "match-instances-to-avar2.py"
+        spec = importlib.util.spec_from_file_location("match_instances_to_avar2", match_script)
+        match_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(match_module)
+        
+        rows, fieldnames, in_cols, out_cols = match_module.read_csv_mappings(csv_path)
+        
+        return jsonify({
+            "mappings": rows,
+            "fieldnames": fieldnames,
+            "traditional_axes": in_cols,
+            "parametric_axes": out_cols
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/avar2/axes', methods=['GET'])
+def get_avar2_axes():
+    """Get traditional axes (in:) and parametric axes (out:) from CSV."""
+    try:
+        csv_path = _get_avar2_csv_path()
+        if not csv_path or not csv_path.exists():
+            return jsonify({
+                "error": "avar2-mappings.csv not found"
+            }), 404
+        
+        import importlib.util
+        match_script = Path(__file__).parent / "match-instances-to-avar2.py"
+        spec = importlib.util.spec_from_file_location("match_instances_to_avar2", match_script)
+        match_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(match_module)
+        
+        _, _, in_cols, out_cols = match_module.read_csv_mappings(csv_path)
+        
+        # Normalize traditional axis names
+        traditional_axes = [match_module._normalize_in_axis_name(col) for col in in_cols]
+        
+        return jsonify({
+            "traditional_axes": {
+                "columns": in_cols,
+                "normalized": traditional_axes
+            },
+            "parametric_axes": out_cols  # All parametric axes from CSV (may include SPAC)
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/avar2/sync-csv', methods=['POST'])
+def sync_csv():
+    """Update CSV parametric values to match Glyphs file."""
+    try:
+        csv_path = _get_avar2_csv_path()
+        if not csv_path or not csv_path.exists():
+            return jsonify({
+                "error": "avar2-mappings.csv not found"
+            }), 404
+        
+        # Use existing sync script via subprocess
+        import subprocess
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).parent / "sync-glyphs-to-avar2.py"),
+                "--glyphs", str(GLYPHS_PATH),
+                "--csv", str(csv_path),
+                "--once"
+            ],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            return jsonify({
+                "error": "Failed to sync CSV",
+                "details": result.stderr
+            }), 500
+        
+        return jsonify({
+            "success": True,
+            "csv_path": str(csv_path),
+            "output": result.stdout
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 def main():
-    global GLYPHS_PATH, BUILD_DIR
+    global GLYPHS_PATH, BUILD_DIR, CSV_PATH
     
     parser = argparse.ArgumentParser(description="Glyphs preview server")
     parser.add_argument(
@@ -697,11 +922,22 @@ def main():
         default="127.0.0.1",
         help="Host to bind to (default: 127.0.0.1)"
     )
+    parser.add_argument(
+        "--csv",
+        type=Path,
+        default=None,
+        help="Path to avar2-mappings.csv (default: same directory as Glyphs file)"
+    )
     
     args = parser.parse_args()
     
     GLYPHS_PATH = args.glyphs.resolve()
     BUILD_DIR = args.build_dir.resolve()
+    
+    if args.csv:
+        CSV_PATH = args.csv.resolve()
+    else:
+        CSV_PATH = None  # Will use default location
     
     if not GLYPHS_PATH.exists():
         print(f"Error: Glyphs file not found: {GLYPHS_PATH}", file=sys.stderr)
@@ -710,6 +946,14 @@ def main():
     print(f"Starting server on {args.host}:{args.port}", file=sys.stderr)
     print(f"Glyphs file: {GLYPHS_PATH}", file=sys.stderr)
     print(f"Build directory: {BUILD_DIR}", file=sys.stderr)
+    if CSV_PATH:
+        print(f"CSV file: {CSV_PATH}", file=sys.stderr)
+    else:
+        csv_path = _get_avar2_csv_path()
+        if csv_path:
+            print(f"CSV file (auto-detected): {csv_path}", file=sys.stderr)
+        else:
+            print(f"CSV file: not found (avar2 endpoints will be unavailable)", file=sys.stderr)
     
     # Set up periodic file checking (every 15 seconds) instead of file watching
     # This checks file modification time and only rebuilds if file changed

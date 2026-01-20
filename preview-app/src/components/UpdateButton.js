@@ -8,7 +8,7 @@ function UpdateButton({ onClick, instanceName }) {
         onClick={onClick}
         className="btn btn-update"
       >
-        Update Instance: {instanceName}
+        Update Instance
       </button>
     </div>
   );

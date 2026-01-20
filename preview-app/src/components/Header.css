@@ -15,7 +15,27 @@
 
 .header-actions {
   display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.avar2-toggle {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.avar2-toggle input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.avar2-toggle span {
+  font-size: 0.9rem;
+  color: #333;
 }
 
 .btn {

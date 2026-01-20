@@ -24,11 +24,39 @@ function App() {
   const [fontSize, setFontSize] = useState(2); // Default 2rem
   const [familyName, setFamilyName] = useState(null);
   const [lastBuildTime, setLastBuildTime] = useState(null);
+  const [avar2Mode, setAvar2Mode] = useState(false);
+  const [avar2Instances, setAvar2Instances] = useState([]);
+  const [avar2Axes, setAvar2Axes] = useState(null);
 
   // Load initial data
   useEffect(() => {
     loadData();
   }, []);
+
+  // Load avar2 data when mode is enabled
+  useEffect(() => {
+    if (avar2Mode) {
+      loadAvar2Data();
+    } else {
+      setAvar2Instances([]);
+      setAvar2Axes(null);
+    }
+  }, [avar2Mode]);
+
+  // Ensure selected instance is in CSV when avar2 mode is enabled
+  useEffect(() => {
+    if (avar2Mode && selectedInstance && avar2Instances.length > 0) {
+      const mapping = avar2Instances.find(
+        inst => inst.instance_name === selectedInstance.name
+      );
+      // If instance not in CSV, it will be added automatically by backend
+      // when we fetch avar2 instances (backend handles missing instances)
+      if (!mapping || mapping.match_status === 'missing_in_csv') {
+        // Reload avar2 data to get updated CSV
+        loadAvar2Data();
+      }
+    }
+  }, [avar2Mode, selectedInstance, avar2Instances.length]);
 
   // Poll for font rebuilds (check every 2 seconds)
   useEffect(() => {
@@ -97,6 +125,22 @@ function App() {
       console.error('Failed to load data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAvar2Data = async () => {
+    try {
+      const [instancesData, axesData] = await Promise.all([
+        api.getAvar2Instances(),
+        api.getAvar2Axes(),
+      ]);
+      setAvar2Instances(instancesData.instances || []);
+      setAvar2Axes(axesData);
+    } catch (err) {
+      console.error('Failed to load avar2 data:', err);
+      // Don't show error to user - avar2 mode is optional
+      setAvar2Instances([]);
+      setAvar2Axes(null);
     }
   };
 
@@ -324,6 +368,8 @@ function App() {
         building={building}
         fontLoaded={fontLoaded}
         familyName={familyName}
+        avar2Mode={avar2Mode}
+        onAvar2ModeChange={setAvar2Mode}
       />
       
       {error && (
@@ -347,6 +393,9 @@ function App() {
           fontSize={fontSize}
           onFontSizeChange={setFontSize}
           onDuplicateInstance={handleDuplicateInstance}
+          avar2Mode={avar2Mode}
+          avar2Instances={avar2Instances}
+          avar2Axes={avar2Axes}
         />
         
         <div className="content-area">

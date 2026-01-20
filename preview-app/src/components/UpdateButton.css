@@ -5,13 +5,14 @@
 
 .btn-update {
   width: 100%;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   background-color: #28a745;
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 0.796875rem; /* Match sample text size */
+  font-size: 0.6375rem;
   font-family: monospace;
+  font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s;
 }
