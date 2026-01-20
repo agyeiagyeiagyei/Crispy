@@ -39,3 +39,8 @@ Thumbs.db
 *（自动存储）.*
 *（已自動儲存）.*
 preview-fonts/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
