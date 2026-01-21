@@ -25,7 +25,7 @@ These are the fundamental building blocks that control specific structural compo
 - **X-Opacity** (XOPQ): 2-1016 units - Controls horizontal opaque (positive) space
 - **Y-Opacity** (YOPQ): 2-462 units - Controls vertical opaque (positive) space
 - **X-Transparency** (XTRA): 94-3330 units - Controls horizontal transparent (negative) space
-- **Spacing** (SPAC): -20 to 40 units (programmatically added) - Controls relative advance width
+- **Spacing** (SPAC): -20 to 40 units (programmatically added) - Controls tracking by adding spacing
 
 **Avar2 Mapping:**
 The font uses an avar2 table to map traditional axis combinations to parametric axis values. This allows users to work with familiar axes (Weight, Width, Optical Size) while the font internally uses parametric axes (XOPQ, YOPQ, XTRA, SPAC). The avar2 table contains mappings for all combinations of traditional axes, automatically translating user input to the appropriate parametric values.
