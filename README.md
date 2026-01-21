@@ -86,7 +86,7 @@ Licensed under the [SIL Open Font License, 1.1](http://scripts.sil.org/OFL); you
 
 ### Building:
 
-The build process uses `gftools builder` with `fontc` (a Rust-based font compiler) for faster compilation. The `fontc` binary is bundled in the `bin/` directory and is used via the `--experimental-fontc` flag, which allows `gftools builder` to use `fontc` instead of the default `fontmake` for the initial font compilation step.
+The build process uses `gftools builder` with `fontmake` for font compilation.
 
 **To build the fonts:**
 
@@ -97,25 +97,24 @@ make build
 This will:
 1. Sync avar2 mappings from the Glyphs file
 2. Update `config.yaml` with STAT and avar2 sections
-3. Build variable fonts using `gftools builder --experimental-fontc bin/fontc`
+3. Build variable fonts using `gftools builder`
 4. Convert avar2 tables to avar1 for backward compatibility
 5. Output fonts to the `fonts/` directory
 
 **Prerequisites:**
 - Python 3 with virtual environment (created automatically)
 - `gftools` (installed via `requirements.txt`)
-- The bundled `fontc` binary in `bin/fontc`
 
 ### Ideal build:
 
-The masters associated with these files are handled on export by `gftools builder`, which uses `fontc` for compilation. The build process is automated using `config.yaml` to specify variables like family name, instance names, STAT table, and avar2 mappings.
+The masters associated with these files are handled on export by `gftools builder`, which uses `fontmake` for compilation. The build process is automated using `config.yaml` to specify variables like family name, instance names, STAT table, and avar2 mappings.
 
 ***The build process covers:***
 
 1. Building parametric instances (stylistic sources)
 2. Weight, Width, and Optical Size expressed as combinations of X-Opacity (XOPQ), Y-Opacity (YOPQ), X-Transparency (XTRA), and Spacing (SPAC) axes
 3. Building stylistic sources (fvarInstances)
-4. ttfautohint and other builtin fontc checks (via gftools builder)
+4. ttfautohint and other builtin fontmake checks (via gftools builder)
 5. Building variable font with proper STAT and avar2 tables
 6. Converting avar2 tables to avar1 for backward compatibility
 
@@ -127,7 +126,6 @@ The masters associated with these files are handled on export by `gftools builde
 ### Glyphs + :
 
 ### Design log:
-* January 2026: Build process updated to use fontc for faster compilation
 * August 2025: build process completed: 8 masters, 6 axes
 * December 2024: design optimised for avar2 revamped
 * December 2023: design revamped entirely
