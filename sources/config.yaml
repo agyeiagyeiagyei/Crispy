@@ -1,7 +1,7 @@
 sources:
 - Crispy.glyphs
 familyName: Crispy
-buildStatic: false
+buildStatic: true
 spacingAxis:
   min: -20
   max: 40
