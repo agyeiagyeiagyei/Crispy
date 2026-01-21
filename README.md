@@ -69,7 +69,7 @@ I describe *parametric axes* as elemental axes that we can use to describe one s
 
 I describe *stylistic axes* as axes that we can use to describe the end-result of more than one of these elemental factors, expressed to different individual degrees at the same time. 
 
-By these descriptions, we can think of ***Weight*** as a stylistic axis that can be expressed as a combination of ***X-Opacity***, ***Y-Opacity***, ***Y-Transparency***, and ***X-Transparency***. We know then that, typically, a Latin typeface with conventional contrast will have a greater ratio of X-Opacity to Y-Opacity, at least visually, if not numerically.  Immediately, we can flag this idea of "conventional contrast" as potentially limiting, and a demonstrable indication of the long-term conceptual and semantic advantage of thinking of fonts parametrically, especially in global typographic applications where we would want to avoid positioning Latin-centric paradigms as default or industry standards. Right?
+By these descriptions, we can think of ***Weight*** as a stylistic axis that can be expressed as a combination of ***X-Opacity*** and ***Y-Opacity***. This parametric approach provides a more fundamental way to describe typeface attributes, offering greater flexibility and precision in typographic applications.
 
 Anyway,
 
