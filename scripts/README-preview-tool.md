@@ -13,7 +13,7 @@ The tool consists of two parts:
 ### Workflow
 
 1. **Load Glyphs File**: The backend reads instances and axes directly from the `.glyphs` file
-2. **Build Font**: Click "Build Font" to generate a variable font using `fontmake` (builds to `preview-fonts/` directory)
+2. **Build Font**: Click "Build Font" to generate a variable font using `fontmake` (builds to `preview-app/preview-fonts/` directory)
 3. **Preview Instances**: All instances are displayed in rows with their sample text
 4. **Edit Coordinates**: Select a row, adjust axes with sliders, and see real-time preview updates
 5. **Update Glyphs File**: Click "Update Instance" to save coordinate changes back to the Glyphs file
@@ -131,7 +131,7 @@ python3 scripts/glyphs-preview-server.py [OPTIONS]
 
 Options:
   --glyphs PATH       Path to Glyphs file (default: sources/Crispy.glyphs)
-  --build-dir PATH    Directory for built fonts (default: preview-fonts)
+  --build-dir PATH    Directory for built fonts (default: preview-app/preview-fonts)
   --port PORT         Port to run server on (default: 5001)
   --host HOST         Host to bind to (default: 127.0.0.1)
 ```
@@ -139,7 +139,7 @@ Options:
 ### Default Settings
 
 - **Glyphs file**: `sources/Crispy.glyphs`
-- **Build directory**: `preview-fonts/` (separate from production `fonts/` directory)
+- **Build directory**: `preview-app/preview-fonts/` (separate from production `fonts/` directory)
 - **Backend port**: 5001 (avoids macOS AirPlay on port 5000)
 - **Frontend port**: 3000
 

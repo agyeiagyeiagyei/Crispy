@@ -682,8 +682,8 @@ def main():
     parser.add_argument(
         "--build-dir",
         type=Path,
-        default=Path("preview-fonts"),
-        help="Directory for built fonts (default: preview-fonts)"
+        default=Path("preview-app/preview-fonts"),
+        help="Directory for built fonts (default: preview-app/preview-fonts)"
     )
     parser.add_argument(
         "--port",

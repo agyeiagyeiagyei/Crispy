@@ -119,7 +119,7 @@ python3 scripts/glyphs-preview-server.py
 python3 scripts/glyphs-preview-server.py \
   --glyphs sources/Crispy.glyphs \
   --config sources/config.yaml \
-  --build-dir preview-fonts \
+  --build-dir preview-app/preview-fonts \
   --port 5000 \
   --host 127.0.0.1
 ```
