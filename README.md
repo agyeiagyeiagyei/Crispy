@@ -60,7 +60,7 @@ cd preview-app
 npm start
 ```
 
-The tool will be available at http://localhost:3000 with the backend API at http://localhost:5001.
+The tool will be available at http://localhost:3000.
 
 ___
 **For the purposes of this project, I describe *axes* as visual paradigms that we use to describe one or more features in a variable font.**
@@ -110,16 +110,18 @@ This will:
 
 The masters associated with these files are handled on export by `gftools builder`, which uses `fontc` for compilation. The build process is automated using `config.yaml` to specify variables like family name, instance names, STAT table, and avar2 mappings.
 
-***The ideal build covers:***
+***The build process covers:***
 
 1. Building parametric instances (stylistic sources)
 2. Weight, Width, and Optical Size expressed as combinations of X-Opacity (XOPQ), Y-Opacity (YOPQ), X-Transparency (XTRA), and Spacing (SPAC) axes
-3. Building stylistic sources
-4. ttfautohint and other builtin fontc checks
-5. Building well-labeled versions of static .ttf and .woff files
-6. Building variable font with proper STAT and avar2 tables
-7. *Automated static and animated proofs with drawbot*
-8. *Automated, well-labelled git push*
+3. Building stylistic sources (fvarInstances)
+4. ttfautohint and other builtin fontc checks (via gftools builder)
+5. Building variable font with proper STAT and avar2 tables
+6. Converting avar2 tables to avar1 for backward compatibility
+
+**Additional targets available:**
+- `make images`: Generate PNG specimen images using drawbot (requires separate run)
+- `make proof`: Generate HTML proof documents (requires separate run)
 
 
 ### Glyphs + :
