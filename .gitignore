@@ -39,6 +39,11 @@ Thumbs.db
 *（已自動儲存）.*
 preview-app/preview-fonts/
 
+# Static font outputs (variable fonts are tracked)
+fonts/otf/
+fonts/ttf/
+fonts/webfonts/
+
 # Python cache files
 __pycache__/
 *.py[cod]
