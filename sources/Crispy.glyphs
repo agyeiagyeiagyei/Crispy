@@ -1,38 +1,8 @@
 {
-.appVersion = "3436";
+.appVersion = "3406";
 .formatVersion = 3;
 DisplayStrings = (
-Sasseo,
-Seo,
-"oe
-
-",
-"SHE Seas ",
-o,
-S,
-S,
-"/S.002 ow",
-Sass,
-sass,
-h,
-"SASS/Y.001",
-O,
-e,
-Mmag,
-gMamLa,
-ag,
-a,
-s,
-M,
-m,
-OLO,
-g,
-"",
-t,
-qa,
-OBO,
-" H H H
-No eh"
+"/nbspace  "
 );
 axes = (
 {
@@ -60782,39 +60752,39 @@ unicode = 32;
 {
 color = 11;
 glyphname = nbspace;
-lastChange = "2026-01-17 12:53:50 +0000";
+lastChange = "2026-01-22 13:51:43 +0000";
 layers = (
 {
 layerId = "6803808E-8576-48E9-AEA7-EE0D171F6F70";
-width = 880;
+width = 980;
 },
 {
 layerId = "1E1683DE-29BB-491B-BAA6-759729746529";
-width = 42;
+width = 72;
 },
 {
 layerId = "8462F42F-4EB1-4423-BAD0-833446464E27";
-width = 42;
+width = 72;
 },
 {
 layerId = "1BCFA072-F94F-498F-956F-3AA5D600A933";
-width = 263;
+width = 463;
 },
 {
 layerId = "0457B203-0D8E-47C5-900E-12B2256A2F18";
-width = 263;
+width = 463;
 },
 {
 layerId = "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C";
-width = 790;
+width = 1390;
 },
 {
 layerId = "80FDAF56-89B9-483B-B264-E4AEDBEEB158";
-width = 880;
+width = 980;
 },
 {
 layerId = "986EB9B7-B65B-4446-9CAC-0D719242B857";
-width = 957;
+width = 1390;
 }
 );
 unicode = 160;
