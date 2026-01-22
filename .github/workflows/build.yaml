@@ -46,7 +46,6 @@ jobs:
     #     do
     #       bumpfontversion sources/$src --new-version $TAG_NAME;
     #     done
-
     - name: Build font
       run: make build
     - name: Check with fontspector
