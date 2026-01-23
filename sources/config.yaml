@@ -1,7 +1,7 @@
 sources:
 - Crispy.glyphs
 familyName: Crispy
-buildStatic: false
+buildStatic: true
 spacingAxis:
   min: -20
   max: 40
@@ -12,64 +12,36 @@ fvarInstances:
       opsz: 48
       wdth: 100
       wght: 100
-      SPAC: 25
-      XTRA: 461.8
-      XOPQ: 46.9
-      YOPQ: 44.0
   - name: ExtraLight
     coordinates:
       opsz: 48
       wdth: 100
       wght: 200
-      SPAC: 25
-      XTRA: 580.0
-      XOPQ: 78.575
-      YOPQ: 78.59
   - name: Light
     coordinates:
       opsz: 48
       wdth: 100
       wght: 300
-      SPAC: 25
-      XTRA: 603.55
-      XOPQ: 133.124
-      YOPQ: 124.253
   - name: Regular
     coordinates:
       opsz: 48
       wdth: 100
       wght: 400
-      SPAC: 25
-      XTRA: 627.0
-      XOPQ: 187.672
-      YOPQ: 160.0
   - name: Medium
     coordinates:
       opsz: 48
       wdth: 100
       wght: 500
-      SPAC: 25
-      XTRA: 650.5
-      XOPQ: 242.221
-      YOPQ: 216.1
   - name: SemiBold
     coordinates:
       opsz: 48
       wdth: 100
       wght: 600
-      SPAC: 25
-      XTRA: 693.05
-      XOPQ: 321.48
-      YOPQ: 286.0
   - name: Bold
     coordinates:
       opsz: 48
       wdth: 100
       wght: 700
-      SPAC: 25
-      XTRA: 735.6
-      XOPQ: 400.738
-      YOPQ: 324.7
 
 stat:
   Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:

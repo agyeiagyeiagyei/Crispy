@@ -3,7 +3,6 @@ venv
 venv-test
 build.stamp
 proof
-fonts
 node_modules
 package-lock.json
 package.json
@@ -38,7 +37,12 @@ Thumbs.db
 *(Otomatik Kaydedildi).*
 *（自动存储）.*
 *（已自動儲存）.*
-preview-fonts/
+preview-app/preview-fonts/
+
+# Static font outputs (variable fonts are tracked)
+fonts/otf/
+fonts/ttf/
+fonts/webfonts/
 
 # Python cache files
 __pycache__/
