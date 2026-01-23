@@ -266,11 +266,12 @@ def build_variable_font(glyphs_path: Path, output_dir: Path, use_fontc: bool = T
     
     # Try fontc first if enabled
     if use_fontc:
-        fontc_path = Path(__file__).parent.parent / "bin" / "fontc"
-        if fontc_path.exists():
+        # Use fontc from PATH (pip-installed)
+        fontc_cmd = shutil.which("fontc")
+        if fontc_cmd:
             output_file = output_dir / "Crispy-VF.ttf"
             cmd = [
-                str(fontc_path),
+                fontc_cmd,
                 "--output-file", str(output_file),
                 str(glyphs_path)
             ]
@@ -290,7 +291,7 @@ def build_variable_font(glyphs_path: Path, output_dir: Path, use_fontc: bool = T
                 error_msg = result.stderr or result.stdout or "Unknown error"
                 print(f"fontc failed, falling back to fontmake: {error_msg}", file=sys.stderr)
         else:
-            print(f"fontc binary not found at {fontc_path}, using fontmake", file=sys.stderr)
+            print(f"fontc not found in PATH, using fontmake", file=sys.stderr)
     
     # Fallback to fontmake
     cmd = [
