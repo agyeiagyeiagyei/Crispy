@@ -65,6 +65,12 @@ export const api = {
     return `${API_BASE}/font?t=${timestamp}`;
   },
 
+  getPreviewFontUrl() {
+    // Add cache busting timestamp to force reload when font is rebuilt
+    const timestamp = Date.now();
+    return `${API_BASE}/preview-font?t=${timestamp}`;
+  },
+
   async createInstance(instanceName, coordinates, insertAfter = null) {
     const body = { name: instanceName, coordinates };
     if (insertAfter) {
@@ -119,6 +125,104 @@ export const api = {
     const response = await fetch(`${API_BASE}/avar2/axes`);
     if (!response.ok) {
       throw new Error(`Failed to fetch avar2 axes: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
+  async addAvar2Axis(axisData) {
+    const response = await fetch(`${API_BASE}/avar2/axis`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(axisData),
+    });
+    if (!response.ok) {
+      const error = await parseJSON(response).catch(() => ({ error: `Failed to add axis: ${response.status}` }));
+      throw new Error(error.error || `Failed to add axis: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
+  async updateAvar2Axis(axisName, axisData) {
+    const response = await fetch(`${API_BASE}/avar2/axis/${encodeURIComponent(axisName)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(axisData),
+    });
+    if (!response.ok) {
+      const error = await parseJSON(response).catch(() => ({ error: `Failed to update axis: ${response.status}` }));
+      throw new Error(error.error || `Failed to update axis: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
+  async updateAvar2Mapping(instanceName, axisName, value) {
+    const response = await fetch(`${API_BASE}/avar2/mapping/${encodeURIComponent(instanceName)}/${encodeURIComponent(axisName)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ value }),
+    });
+    if (!response.ok) {
+      const error = await parseJSON(response).catch(() => ({ error: `Failed to update mapping: ${response.status}` }));
+      throw new Error(error.error || `Failed to update mapping: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
+  async checkSpacAxis() {
+    const response = await fetch(`${API_BASE}/spacing/check`);
+    if (!response.ok) {
+      throw new Error(`Failed to check SPAC axis: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
+  async getSpacValues() {
+    const response = await fetch(`${API_BASE}/spacing/values`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch SPAC values: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
+  async initSpacAxis() {
+    const response = await fetch(`${API_BASE}/spacing/init`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const error = await parseJSON(response).catch(() => ({ error: `Failed to initialize SPAC axis: ${response.status}` }));
+      throw new Error(error.error || `Failed to initialize SPAC axis: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
+  async updateSpacValue(instanceName, value) {
+    const response = await fetch(`${API_BASE}/spacing/instance/${encodeURIComponent(instanceName)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ value }),
+    });
+    if (!response.ok) {
+      const error = await parseJSON(response).catch(() => ({ error: `Failed to update SPAC value: ${response.status}` }));
+      throw new Error(error.error || `Failed to update SPAC value: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
+  async rebuildPreviewFont() {
+    const response = await fetch(`${API_BASE}/spacing/rebuild`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const error = await parseJSON(response).catch(() => ({ error: `Failed to rebuild preview font: ${response.status}` }));
+      throw new Error(error.error || `Failed to rebuild preview font: ${response.status} ${response.statusText}`);
     }
     return parseJSON(response);
   },

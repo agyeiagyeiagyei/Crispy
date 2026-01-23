@@ -38,6 +38,25 @@
   color: #333;
 }
 
+.spac-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.spac-toggle input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+.spac-toggle span {
+  font-size: 0.9rem;
+  color: #333;
+}
+
 .btn {
   padding: 0.5rem 1rem;
   border: 1px solid #ccc;

@@ -1,7 +1,7 @@
 import React from 'react';
 import './Header.css';
 
-function Header({ onBuildFont, onRefresh, building, fontLoaded, familyName, avar2Mode, onAvar2ModeChange }) {
+function Header({ onBuildFont, onRefresh, building, fontLoaded, familyName, avar2Mode, onAvar2ModeChange, spacMode, onSpacModeChange, spacBuilding }) {
   return (
     <header className="header">
       {familyName && <h1>{familyName}</h1>}
@@ -14,6 +14,15 @@ function Header({ onBuildFont, onRefresh, building, fontLoaded, familyName, avar
             disabled={building}
           />
           <span>Show Avar2</span>
+        </label>
+        <label className="spac-toggle">
+          <input
+            type="checkbox"
+            checked={spacMode || false}
+            onChange={(e) => onSpacModeChange(e.target.checked)}
+            disabled={building || spacBuilding}
+          />
+          <span>Show Spacing{spacBuilding ? ' (Building...)' : ''}</span>
         </label>
         <button
           onClick={onBuildFont}

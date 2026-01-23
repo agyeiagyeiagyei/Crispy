@@ -12,6 +12,7 @@ Provides API endpoints to:
 """
 
 import argparse
+import csv
 import json
 import os
 import shutil
@@ -22,6 +23,12 @@ import threading
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
+
+try:
+    import yaml
+except ImportError:
+    print("Warning: PyYAML not found. Install with: pip install pyyaml", file=sys.stderr)
+    yaml = None
 
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
@@ -57,6 +64,9 @@ BUILDING: bool = False
 OBSERVER: Optional[Observer] = None
 CSV_PATH: Optional[Path] = None  # Path to avar2-mappings.csv
 USE_FONTC: bool = True  # Use fontc by default, fallback to fontmake
+PREVIEW_DIR: Optional[Path] = None  # Directory for preview tool files (preview-app/)
+PREVIEW_CSV_PATH: Optional[Path] = None  # Path to preview CSV (e.g., preview-app/Crispy-avar.csv)
+PREVIEW_CONFIG_PATH: Optional[Path] = None  # Path to preview config (e.g., preview-app/config-preview.yaml)
 
 
 def _force_reload_glyphs_document(glyphs_path: Path, font_object=None) -> None:
@@ -601,6 +611,41 @@ def get_font():
     return response
 
 
+@app.route('/api/preview-font', methods=['GET'])
+def get_preview_font():
+    """Serve the preview font file (with SPAC axis if available)."""
+    preview_font_dir = _get_preview_font_dir()
+    if not preview_font_dir or not preview_font_dir.exists():
+        return jsonify({"error": "Preview font directory not found"}), 404
+    
+    # Look for font with SPAC in name first, then any .ttf file
+    family_name = GLYPHS_PATH.stem if GLYPHS_PATH else "Crispy"
+    spac_font = preview_font_dir / f"{family_name}[SPAC].ttf"
+    
+    if spac_font.exists():
+        font_path = spac_font
+    else:
+        # Fallback to any .ttf file in preview directory
+        ttf_files = list(preview_font_dir.glob("*.ttf"))
+        if not ttf_files:
+            return jsonify({"error": "Preview font not built yet"}), 404
+        font_path = ttf_files[0]  # Use first TTF file found
+    
+    response = send_file(
+        str(font_path),
+        mimetype='font/ttf',
+        as_attachment=False
+    )
+    # Add cache control headers to prevent browser caching
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    # Add ETag based on file modification time for cache validation
+    mtime = font_path.stat().st_mtime
+    response.headers['ETag'] = f'"{int(mtime)}"'
+    return response
+
+
 @app.route('/api/instance', methods=['POST'])
 def create_instance():
     """Create a new instance in the Glyphs file."""
@@ -709,6 +754,9 @@ def health():
 # Avar2 API Endpoints
 # ============================================================================
 
+# Track CSV modification times for external edit detection
+_CSV_MODIFICATION_TIMES: Dict[str, float] = {}
+
 def _get_avar2_csv_path() -> Optional[Path]:
     """Get path to avar2-mappings.csv (relative to Glyphs file or explicit)."""
     global CSV_PATH
@@ -724,39 +772,413 @@ def _get_avar2_csv_path() -> Optional[Path]:
     return None
 
 
+def _get_avar2_metadata_path() -> Optional[Path]:
+    """Get path to avar2-axis-metadata.json (same directory as CSV)."""
+    csv_path = _get_avar2_csv_path()
+    if csv_path:
+        return csv_path.parent / "avar2-axis-metadata.json"
+    return None
+
+
+def _get_preview_dir() -> Optional[Path]:
+    """Get preview tool directory (preview-app/)."""
+    global PREVIEW_DIR
+    if PREVIEW_DIR:
+        return PREVIEW_DIR
+    
+    # Default: preview-app/ directory relative to script location
+    script_dir = Path(__file__).parent.parent
+    preview_dir = script_dir / "preview-app"
+    if preview_dir.exists():
+        PREVIEW_DIR = preview_dir
+        return preview_dir
+    return None
+
+
+def _get_preview_csv_path() -> Optional[Path]:
+    """Get path to preview CSV (e.g., preview-app/Crispy-avar.csv)."""
+    global PREVIEW_CSV_PATH
+    if PREVIEW_CSV_PATH:
+        return PREVIEW_CSV_PATH
+    
+    preview_dir = _get_preview_dir()
+    if not preview_dir or not GLYPHS_PATH:
+        return None
+    
+    # Extract family name from Glyphs file
+    try:
+        font = load(str(GLYPHS_PATH))
+        family_name = font.familyName or "Font"
+    except Exception:
+        # Fallback: use Glyphs filename without extension
+        family_name = GLYPHS_PATH.stem
+    
+    csv_path = preview_dir / f"{family_name}-avar.csv"
+    PREVIEW_CSV_PATH = csv_path
+    return csv_path
+
+
+def _get_preview_config_path() -> Optional[Path]:
+    """Get path to preview config.yaml (e.g., preview-app/config-preview.yaml)."""
+    global PREVIEW_CONFIG_PATH
+    if PREVIEW_CONFIG_PATH:
+        return PREVIEW_CONFIG_PATH
+    
+    preview_dir = _get_preview_dir()
+    if not preview_dir:
+        return None
+    
+    config_path = preview_dir / "config-preview.yaml"
+    PREVIEW_CONFIG_PATH = config_path
+    return config_path
+
+
+def _get_preview_font_dir() -> Optional[Path]:
+    """Get preview font directory (preview-app/preview-fonts/)."""
+    preview_dir = _get_preview_dir()
+    if not preview_dir:
+        return None
+    font_dir = preview_dir / "preview-fonts"
+    font_dir.mkdir(parents=True, exist_ok=True)
+    return font_dir
+
+
+def _initialize_preview_csv_from_glyphs() -> Optional[Path]:
+    """
+    Initialize preview CSV from Glyphs file.
+    Creates CSV with Instance Name and parametric axes (XTRA, XOPQ, YOPQ) from Glyphs instances.
+    Only creates if CSV doesn't exist.
+    """
+    csv_path = _get_preview_csv_path()
+    if not csv_path:
+        return None
+    
+    # Don't overwrite existing CSV
+    if csv_path.exists():
+        return csv_path
+    
+    if not GLYPHS_PATH or not GLYPHS_PATH.exists():
+        return None
+    
+    try:
+        import csv
+        font = load(str(GLYPHS_PATH))
+        
+        # Get parametric axes from Glyphs file
+        parametric_axes = []
+        for axis in font.axes:
+            if hasattr(axis, 'axisTag'):
+                parametric_axes.append(axis.axisTag.upper())
+        
+        # Get instances from Glyphs file
+        instances = []
+        for instance in font.instances:
+            if not instance.name:
+                continue
+            
+            row = {"Instance Name": instance.name}
+            
+            # Get parametric axis values from instance
+            if hasattr(instance, 'axes') and instance.axes:
+                for i, axis in enumerate(font.axes):
+                    if i < len(instance.axes):
+                        tag = axis.axisTag.upper()
+                        value = float(instance.axes[i])
+                        row[tag] = value
+            
+            instances.append(row)
+        
+        # Write CSV
+        if instances:
+            fieldnames = ["Instance Name"] + parametric_axes
+            with csv_path.open("w", encoding="utf-8", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                for row in instances:
+                    # Ensure all parametric axes are present (fill missing with 0)
+                    for axis in parametric_axes:
+                        if axis not in row:
+                            row[axis] = 0
+                    writer.writerow(row)
+            
+            print(f"Initialized preview CSV: {csv_path}", file=sys.stderr)
+            return csv_path
+    except Exception as e:
+        print(f"Error initializing preview CSV: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+    
+    return None
+
+
+def _initialize_preview_config_from_glyphs() -> Optional[Path]:
+    """
+    Initialize preview config.yaml from Glyphs file.
+    Creates minimal config with sources, familyName, and fvarInstances from Glyphs.
+    Only creates if config doesn't exist.
+    """
+    config_path = _get_preview_config_path()
+    if not config_path:
+        return None
+    
+    # Don't overwrite existing config
+    if config_path.exists():
+        return config_path
+    
+    if not GLYPHS_PATH or not GLYPHS_PATH.exists():
+        return None
+    
+    try:
+        import yaml
+        font = load(str(GLYPHS_PATH))
+        
+        # Get family name
+        family_name = font.familyName or GLYPHS_PATH.stem
+        
+        # Get fvarInstances from Glyphs file
+        fvar_instances = []
+        for instance in font.instances:
+            if not instance.name:
+                continue
+            
+            coords = {}
+            if hasattr(instance, 'axes') and instance.axes:
+                for i, axis in enumerate(font.axes):
+                    if i < len(instance.axes):
+                        tag = axis.axisTag.lower()
+                        value = float(instance.axes[i])
+                        coords[tag] = value
+            
+            if coords:
+                fvar_instances.append({
+                    "name": instance.name,
+                    "coordinates": coords
+                })
+        
+        # Build config structure
+        # Get font filename - use format with axis tags (gftools builder expects this)
+        # Get parametric axes from Glyphs file to include in filename
+        parametric_tags = []
+        for axis in font.axes:
+            if hasattr(axis, 'axisTag'):
+                parametric_tags.append(axis.axisTag.upper())
+        # SPAC will be added later, but include it in filename format
+        if parametric_tags:
+            tags_str = ",".join(parametric_tags)
+            font_filename = f"{family_name}[SPAC,{tags_str}].ttf"
+        else:
+            font_filename = f"{family_name}[SPAC].ttf"
+        
+        # Use absolute path for sources to avoid path issues
+        sources_path = str(GLYPHS_PATH.resolve())
+        
+        config = {
+            "sources": [sources_path],
+            "familyName": family_name,
+            "fvarInstances": {
+                font_filename: fvar_instances
+            }
+        }
+        
+        # Write config
+        with config_path.open("w", encoding="utf-8") as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        
+        print(f"Initialized preview config: {config_path}", file=sys.stderr)
+        return config_path
+    except Exception as e:
+        print(f"Error initializing preview config: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+    
+    return None
+
+
+def _check_spac_axis_in_font(font_path: Path) -> bool:
+    """Check if SPAC axis exists in font's fvar table."""
+    try:
+        font = TTFont(str(font_path))
+        if "fvar" not in font:
+            return False
+        
+        fvar = font["fvar"]
+        for axis in fvar.axes:
+            if axis.axisTag == "SPAC":
+                return True
+        return False
+    except Exception as e:
+        print(f"Error checking SPAC axis in font: {e}", file=sys.stderr)
+        return False
+
+
+def _load_axis_metadata() -> Dict[str, Dict[str, any]]:
+    """Load axis metadata from JSON file. Auto-populates with Glyphs file axes if missing."""
+    metadata_path = _get_avar2_metadata_path()
+    if not metadata_path:
+        return {}
+    
+    # Create file with empty dict if it doesn't exist
+    if not metadata_path.exists():
+        try:
+            with metadata_path.open("w", encoding="utf-8") as f:
+                json.dump({}, f, indent=2)
+        except Exception as e:
+            print(f"Error creating axis metadata file: {e}", file=sys.stderr)
+            return {}
+    
+    # Load existing metadata
+    try:
+        with metadata_path.open("r", encoding="utf-8") as f:
+            metadata = json.load(f)
+    except Exception as e:
+        print(f"Error loading axis metadata: {e}", file=sys.stderr)
+        metadata = {}
+    
+    # Get parametric axes from Glyphs file and add to metadata if missing
+    if GLYPHS_PATH and GLYPHS_PATH.exists():
+        try:
+            font = load(str(GLYPHS_PATH))
+            metadata_updated = False
+            
+            for axis in font.axes:
+                if hasattr(axis, 'axisTag'):
+                    axis_tag_upper = axis.axisTag.upper()
+                    axis_name = getattr(axis, 'name', axis_tag_upper) if hasattr(axis, 'name') else axis_tag_upper
+                    
+                    # If this parametric axis is not in metadata, add it
+                    if axis_tag_upper not in metadata:
+                        metadata[axis_tag_upper] = {
+                            "display_name": axis_name,
+                            "registered_tag": axis.axisTag.lower(),
+                            "min": -1000,
+                            "max": 1000,
+                            "is_parametric": True  # Mark as parametric (from Glyphs file)
+                        }
+                        metadata_updated = True
+                    else:
+                        # Ensure existing entries are marked correctly
+                        if "is_parametric" not in metadata[axis_tag_upper]:
+                            metadata[axis_tag_upper]["is_parametric"] = True
+                            metadata_updated = True
+                        # Update display name from Glyphs if not user-modified
+                        # (preserve user edits, but initialize from Glyphs)
+                        if metadata[axis_tag_upper].get("display_name") == axis_tag_upper:
+                            metadata[axis_tag_upper]["display_name"] = axis_name
+                            metadata_updated = True
+            
+            # Save updated metadata if we added any parametric axes
+            if metadata_updated:
+                _save_axis_metadata(metadata)
+        except Exception as e:
+            print(f"Error reading axes from Glyphs file for metadata: {e}", file=sys.stderr)
+    
+    return metadata
+
+
+def _save_axis_metadata(metadata: Dict[str, Dict[str, any]]) -> bool:
+    """Save axis metadata to JSON file."""
+    metadata_path = _get_avar2_metadata_path()
+    if not metadata_path:
+        return False
+    
+    try:
+        with metadata_path.open("w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f"Error saving axis metadata: {e}", file=sys.stderr)
+        return False
+
+
+def _check_csv_external_edit(csv_path: Path) -> bool:
+    """Check if CSV was modified externally. Returns True if modified externally."""
+    csv_str = str(csv_path)
+    current_mtime = csv_path.stat().st_mtime if csv_path.exists() else 0
+    
+    if csv_str in _CSV_MODIFICATION_TIMES:
+        if current_mtime > _CSV_MODIFICATION_TIMES[csv_str]:
+            return True
+    
+    _CSV_MODIFICATION_TIMES[csv_str] = current_mtime
+    return False
+
+
+def _update_csv_modification_time(csv_path: Path) -> None:
+    """Update tracked modification time after we write to CSV."""
+    csv_str = str(csv_path)
+    if csv_path.exists():
+        _CSV_MODIFICATION_TIMES[csv_str] = csv_path.stat().st_mtime
+
+
+def _validate_axis_tag(tag: str) -> tuple[bool, Optional[str]]:
+    """Validate OpenType axis tag. Returns (is_valid, error_message)."""
+    if not tag:
+        return False, "Tag cannot be empty"
+    if len(tag) != 4:
+        return False, "Tag must be exactly 4 characters"
+    if not tag.islower():
+        return False, "Tag must be lowercase"
+    if not tag.isalnum():
+        return False, "Tag must contain only alphanumeric characters"
+    return True, None
+
+
+def _get_glyphs_axis_tags() -> set:
+    """Get set of axis tags from Glyphs file (source of truth for parametric axes)."""
+    if not GLYPHS_PATH or not GLYPHS_PATH.exists():
+        return set()
+    
+    try:
+        font = load(str(GLYPHS_PATH))
+        axis_tags = set()
+        # Get axis tags directly from font.axes
+        for axis in font.axes:
+            if hasattr(axis, 'axisTag'):
+                axis_tags.add(axis.axisTag.lower())
+        return axis_tags
+    except Exception as e:
+        print(f"Error reading axes from Glyphs file: {e}", file=sys.stderr)
+        return set()
+
+
 def _add_missing_instance_to_csv(instance_name: str, glyphs_coords: Dict[str, float], csv_path: Path) -> bool:
     """Add a missing instance to CSV with blank traditional axis values."""
     import csv
+    import importlib.util
     try:
-        # Read existing CSV
-        rows = []
-        fieldnames = []
-        with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
-            reader = csv.DictReader(f)
-            fieldnames = list(reader.fieldnames) if reader.fieldnames else []
-            for row in reader:
-                rows.append(row)
+        # Use normalized read function
+        match_script = Path(__file__).parent / "match-instances-to-avar2.py"
+        spec = importlib.util.spec_from_file_location("match_instances_to_avar2", match_script)
+        match_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(match_module)
+        
+        rows, fieldnames, in_cols, out_cols, _ = match_module.read_csv_mappings(csv_path, GLYPHS_PATH)
         
         if not fieldnames:
             return False
         
-        # Detect traditional axes (WGHT, WDTH, OPSZ, etc.)
-        traditional_axes = {"WGHT", "WDTH", "OPSZ", "CONTRAST"}
-        in_cols = [c for c in fieldnames if c.upper() in traditional_axes or c.upper().endswith("-E")]
-        
         # Create new row with instance name
         new_row = {"Instance Name": instance_name}
         
-        # Initialize all columns
+        # Initialize all columns (use normalized fieldnames)
         for col in fieldnames:
             if col == "Instance Name":
                 continue
             elif col in in_cols:
                 # Traditional axes: blank
                 new_row[col] = ""
-            elif col in glyphs_coords:
-                # Parametric axes: use value from Glyphs
-                new_row[col] = str(glyphs_coords[col])
+            elif col in out_cols:
+                # Parametric axes: use value from Glyphs (match by uppercase)
+                # Find matching glyphs coordinate (case-insensitive)
+                glyphs_key = None
+                for glyphs_tag in glyphs_coords.keys():
+                    if glyphs_tag.upper() == col:
+                        glyphs_key = glyphs_tag
+                        break
+                if glyphs_key:
+                    new_row[col] = str(glyphs_coords[glyphs_key])
+                else:
+                    new_row[col] = ""
             else:
                 # Other columns: blank
                 new_row[col] = ""
@@ -764,7 +1186,7 @@ def _add_missing_instance_to_csv(instance_name: str, glyphs_coords: Dict[str, fl
         # Add new row
         rows.append(new_row)
         
-        # Write updated CSV
+        # Write updated CSV (use normalized fieldnames)
         with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
@@ -840,7 +1262,7 @@ def get_avar2_mappings():
         match_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(match_module)
         
-        rows, fieldnames, in_cols, out_cols = match_module.read_csv_mappings(csv_path)
+        rows, fieldnames, in_cols, out_cols, _ = match_module.read_csv_mappings(csv_path, GLYPHS_PATH)
         
         return jsonify({
             "mappings": rows,
@@ -856,7 +1278,7 @@ def get_avar2_mappings():
 
 @app.route('/api/avar2/axes', methods=['GET'])
 def get_avar2_axes():
-    """Get traditional axes (in:) and parametric axes (out:) from CSV."""
+    """Get traditional axes (in:) and parametric axes (out:) from CSV, including metadata."""
     try:
         csv_path = _get_avar2_csv_path()
         if not csv_path or not csv_path.exists():
@@ -870,17 +1292,159 @@ def get_avar2_axes():
         match_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(match_module)
         
-        _, _, in_cols, out_cols = match_module.read_csv_mappings(csv_path)
+        _, _, in_cols, out_cols, _ = match_module.read_csv_mappings(csv_path, GLYPHS_PATH)
         
         # Normalize traditional axis names
         traditional_axes = [match_module._normalize_in_axis_name(col) for col in in_cols]
+        
+        # Load metadata
+        metadata = _load_axis_metadata()
+        
+        # Get parametric axes from Glyphs file and populate metadata
+        glyphs_axes_info = {}
+        if GLYPHS_PATH and GLYPHS_PATH.exists():
+            try:
+                font = load(str(GLYPHS_PATH))
+                # Calculate min/max from masters
+                axis_ranges = {}
+                for axis in font.axes:
+                    if hasattr(axis, 'axisTag'):
+                        tag = axis.axisTag
+                        axis_ranges[tag] = {'min': float('inf'), 'max': float('-inf')}
+                
+                for master in font.masters:
+                    if hasattr(master, 'axes') and master.axes:
+                        for i, axis in enumerate(font.axes):
+                            if i < len(master.axes):
+                                tag = axis.axisTag
+                                value = float(master.axes[i])
+                                axis_ranges[tag]['min'] = min(axis_ranges[tag]['min'], value)
+                                axis_ranges[tag]['max'] = max(axis_ranges[tag]['max'], value)
+                
+                # Build axes info with min/max from masters
+                for axis in font.axes:
+                    if hasattr(axis, 'axisTag'):
+                        tag = axis.axisTag.upper()
+                        ranges = axis_ranges[axis.axisTag]
+                        glyphs_axes_info[tag] = {
+                            "display_name": axis.name if hasattr(axis, 'name') and axis.name else tag,
+                            "registered_tag": axis.axisTag.lower(),
+                            "is_parametric": True,
+                            "min": ranges['min'] if ranges['min'] != float('inf') else 0.0,
+                            "max": ranges['max'] if ranges['max'] != float('-inf') else 1000.0
+                        }
+            except Exception as e:
+                print(f"Warning: Could not read axes from Glyphs file: {e}", file=sys.stderr)
+        
+        # Build axes with metadata
+        # If axis doesn't exist in metadata, create default entry and save it
+        axes_with_metadata = {}
+        metadata_updated = False
+        
+        # First, populate parametric axes from Glyphs file (these are in out_cols)
+        for col in out_cols:
+            col_upper = col.upper()
+            if col_upper in glyphs_axes_info:
+                # This is a parametric axis from Glyphs file
+                glyphs_info = glyphs_axes_info[col_upper]
+                if col_upper not in metadata:
+                    metadata[col_upper] = {
+                        "display_name": glyphs_info["display_name"],
+                        "registered_tag": glyphs_info["registered_tag"],
+                        "is_parametric": True,
+                        "min": glyphs_info.get("min", 0.0),
+                        "max": glyphs_info.get("max", 1000.0)
+                    }
+                    metadata_updated = True
+                else:
+                    # Update existing entry to mark as parametric and sync from Glyphs
+                    if metadata[col_upper].get("is_parametric") != True:
+                        metadata[col_upper]["is_parametric"] = True
+                        metadata_updated = True
+                    # Always update display_name, registered_tag, min, and max from Glyphs (source of truth)
+                    if metadata[col_upper].get("display_name") != glyphs_info["display_name"]:
+                        metadata[col_upper]["display_name"] = glyphs_info["display_name"]
+                        metadata_updated = True
+                    if metadata[col_upper].get("registered_tag") != glyphs_info["registered_tag"]:
+                        metadata[col_upper]["registered_tag"] = glyphs_info["registered_tag"]
+                        metadata_updated = True
+                    # Update min/max from Glyphs (parametric axes should always match Glyphs)
+                    if metadata[col_upper].get("min") != glyphs_info.get("min", 0.0):
+                        metadata[col_upper]["min"] = glyphs_info.get("min", 0.0)
+                        metadata_updated = True
+                    if metadata[col_upper].get("max") != glyphs_info.get("max", 1000.0):
+                        metadata[col_upper]["max"] = glyphs_info.get("max", 1000.0)
+                        metadata_updated = True
+                axes_with_metadata[col_upper] = metadata[col_upper]
+            else:
+                # Parametric axis not found in Glyphs (shouldn't happen, but handle gracefully)
+                if col_upper not in metadata:
+                    normalized_tag = match_module._normalize_in_axis_name(col)
+                    metadata[col_upper] = {
+                        "display_name": col,
+                        "registered_tag": normalized_tag,
+                        "is_parametric": True,
+                        "min": -1000,
+                        "max": 1000
+                    }
+                    metadata_updated = True
+                axes_with_metadata[col_upper] = metadata[col_upper]
+        
+        # Then, handle traditional axes (not in Glyphs file)
+        # Map of normalized tags to default display names
+        default_display_names = {
+            "wght": "Weight",
+            "wdth": "Width",
+            "opsz": "Optical Size",
+            "cntr": "Contrast",
+            "spac": "Spacing",
+            "grad": "Grade",
+            "slnt": "Slant",
+            "ital": "Italic"
+        }
+        
+        for col in in_cols:
+            if col not in metadata:
+                # Create default entry for traditional axis (not in Glyphs file)
+                normalized_tag = match_module._normalize_in_axis_name(col)
+                # Use proper display name if available, otherwise use column name
+                default_display_name = default_display_names.get(normalized_tag.lower(), col)
+                metadata[col] = {
+                    "display_name": default_display_name,
+                    "registered_tag": normalized_tag,
+                    "min": -1000,
+                    "max": 1000,
+                    "is_parametric": False  # Mark as traditional (not in Glyphs file)
+                }
+                metadata_updated = True
+            else:
+                # Ensure is_parametric flag exists for existing entries
+                if "is_parametric" not in metadata[col]:
+                    # Check if it's actually parametric (exists in Glyphs)
+                    normalized_tag = match_module._normalize_in_axis_name(col)
+                    glyphs_axis_tags = _get_glyphs_axis_tags()
+                    metadata[col]["is_parametric"] = normalized_tag in glyphs_axis_tags
+                    metadata_updated = True
+                
+                # Update display_name if it's still the column name (tag) - migrate to proper display name
+                normalized_tag = match_module._normalize_in_axis_name(col)
+                if metadata[col].get("display_name") == col and normalized_tag.lower() in default_display_names:
+                    metadata[col]["display_name"] = default_display_names[normalized_tag.lower()]
+                    metadata_updated = True
+            
+            axes_with_metadata[col] = metadata[col]
+        
+        # Save updated metadata if we added any new axes
+        if metadata_updated:
+            _save_axis_metadata(metadata)
         
         return jsonify({
             "traditional_axes": {
                 "columns": in_cols,
                 "normalized": traditional_axes
             },
-            "parametric_axes": out_cols  # All parametric axes from CSV (may include SPAC)
+            "parametric_axes": out_cols,  # All parametric axes from Glyphs file
+            "metadata": axes_with_metadata  # Includes all axes with is_parametric flag
         })
     except Exception as e:
         import traceback
@@ -924,6 +1488,731 @@ def sync_csv():
             "output": result.stdout
         })
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/avar2/axis', methods=['POST'])
+def add_avar2_axis():
+    """Add a new traditional axis to the CSV."""
+    try:
+        csv_path = _get_avar2_csv_path()
+        if not csv_path or not csv_path.exists():
+            return jsonify({"error": "avar2-mappings.csv not found"}), 404
+        
+        # Check for external edits
+        if _check_csv_external_edit(csv_path):
+            return jsonify({
+                "error": "CSV was modified externally. Please reload.",
+                "reload_required": True
+            }), 409
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        axis_name = data.get("axis_name")  # CSV column header (e.g., "WGHT")
+        display_name = data.get("display_name", axis_name)  # Display name (e.g., "Weight")
+        registered_tag = data.get("registered_tag", "").lower()  # OpenType tag (e.g., "wght")
+        default_value = data.get("default_value", 0)
+        min_value = data.get("min", -1000)
+        max_value = data.get("max", 1000)
+        
+        # Validate inputs
+        if not axis_name:
+            return jsonify({"error": "axis_name is required"}), 400
+        
+        is_valid, error_msg = _validate_axis_tag(registered_tag)
+        if not is_valid:
+            return jsonify({"error": f"Invalid registered tag: {error_msg}"}), 400
+        
+        # Check if tag exists in Glyphs file (parametric axes) - cannot add traditional axis with same tag
+        glyphs_axis_tags = _get_glyphs_axis_tags()
+        if registered_tag.lower() in glyphs_axis_tags:
+            return jsonify({
+                "error": f"Registered tag '{registered_tag}' already exists in Glyphs file as a parametric axis. Traditional axes cannot use tags that exist in the Glyphs file."
+            }), 400
+        
+        if min_value < -1000 or min_value > 1000:
+            return jsonify({"error": "min must be between -1000 and 1000"}), 400
+        if max_value < -1000 or max_value > 1000:
+            return jsonify({"error": "max must be between -1000 and 1000"}), 400
+        if min_value >= max_value:
+            return jsonify({"error": "min must be less than max"}), 400
+        
+        # Check for duplicate registered tags in existing metadata
+        metadata = _load_axis_metadata()
+        for existing_axis, existing_meta in metadata.items():
+            if existing_meta.get("registered_tag") == registered_tag and existing_axis != axis_name_normalized:
+                return jsonify({"error": f"Registered tag '{registered_tag}' already used by axis '{existing_axis}'"}), 400
+        
+        # Read CSV using normalized function
+        import importlib.util
+        match_script = Path(__file__).parent / "match-instances-to-avar2.py"
+        spec = importlib.util.spec_from_file_location("match_instances_to_avar2", match_script)
+        match_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(match_module)
+        
+        rows, fieldnames, _, _, fieldname_mapping = match_module.read_csv_mappings(csv_path, GLYPHS_PATH)
+        
+        # Normalize axis_name to uppercase for consistency
+        axis_name_normalized = axis_name.upper()
+        
+        # Check if axis already exists (case-insensitive)
+        if axis_name_normalized in fieldnames:
+            return jsonify({"error": f"Axis '{axis_name}' already exists"}), 400
+        
+        # Add new column to CSV (use normalized name)
+        fieldnames.append(axis_name_normalized)
+        for row in rows:
+            row[axis_name_normalized] = str(default_value)
+        
+        # Write updated CSV (use normalized fieldnames)
+        import csv
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        _update_csv_modification_time(csv_path)
+        
+        # Save metadata (use normalized name)
+        # Check if this is a parametric axis (shouldn't happen, but be safe)
+        is_parametric = False
+        glyphs_axis_tags = _get_glyphs_axis_tags()
+        if registered_tag.lower() in glyphs_axis_tags:
+            is_parametric = True
+        
+        metadata[axis_name_normalized] = {
+            "display_name": display_name,
+            "registered_tag": registered_tag,
+            "is_parametric": is_parametric,
+            "min": min_value,
+            "max": max_value
+        }
+        _save_axis_metadata(metadata)
+        
+        return jsonify({
+            "success": True,
+            "axis_name": axis_name_normalized,
+            "metadata": metadata[axis_name_normalized]
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/avar2/axis/<axis_name>', methods=['PUT'])
+def update_avar2_axis(axis_name: str):
+    """Update axis metadata. Cannot edit axes that exist in Glyphs file (parametric axes)."""
+    try:
+        csv_path = _get_avar2_csv_path()
+        if not csv_path or not csv_path.exists():
+            return jsonify({"error": "avar2-mappings.csv not found"}), 404
+        
+        # Check for external edits
+        if _check_csv_external_edit(csv_path):
+            return jsonify({
+                "error": "CSV was modified externally. Please reload.",
+                "reload_required": True
+            }), 409
+        
+        # Check if this axis exists in Glyphs file (parametric axis) - cannot edit
+        import importlib.util
+        match_script = Path(__file__).parent / "match-instances-to-avar2.py"
+        spec = importlib.util.spec_from_file_location("match_instances_to_avar2", match_script)
+        match_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(match_module)
+        
+        _, _, in_cols, out_cols, _ = match_module.read_csv_mappings(csv_path, GLYPHS_PATH)
+        
+        # Normalize axis_name to uppercase for lookup
+        axis_name_normalized = axis_name.upper()
+        
+        # If axis is in parametric axes (exists in Glyphs file), cannot edit
+        if axis_name_normalized in out_cols:
+            return jsonify({
+                "error": f"Cannot edit axis '{axis_name}' - it exists in the Glyphs file as a parametric axis. Parametric axes are managed in the Glyphs file, not in avar2 mappings."
+            }), 403
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        new_display_name = data.get("display_name")
+        new_registered_tag = data.get("registered_tag", "").lower()
+        new_min = data.get("min")
+        new_max = data.get("max")
+        
+        # Normalize axis_name to uppercase for lookup
+        axis_name_normalized = axis_name.upper()
+        
+        # Load metadata
+        metadata = _load_axis_metadata()
+        if axis_name_normalized not in metadata:
+            return jsonify({"error": f"Axis '{axis_name}' not found in metadata"}), 404
+        
+        # Validate registered tag if provided
+        if new_registered_tag:
+            is_valid, error_msg = _validate_axis_tag(new_registered_tag)
+            if not is_valid:
+                return jsonify({"error": f"Invalid registered tag: {error_msg}"}), 400
+            
+            # Check if tag exists in Glyphs file (parametric axes) - cannot use same tag
+            glyphs_axis_tags = _get_glyphs_axis_tags()
+            if new_registered_tag.lower() in glyphs_axis_tags:
+                return jsonify({
+                    "error": f"Registered tag '{new_registered_tag}' already exists in Glyphs file as a parametric axis. Traditional axes cannot use tags that exist in the Glyphs file."
+                }), 400
+            
+            # Check for duplicate tags in existing metadata
+            for existing_axis, existing_meta in metadata.items():
+                if existing_axis != axis_name_normalized and existing_meta.get("registered_tag") == new_registered_tag:
+                    return jsonify({"error": f"Registered tag '{new_registered_tag}' already used by axis '{existing_axis}'"}), 400
+        
+        # Validate min/max if provided
+        if new_min is not None:
+            if new_min < -1000 or new_min > 1000:
+                return jsonify({"error": "min must be between -1000 and 1000"}), 400
+        if new_max is not None:
+            if new_max < -1000 or new_max > 1000:
+                return jsonify({"error": "max must be between -1000 and 1000"}), 400
+        if new_min is not None and new_max is not None and new_min >= new_max:
+            return jsonify({"error": "min must be less than max"}), 400
+        
+        # Read CSV
+        import csv
+        rows = []
+        fieldnames = []
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+            for row in reader:
+                rows.append(row)
+        
+        if axis_name not in fieldnames:
+            return jsonify({"error": f"Axis '{axis_name}' not found in CSV"}), 404
+        
+        # Update metadata (use normalized name)
+        if axis_name_normalized not in metadata:
+            # Create metadata entry if it doesn't exist
+            metadata[axis_name_normalized] = {
+                "display_name": axis_name_normalized,
+                "registered_tag": match_module._normalize_in_axis_name(axis_name_normalized),
+                "min": -1000,
+                "max": 1000
+            }
+        
+        current_meta = metadata[axis_name_normalized]
+        if new_display_name:
+            current_meta["display_name"] = new_display_name
+        if new_registered_tag:
+            old_tag = current_meta.get("registered_tag")
+            current_meta["registered_tag"] = new_registered_tag
+        if new_min is not None:
+            current_meta["min"] = new_min
+        if new_max is not None:
+            current_meta["max"] = new_max
+        
+        # Ensure is_parametric flag is preserved (don't allow changing it via edit)
+        # It should already be set correctly from initialization
+        
+        # If axis_name was different case, update metadata key
+        if axis_name_normalized != axis_name and axis_name in metadata:
+            del metadata[axis_name]
+        
+        metadata[axis_name_normalized] = current_meta
+        _save_axis_metadata(metadata)
+        
+        # Write CSV back (use normalized fieldnames)
+        import csv
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        _update_csv_modification_time(csv_path)
+        
+        return jsonify({
+            "success": True,
+            "axis_name": axis_name_normalized,
+            "metadata": current_meta
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/avar2/mapping/<instance_name>/<axis_name>', methods=['PUT'])
+def update_avar2_mapping(instance_name: str, axis_name: str):
+    """Update a single cell value in the CSV."""
+    try:
+        csv_path = _get_avar2_csv_path()
+        if not csv_path or not csv_path.exists():
+            return jsonify({"error": "avar2-mappings.csv not found"}), 404
+        
+        # Check for external edits
+        if _check_csv_external_edit(csv_path):
+            return jsonify({
+                "error": "CSV was modified externally. Please reload.",
+                "reload_required": True
+            }), 409
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        new_value = data.get("value")
+        if new_value is None:
+            return jsonify({"error": "value is required"}), 400
+        
+        # Validate value is numeric
+        try:
+            float_value = float(new_value)
+        except (ValueError, TypeError):
+            return jsonify({"error": "value must be a number"}), 400
+        
+        # Normalize axis_name to uppercase for lookup
+        axis_name_normalized = axis_name.upper()
+        
+        # Load metadata to check range
+        metadata = _load_axis_metadata()
+        if axis_name_normalized in metadata:
+            axis_meta = metadata[axis_name_normalized]
+            min_val = axis_meta.get("min", -1000)
+            max_val = axis_meta.get("max", 1000)
+            if float_value < min_val or float_value > max_val:
+                return jsonify({
+                    "error": f"Value {float_value} is outside allowed range [{min_val}, {max_val}]"
+                }), 400
+        
+        # Read CSV using normalized function
+        import importlib.util
+        match_script = Path(__file__).parent / "match-instances-to-avar2.py"
+        spec = importlib.util.spec_from_file_location("match_instances_to_avar2", match_script)
+        match_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(match_module)
+        
+        rows, fieldnames, _, _, _ = match_module.read_csv_mappings(csv_path, GLYPHS_PATH)
+        
+        if axis_name_normalized not in fieldnames:
+            return jsonify({"error": f"Axis '{axis_name}' not found in CSV"}), 404
+        
+        # Find and update the instance
+        instance_found = False
+        for row in rows:
+            if row.get("Instance Name", "").strip() == instance_name:
+                row[axis_name_normalized] = str(float_value)
+                instance_found = True
+                break
+        
+        if not instance_found:
+            return jsonify({"error": f"Instance '{instance_name}' not found in CSV"}), 404
+        
+        # Write updated CSV (use normalized fieldnames)
+        import csv
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        _update_csv_modification_time(csv_path)
+        
+        return jsonify({
+            "success": True,
+            "instance_name": instance_name,
+            "axis_name": axis_name_normalized,
+            "value": float_value
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/spacing/init', methods=['POST'])
+def init_spac_axis():
+    """Initialize SPAC axis: add SPAC column to CSV (all instances = 0) and update config.yaml."""
+    try:
+        csv_path = _get_preview_csv_path()
+        config_path = _get_preview_config_path()
+        if not csv_path or not config_path:
+            return jsonify({"error": "Preview CSV or config not found"}), 404
+        
+        # Read CSV
+        rows = []
+        fieldnames = []
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+            for row in reader:
+                rows.append(row)
+        
+        # Check if SPAC column already exists
+        if "SPAC" in fieldnames:
+            return jsonify({
+                "success": True,
+                "message": "SPAC column already exists",
+                "initialized": False
+            })
+        
+        # Add SPAC column with 0 for all instances
+        fieldnames.append("SPAC")
+        for row in rows:
+            row["SPAC"] = "0"
+        
+        # Write updated CSV
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        # Update config.yaml to add spacingAxis section
+        if yaml:
+            with config_path.open("r", encoding="utf-8") as f:
+                config = yaml.safe_load(f) or {}
+            
+            config["spacingAxis"] = {
+                "min": -100,
+                "max": 100
+            }
+            
+            with config_path.open("w", encoding="utf-8") as f:
+                yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        
+        return jsonify({
+            "success": True,
+            "initialized": True,
+            "message": "SPAC axis initialized"
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/spacing/check', methods=['GET'])
+def check_spac_axis():
+    """Check if SPAC axis exists in preview font."""
+    try:
+        preview_font_dir = _get_preview_font_dir()
+        if not preview_font_dir:
+            return jsonify({"exists": False, "error": "Preview font directory not found"}), 404
+        
+        # Look for preview font files, prefer one with SPAC in filename
+        font_files = list(preview_font_dir.glob("*.ttf"))
+        if not font_files:
+            return jsonify({"exists": False})
+        
+        # Prefer font with SPAC in filename, otherwise use most recent
+        spac_font = None
+        for font_file in font_files:
+            if "SPAC" in font_file.name:
+                spac_font = font_file
+                break
+        
+        if not spac_font:
+            spac_font = max(font_files, key=lambda p: p.stat().st_mtime)
+        
+        has_spac = _check_spac_axis_in_font(spac_font)
+        
+        return jsonify({
+            "exists": has_spac,
+            "font_path": str(spac_font)
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/spacing/values', methods=['GET'])
+def get_spac_values():
+    """Get SPAC values for all instances from preview CSV."""
+    try:
+        csv_path = _get_preview_csv_path()
+        if not csv_path or not csv_path.exists():
+            return jsonify({"error": "Preview CSV not found"}), 404
+        
+        rows = []
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                instance_name = row.get("Instance Name", "").strip()
+                spac_value = row.get("SPAC", "0").strip()
+                try:
+                    spac_float = float(spac_value) if spac_value else 0.0
+                except ValueError:
+                    spac_float = 0.0
+                rows.append({
+                    "instance_name": instance_name,
+                    "spac": spac_float
+                })
+        
+        return jsonify({"values": rows})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/spacing/instance/<instance_name>', methods=['PUT'])
+def update_spac_value(instance_name: str):
+    """Update SPAC value for a specific instance."""
+    try:
+        csv_path = _get_preview_csv_path()
+        if not csv_path or not csv_path.exists():
+            return jsonify({"error": "Preview CSV not found"}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        new_value = data.get("value")
+        if new_value is None:
+            return jsonify({"error": "value is required"}), 400
+        
+        # Validate value
+        try:
+            float_value = float(new_value)
+            if float_value < -100 or float_value > 100:
+                return jsonify({"error": "SPAC value must be between -100 and 100"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"error": "value must be a number"}), 400
+        
+        # Read CSV
+        rows = []
+        fieldnames = []
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+            for row in reader:
+                rows.append(row)
+        
+        # Ensure SPAC column exists
+        if "SPAC" not in fieldnames:
+            fieldnames.append("SPAC")
+            for row in rows:
+                if "SPAC" not in row:
+                    row["SPAC"] = "0"
+        
+        # Find and update instance
+        instance_found = False
+        for row in rows:
+            if row.get("Instance Name", "").strip() == instance_name:
+                row["SPAC"] = str(float_value)
+                instance_found = True
+                break
+        
+        if not instance_found:
+            return jsonify({"error": f"Instance '{instance_name}' not found"}), 404
+        
+        # Write updated CSV
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        # Update config.yaml spacingAxis min/max based on all SPAC values
+        _update_spacing_axis_range()
+        
+        return jsonify({
+            "success": True,
+            "instance_name": instance_name,
+            "spac": float_value
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+def _update_spacing_axis_range():
+    """Update config.yaml spacingAxis min/max based on SPAC values in CSV."""
+    if not yaml:
+        return
+    
+    csv_path = _get_preview_csv_path()
+    config_path = _get_preview_config_path()
+    if not csv_path or not csv_path.exists() or not config_path:
+        return
+    
+    try:
+        # Read SPAC values from CSV
+        spac_values = []
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                spac_str = row.get("SPAC", "0").strip()
+                try:
+                    spac_values.append(float(spac_str) if spac_str else 0.0)
+                except ValueError:
+                    spac_values.append(0.0)
+        
+        if not spac_values:
+            return
+        
+        # Calculate min/max (with some padding)
+        min_spac = min(spac_values)
+        max_spac = max(spac_values)
+        
+        # Add padding (10% or at least 5 units)
+        padding = max(abs(min_spac) * 0.1, abs(max_spac) * 0.1, 5)
+        min_spac = min_spac - padding
+        max_spac = max_spac + padding
+        
+        # Clamp to reasonable range
+        min_spac = max(-100, min_spac)
+        max_spac = min(100, max_spac)
+        
+        # Read config
+        with config_path.open("r", encoding="utf-8") as f:
+            config = yaml.safe_load(f) or {}
+        
+        # Update spacingAxis
+        config["spacingAxis"] = {
+            "min": int(min_spac),
+            "max": int(max_spac)
+        }
+        
+        # Write config back
+        with config_path.open("w", encoding="utf-8") as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    except Exception as e:
+        print(f"Error updating spacing axis range: {e}", file=sys.stderr)
+
+
+@app.route('/api/spacing/rebuild', methods=['POST'])
+def rebuild_preview_font_with_spac():
+    """Rebuild preview font with SPAC axis using minimal config and fontc."""
+    global BUILDING
+    
+    if BUILDING:
+        return jsonify({"error": "Build already in progress"}), 409
+    
+    try:
+        config_path = _get_preview_config_path()
+        preview_font_dir = _get_preview_font_dir()
+        if not config_path or not preview_font_dir:
+            return jsonify({"error": "Preview config or font directory not found"}), 404
+        
+        if not USE_FONTC:
+            return jsonify({"error": "fontc is required for preview font rebuild"}), 400
+        
+        # Check if fontc is available
+        fontc_path = shutil.which("fontc")
+        if not fontc_path:
+            return jsonify({"error": "fontc not found in PATH"}), 400
+        
+        BUILDING = True
+        
+        # Build preview font directly with fontc, then add SPAC axis
+        # Skip fix, BuildSTAT, and buildFvarInstances steps
+        project_root = GLYPHS_PATH.parent.parent if GLYPHS_PATH else Path.cwd()
+        
+        # Step 1: Build variable font with fontc (no post-processing)
+        temp_font = tempfile.NamedTemporaryFile(suffix=".ttf", delete=False)
+        temp_font_path = Path(temp_font.name)
+        temp_font.close()
+        
+        fontc_cmd = [
+            fontc_path,
+            "--output-file", str(temp_font_path),
+            str(GLYPHS_PATH.resolve()),
+            "--flatten-components",
+            "--decompose-transformed-components"
+        ]
+        
+        fontc_result = subprocess.run(
+            fontc_cmd,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        if fontc_result.returncode != 0:
+            BUILDING = False
+            if temp_font_path.exists():
+                temp_font_path.unlink()
+            return jsonify({
+                "error": "fontc build failed",
+                "details": fontc_result.stderr
+            }), 500
+        
+        if not temp_font_path.exists():
+            BUILDING = False
+            return jsonify({"error": "fontc did not produce output file"}), 500
+        
+        # Step 2: Add SPAC axis using gftools-gen-spac
+        # Get spacingAxis min/max from config
+        spacing_min = -100
+        spacing_max = 100
+        if yaml and config_path.exists():
+            try:
+                with config_path.open("r", encoding="utf-8") as f:
+                    config = yaml.safe_load(f) or {}
+                    if "spacingAxis" in config:
+                        spacing_min = config["spacingAxis"].get("min", -100)
+                        spacing_max = config["spacingAxis"].get("max", 100)
+            except Exception as e:
+                print(f"Warning: Could not read spacingAxis from config: {e}", file=sys.stderr)
+        
+        # Step 2: Add SPAC axis using gftools-gen-spac (inplace to temp file, then copy)
+        # Use --inplace to modify temp file directly
+        spac_cmd = [
+            "gftools-gen-spac",
+            "--inplace",
+            str(temp_font_path),
+            str(int(spacing_min)),
+            str(int(spacing_max))
+        ]
+        
+        spac_result = subprocess.run(
+            spac_cmd,
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        
+        BUILDING = False
+        
+        if spac_result.returncode != 0:
+            if temp_font_path.exists():
+                temp_font_path.unlink()
+            return jsonify({
+                "error": "SPAC axis addition failed",
+                "details": spac_result.stderr
+            }), 500
+        
+        # Generate preview font filename with SPAC
+        family_name = GLYPHS_PATH.stem
+        preview_font_path = preview_font_dir / f"{family_name}[SPAC].ttf"
+        
+        # Copy temp font to preview directory
+        shutil.copy2(temp_font_path, preview_font_path)
+        
+        # Clean up temp file
+        if temp_font_path.exists():
+            temp_font_path.unlink()
+        
+        final_font = preview_font_path
+        
+        has_spac = _check_spac_axis_in_font(final_font)
+        
+        return jsonify({
+            "success": True,
+            "font_path": str(final_font),
+            "has_spac": has_spac,
+            "output": f"fontc: {fontc_result.stdout}\ngftools-gen-spac: {spac_result.stdout}"
+        })
+    except subprocess.TimeoutExpired:
+        BUILDING = False
+        return jsonify({"error": "Build timeout"}), 500
+    except Exception as e:
+        BUILDING = False
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
@@ -985,6 +2274,10 @@ def main():
         print(f"Error: Glyphs file not found: {GLYPHS_PATH}", file=sys.stderr)
         sys.exit(1)
     
+    # Initialize preview tool files (CSV and config) if they don't exist
+    _initialize_preview_csv_from_glyphs()
+    _initialize_preview_config_from_glyphs()
+    
     print(f"Starting server on {args.host}:{args.port}", file=sys.stderr)
     print(f"Glyphs file: {GLYPHS_PATH}", file=sys.stderr)
     print(f"Build directory: {BUILD_DIR}", file=sys.stderr)
@@ -997,6 +2290,13 @@ def main():
             print(f"CSV file (auto-detected): {csv_path}", file=sys.stderr)
         else:
             print(f"CSV file: not found (avar2 endpoints will be unavailable)", file=sys.stderr)
+    
+    preview_csv = _get_preview_csv_path()
+    if preview_csv:
+        print(f"Preview CSV: {preview_csv}", file=sys.stderr)
+    preview_config = _get_preview_config_path()
+    if preview_config:
+        print(f"Preview config: {preview_config}", file=sys.stderr)
     
     # Set up periodic file checking (every 15 seconds) instead of file watching
     # This checks file modification time and only rebuilds if file changed

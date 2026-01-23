@@ -3,10 +3,13 @@ import './Sidebar.css';
 import AxisControl from './AxisControl';
 import UpdateButton from './UpdateButton';
 import DuplicateModal from './DuplicateModal';
+import AddAxisModal from './AddAxisModal';
+import EditAxisModal from './EditAxisModal';
+import { api } from '../api';
 
 const DEFAULT_SAMPLE_TEXT = "The Quick Brown Fox Jumps Over The Lazy Dog 0123456789 &!";
 
-function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance, avar2Mode, avar2Instances, avar2Axes }) {
+function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance, avar2Mode, avar2Instances, avar2Axes, onAddAvar2Axis, onUpdateAvar2Axis, onUpdateAvar2Mapping, onReloadAvar2Data, spacMode, spacAxisExists, spacValue, onSpacChange, spacBuilding, spacError, onSpacRetry }) {
   // Map axis tags to names for avar2 display
   const axisNames = {
     wght: 'Weight',
@@ -15,6 +18,12 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
     cntr: 'Contrast'
   };
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [showAddAxisModal, setShowAddAxisModal] = useState(false);
+  const [showEditAxisModal, setShowEditAxisModal] = useState(false);
+  const [editingAxisName, setEditingAxisName] = useState(null);
+  const [editingValue, setEditingValue] = useState({ instance: null, axis: null, value: null });
+  const [savingValue, setSavingValue] = useState(false);
+  const [valueError, setValueError] = useState(null);
   
   // Check if coordinates have been modified from original
   const coordinatesChanged = React.useMemo(() => {
@@ -76,40 +85,219 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
             disabled={disabled}
           />
         ))}
+        
+        {/* SPAC axis control - shown when spacMode is ON and axis exists */}
+        {spacMode && spacAxisExists && selectedInstance && (
+          <div className="axis-control spac-axis-control">
+            <div className="axis-label-row">
+              <label className="axis-label">SPAC</label>
+              <span className="axis-value">{spacValue.toFixed(1)}</span>
+            </div>
+            <input
+              type="range"
+              min="-100"
+              max="100"
+              step="0.1"
+              value={spacValue}
+              onChange={(e) => onSpacChange(parseFloat(e.target.value))}
+              disabled={disabled || spacBuilding}
+              className="axis-slider"
+            />
+            <div className="axis-range">-100 to +100</div>
+            {spacBuilding && (
+              <div className="spac-building-indicator">Rebuilding font...</div>
+            )}
+            {spacError && (
+              <div className="spac-error">
+                <div className="error-message">{spacError}</div>
+                <button onClick={onSpacRetry} className="retry-btn">Retry</button>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* SPAC error state - when toggle is ON but axis doesn't exist */}
+        {spacMode && !spacAxisExists && (
+          <div className="spac-error-state">
+            {spacBuilding ? (
+              <div>Initializing SPAC axis and rebuilding font...</div>
+            ) : spacError ? (
+              <div className="spac-error">
+                <div className="error-message">{spacError}</div>
+                <button onClick={onSpacRetry} className="retry-btn">Retry</button>
+              </div>
+            ) : (
+              <div>SPAC axis not available. Click toggle to initialize.</div>
+            )}
+          </div>
+        )}
       </div>
       
-      {avar2Mode && selectedInstance && avar2Instances.length > 0 && (
+      {avar2Mode && selectedInstance && (
         <div className="avar2-traditional-axes">
           <h3 className="avar2-section-title">AVAR2 MAPPINGS</h3>
           {(() => {
+            // Show loading state if data is not ready yet
+            if (!avar2Axes || avar2Instances.length === 0) {
+              return <div className="avar2-loading">Loading mappings...</div>;
+            }
+            
             const mapping = avar2Instances.find(
               inst => inst.instance_name === selectedInstance.name
             );
             if (mapping && mapping.avar2_mapping && mapping.avar2_mapping.in) {
               const traditionalAxes = mapping.avar2_mapping.in;
-              const axisNames = {
-                wght: 'Weight',
-                wdth: 'Width',
-                opsz: 'Optical Size',
-                cntr: 'Contrast'
-              };
-              // Find axis metadata from axes array to get min/max
-              const getAxisMetadata = (tag) => {
-                return axes.find(ax => ax.tag === tag) || { min: 0, max: 1000 };
-              };
+              const metadata = avar2Axes?.metadata || {};
+              
+              // Get axis column names from metadata or use normalized tags
+              const axisColumns = avar2Axes?.traditional_axes?.columns || [];
+              
               return (
-                <div className="traditional-axes-list">
-                  {Object.entries(traditionalAxes).map(([tag, value]) => {
-                    return (
-                      <div key={tag} className="traditional-axis-item">
-                        <div className="traditional-axis-tag">{tag}</div>
-                        <div className="traditional-axis-value">
-                          {value.toFixed(1)}
+                <>
+                  <div className="traditional-axes-list">
+                    {Object.entries(traditionalAxes).map(([tag, value]) => {
+                      // Map normalized tag (wght, wdth, etc.) to CSV column name
+                      // The backend provides normalized tags in avar2_mapping.in, but we need CSV column names
+                      const tagToColumnMap = {
+                        'wght': 'WGHT',
+                        'wdth': 'WDTH', 
+                        'opsz': 'OPSZ',
+                        'cntr': 'CNTR'  // CNTR is the CSV column name
+                      };
+                      
+                      // Try to find CSV column by matching normalized tag
+                      let axisColumn = tagToColumnMap[tag] || tag.toUpperCase();
+                      
+                      // If not found in map, try to find in columns by normalizing
+                      if (!axisColumns.includes(axisColumn)) {
+                        const found = axisColumns.find(col => {
+                          const normalized = col.toUpperCase().replace(/-E$/, '');
+                          const tagMap = { WGHT: 'wght', WDTH: 'wdth', OPSZ: 'opsz', CONTRAST: 'cntr', CNTR: 'cntr' };
+                          return tagMap[normalized] === tag;
+                        });
+                        if (found) axisColumn = found;
+                      }
+                      
+                      // Use metadata from backend (which ensures all axes are in JSON)
+                      // CSV column names (like "WGHT") are the keys in metadata
+                      const axisMeta = metadata[axisColumn];
+                      
+                      // Ensure we have metadata - if not, something is wrong
+                      if (!axisMeta) {
+                        console.warn(`Missing metadata for axis column: ${axisColumn}`);
+                      }
+                      
+                      // Use registered_tag for avar2 mapping labels (not display_name)
+                      // Fallback to normalized tag if metadata is missing
+                      const axisLabel = axisMeta?.registered_tag || tag;
+                      
+                      const isEditing = editingValue.instance === selectedInstance.name && editingValue.axis === axisColumn;
+                      const isSaving = savingValue && editingValue.instance === selectedInstance.name && editingValue.axis === axisColumn;
+                      
+                      // Check if this is a parametric axis (exists in Glyphs file) - cannot edit
+                      // Use is_parametric flag from metadata, fallback to checking parametric_axes array
+                      const isParametricAxis = axisMeta?.is_parametric === true || avar2Axes?.parametric_axes?.includes(axisColumn) || false;
+                      
+                      // Get min/max from metadata or use defaults
+                      const axisMin = axisMeta?.min ?? -1000;
+                      const axisMax = axisMeta?.max ?? 1000;
+                      
+                      return (
+                        <div key={tag} className="traditional-axis-item">
+                          <div 
+                            className={`traditional-axis-tag ${isParametricAxis ? '' : 'clickable'}`}
+                            onClick={() => {
+                              if (!isParametricAxis) {
+                                setEditingAxisName(axisColumn);
+                                setShowEditAxisModal(true);
+                              }
+                            }}
+                            title={isParametricAxis ? "Parametric axis (from Glyphs file) - cannot edit" : "Click to edit axis metadata"}
+                          >
+                            {axisLabel}
+                            {isParametricAxis && <span className="parametric-badge"> (Glyphs)</span>}
+                          </div>
+                          {isEditing && !isParametricAxis ? (
+                            <input
+                              type="number"
+                              className="traditional-axis-value-input"
+                              defaultValue={value}
+                              step="0.1"
+                              autoFocus
+                              onBlur={async (e) => {
+                                const newValue = parseFloat(e.target.value);
+                                if (isNaN(newValue)) {
+                                  setEditingValue({ instance: null, axis: null, value: null });
+                                  return;
+                                }
+                                
+                                // Validate range
+                                if (newValue < axisMin || newValue > axisMax) {
+                                  setValueError(`Value must be between ${axisMin} and ${axisMax}`);
+                                  setTimeout(() => setValueError(null), 3000);
+                                  setEditingValue({ instance: null, axis: null, value: null });
+                                  return;
+                                }
+                                
+                                setSavingValue(true);
+                                setValueError(null);
+                                try {
+                                  await onUpdateAvar2Mapping(selectedInstance.name, axisColumn, newValue);
+                                  setEditingValue({ instance: null, axis: null, value: null });
+                                } catch (err) {
+                                  setValueError(err.message || 'Failed to save value');
+                                  setTimeout(() => setValueError(null), 3000);
+                                  // Revert to original value
+                                  setEditingValue({ instance: null, axis: null, value: null });
+                                } finally {
+                                  setSavingValue(false);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.target.blur();
+                                } else if (e.key === 'Escape') {
+                                  setEditingValue({ instance: null, axis: null, value: null });
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div 
+                              className={`traditional-axis-value ${isSaving ? 'saving' : (isParametricAxis ? '' : 'clickable')}`}
+                              onClick={() => {
+                                if (!isSaving && !isParametricAxis) {
+                                  setEditingValue({ 
+                                    instance: selectedInstance.name, 
+                                    axis: axisColumn, 
+                                    value: value 
+                                  });
+                                }
+                              }}
+                              title={isParametricAxis ? "Parametric axis (from Glyphs file) - cannot edit" : `Click to edit (range: ${axisMeta.min} to ${axisMeta.max})`}
+                            >
+                              {isSaving ? '...' : value.toFixed(1)}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                  {valueError && (
+                    <div className="avar2-error-message">{valueError}</div>
+                  )}
+                  <div className="avar2-add-axis-section">
+                    <button
+                      className="btn btn-add-axis"
+                      onClick={() => {
+                        // Get existing axis names for validation
+                        const existingAxisNames = axisColumns;
+                        setShowAddAxisModal(true);
+                      }}
+                    >
+                      + Add Axis
+                    </button>
+                  </div>
+                </>
               );
             }
             return (
@@ -160,6 +348,63 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
           onDuplicateInstance(newName);
         }}
         instanceName={selectedInstance?.name || ''}
+      />
+      
+      <AddAxisModal
+        isOpen={showAddAxisModal}
+        onClose={() => setShowAddAxisModal(false)}
+        onConfirm={async (axisData) => {
+          try {
+            await onAddAvar2Axis(axisData);
+            setShowAddAxisModal(false);
+            // Force reload after a brief delay to ensure backend has processed
+            setTimeout(() => {
+              if (onReloadAvar2Data) {
+                onReloadAvar2Data();
+              }
+            }, 500);
+          } catch (err) {
+            // Error will be shown in modal or handled by parent
+            console.error('Failed to add axis:', err);
+            alert(err.message || 'Failed to add axis');
+            // Don't close modal on error so user can see the error
+          }
+        }}
+        existingAxes={avar2Axes?.traditional_axes?.columns || []}
+        existingMetadata={avar2Axes?.metadata || {}}
+        parametricAxes={avar2Axes?.parametric_axes || []}
+      />
+      
+      <EditAxisModal
+        isOpen={showEditAxisModal}
+        onClose={() => {
+          setShowEditAxisModal(false);
+          setEditingAxisName(null);
+        }}
+        onConfirm={async (axisData) => {
+          try {
+            // Check if this is a parametric axis - should not be editable
+            const axisMeta = avar2Axes?.metadata?.[editingAxisName];
+            const isParametric = axisMeta?.is_parametric === true || avar2Axes?.parametric_axes?.includes(editingAxisName) || false;
+            if (isParametric) {
+              throw new Error("Cannot edit parametric axes - they are managed in the Glyphs file");
+            }
+            await onUpdateAvar2Axis(editingAxisName, axisData);
+            setShowEditAxisModal(false);
+            setEditingAxisName(null);
+          } catch (err) {
+            // Error will be shown in modal or handled by parent
+            console.error('Failed to update axis:', err);
+            alert(err.message || 'Failed to update axis');
+          }
+        }}
+        axisName={editingAxisName}
+        axisMetadata={editingAxisName && avar2Axes?.metadata?.[editingAxisName]}
+        existingAxes={(avar2Axes?.traditional_axes?.columns || []).map(col => ({
+          axisName: col,
+          registeredTag: avar2Axes?.metadata?.[col]?.registered_tag || ''
+        }))}
+        isParametricAxis={editingAxisName && (avar2Axes?.parametric_axes?.includes(editingAxisName) || false)}
       />
     </aside>
   );

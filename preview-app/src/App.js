@@ -27,19 +27,34 @@ function App() {
   const [avar2Mode, setAvar2Mode] = useState(false);
   const [avar2Instances, setAvar2Instances] = useState([]);
   const [avar2Axes, setAvar2Axes] = useState(null);
+  const [spacMode, setSpacMode] = useState(false);
+  const [spacAxisExists, setSpacAxisExists] = useState(false);
+  const [spacValues, setSpacValues] = useState({}); // { instanceName: SPAC_value }
+  const [spacBuilding, setSpacBuilding] = useState(false);
+  const [spacError, setSpacError] = useState(null);
 
   // Load initial data
   useEffect(() => {
     loadData();
+    // Preload avar2 data so it's ready when toggled
+    loadAvar2Data().catch(() => {
+      // Silently fail - avar2 is optional
+    });
+    // Check SPAC axis status and load values
+    checkSpacAxisStatus();
+    loadSpacValues();
   }, []);
 
-  // Load avar2 data when mode is enabled
+  // Load avar2 data when mode is enabled (if not already loaded)
   useEffect(() => {
     if (avar2Mode) {
-      loadAvar2Data();
+      // Only reload if we don't have data yet
+      if (avar2Instances.length === 0 && !avar2Axes) {
+        loadAvar2Data();
+      }
     } else {
-      setAvar2Instances([]);
-      setAvar2Axes(null);
+      // Keep data in memory but don't display it
+      // This allows instant toggle back without reloading
     }
   }, [avar2Mode]);
 
@@ -130,17 +145,176 @@ function App() {
 
   const loadAvar2Data = async () => {
     try {
-      const [instancesData, axesData] = await Promise.all([
-        api.getAvar2Instances(),
-        api.getAvar2Axes(),
-      ]);
-      setAvar2Instances(instancesData.instances || []);
-      setAvar2Axes(axesData);
+      // Load both in parallel, but update state as soon as each arrives
+      const instancesPromise = api.getAvar2Instances().then(data => {
+        setAvar2Instances(data.instances || []);
+        return data;
+      });
+      
+      const axesPromise = api.getAvar2Axes().then(data => {
+        setAvar2Axes(data);
+        return data;
+      });
+      
+      // Wait for both to complete (but state updates happen immediately)
+      await Promise.all([instancesPromise, axesPromise]);
     } catch (err) {
       console.error('Failed to load avar2 data:', err);
       // Don't show error to user - avar2 mode is optional
       setAvar2Instances([]);
       setAvar2Axes(null);
+    }
+  };
+
+  const handleAddAvar2Axis = async (axisData) => {
+    try {
+      const result = await api.addAvar2Axis(axisData);
+      console.log('Axis added successfully:', result);
+      // Reload avar2 data to get updated axes and instances
+      // Add a small delay to ensure backend has written files
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await loadAvar2Data();
+      console.log('Avar2 data reloaded after adding axis');
+    } catch (err) {
+      console.error('Failed to add axis:', err);
+      throw err; // Re-throw to let modal handle error display
+    }
+  };
+
+  const handleUpdateAvar2Axis = async (axisName, axisData) => {
+    try {
+      await api.updateAvar2Axis(axisName, axisData);
+      // Reload avar2 data to get updated metadata
+      await loadAvar2Data();
+    } catch (err) {
+      console.error('Failed to update axis:', err);
+      throw err; // Re-throw to let component handle error display
+    }
+  };
+
+  const handleUpdateAvar2Mapping = async (instanceName, axisName, value) => {
+    try {
+      await api.updateAvar2Mapping(instanceName, axisName, value);
+      // Reload avar2 data to get updated instances
+      await loadAvar2Data();
+    } catch (err) {
+      console.error('Failed to update mapping:', err);
+      // Check if it's an external edit error
+      if (err.message && err.message.includes('externally')) {
+        // Reload data and show error
+        await loadAvar2Data();
+      }
+      throw err; // Re-throw to let component handle error display
+    }
+  };
+
+  const checkSpacAxisStatus = async () => {
+    try {
+      const result = await api.checkSpacAxis();
+      setSpacAxisExists(result.exists || false);
+    } catch (err) {
+      console.error('Failed to check SPAC axis:', err);
+      setSpacAxisExists(false);
+    }
+  };
+
+  const loadSpacValues = async () => {
+    try {
+      const result = await api.getSpacValues();
+      const valuesMap = {};
+      if (result.values) {
+        result.values.forEach(v => {
+          valuesMap[v.instance_name] = v.spac || 0;
+        });
+      }
+      setSpacValues(valuesMap);
+    } catch (err) {
+      console.error('Failed to load SPAC values:', err);
+      // Don't show error - SPAC is optional
+    }
+  };
+
+  const handleSpacModeChange = async (enabled) => {
+    setSpacError(null);
+    
+    if (enabled) {
+      // If SPAC axis doesn't exist, initialize and rebuild
+      if (!spacAxisExists) {
+        try {
+          setSpacMode(true);
+          setSpacBuilding(true);
+          await api.initSpacAxis();
+          await handleSpacRebuild();
+          await checkSpacAxisStatus();
+          await loadSpacValues();
+          // Switch to preview font URL when SPAC mode is enabled
+          setFontUrl(api.getPreviewFontUrl());
+          setFontLoaded(true);
+        } catch (err) {
+          console.error('Failed to initialize SPAC axis:', err);
+          setSpacError(err.message || 'Failed to initialize SPAC axis');
+          setSpacMode(false); // Revert toggle on error
+        } finally {
+          setSpacBuilding(false);
+        }
+      } else {
+        // SPAC axis exists, enable mode and load values
+        setSpacMode(true);
+        await loadSpacValues();
+        // Switch to preview font URL when SPAC mode is enabled
+        setFontUrl(api.getPreviewFontUrl());
+        setFontLoaded(true);
+      }
+    } else {
+      // Disable SPAC mode - switch back to regular font
+      setSpacMode(false);
+      setFontUrl(api.getFontUrl());
+      setFontLoaded(true);
+    }
+  };
+
+  const handleSpacRebuild = async () => {
+    if (spacBuilding) return; // Prevent concurrent rebuilds
+    
+    setSpacBuilding(true);
+    setSpacError(null);
+    try {
+      await api.rebuildPreviewFont();
+      // Reload font URL to get updated preview font (with SPAC axis)
+      const newFontUrl = api.getPreviewFontUrl();
+      setFontUrl(newFontUrl);
+      setFontLoaded(true);
+      await checkSpacAxisStatus();
+    } catch (err) {
+      console.error('Failed to rebuild preview font:', err);
+      setSpacError(err.message || 'Failed to rebuild preview font');
+      throw err; // Re-throw to allow retry
+    } finally {
+      setSpacBuilding(false);
+    }
+  };
+
+  const handleSpacChange = async (value) => {
+    if (!selectedInstance) return;
+    
+    try {
+      setSpacError(null);
+      // Update local state immediately for responsive UI
+      setSpacValues(prev => ({ ...prev, [selectedInstance.name]: value }));
+      
+      // Update backend
+      await api.updateSpacValue(selectedInstance.name, value);
+      
+      // Trigger rebuild for accurate preview (if SPAC axis exists)
+      if (spacAxisExists) {
+        await handleSpacRebuild();
+      }
+    } catch (err) {
+      console.error('Failed to update SPAC value:', err);
+      // Revert on error
+      const previousValue = spacValues[selectedInstance.name] || 0;
+      setSpacValues(prev => ({ ...prev, [selectedInstance.name]: previousValue }));
+      setSpacError(err.message || 'Failed to update spacing');
     }
   };
 
@@ -370,6 +544,9 @@ function App() {
         familyName={familyName}
         avar2Mode={avar2Mode}
         onAvar2ModeChange={setAvar2Mode}
+        spacMode={spacMode}
+        onSpacModeChange={handleSpacModeChange}
+        spacBuilding={spacBuilding}
       />
       
       {error && (
@@ -396,6 +573,17 @@ function App() {
           avar2Mode={avar2Mode}
           avar2Instances={avar2Instances}
           avar2Axes={avar2Axes}
+          onAddAvar2Axis={handleAddAvar2Axis}
+          onUpdateAvar2Axis={handleUpdateAvar2Axis}
+          onUpdateAvar2Mapping={handleUpdateAvar2Mapping}
+          onReloadAvar2Data={loadAvar2Data}
+          spacMode={spacMode}
+          spacAxisExists={spacAxisExists}
+          spacValue={selectedInstance ? (spacValues[selectedInstance.name] || 0) : 0}
+          onSpacChange={handleSpacChange}
+          spacBuilding={spacBuilding}
+          spacError={spacError}
+          onSpacRetry={handleSpacRebuild}
         />
         
         <div className="content-area">
@@ -407,6 +595,9 @@ function App() {
             instanceEditingCoordinates={instanceEditingCoordinates}
             sampleText={sampleText}
             fontUrl={fontUrl}
+            spacMode={spacMode}
+            spacAxisExists={spacAxisExists}
+            spacValues={spacValues}
             fontLoaded={fontLoaded}
             onReorderInstances={setInstances}
             fontSize={fontSize}

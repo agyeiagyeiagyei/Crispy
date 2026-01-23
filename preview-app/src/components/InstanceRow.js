@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './InstanceRow.css';
 
-function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, instanceEditingCoordinates, sampleText, fontLoaded, fontSize, onDelete, onMove, allInstances }) {
+function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, instanceEditingCoordinates, sampleText, fontLoaded, fontSize, onDelete, onMove, allInstances, spacMode, spacAxisExists, spacValue }) {
   const [showMoveControls, setShowMoveControls] = useState(false);
   const [movePosition, setMovePosition] = useState('before');
   const [targetInstance, setTargetInstance] = useState(null);
@@ -12,9 +12,18 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
     ? editingCoordinates
     : (instanceEditingCoordinates[instance.name] || instance.coordinates);
   
-  const fontVariationSettings = Object.entries(activeCoordinates)
+  // Build font-variation-settings string
+  let fontVariationSettings = Object.entries(activeCoordinates)
     .map(([tag, value]) => `"${tag}" ${value}`)
     .join(', ');
+  
+  // Add SPAC axis if SPAC mode is enabled and axis exists
+  if (spacMode && spacAxisExists) {
+    const spacSetting = `"SPAC" ${spacValue}`;
+    fontVariationSettings = fontVariationSettings 
+      ? `${fontVariationSettings}, ${spacSetting}`
+      : spacSetting;
+  }
 
   return (
     <div
