@@ -78350,7 +78350,7 @@ name = "ExtraLight Condensed";
 },
 {
 axesValues = (
-248,
+326.8,
 78,
 85
 );
@@ -78386,7 +78386,7 @@ name = "Light Condensed";
 },
 {
 axesValues = (
-280,
+368.5,
 95,
 90
 );
@@ -78422,7 +78422,7 @@ name = "Regular Condensed";
 },
 {
 axesValues = (
-350.6,
+613.9,
 139.5,
 130
 );
@@ -78458,7 +78458,7 @@ name = "Medium Condensed";
 },
 {
 axesValues = (
-405.6,
+642.4,
 266.1,
 240
 );
@@ -78494,7 +78494,7 @@ name = "Semibold Condensed";
 },
 {
 axesValues = (
-354,
+544,
 336,
 262.9
 );
@@ -78530,7 +78530,7 @@ name = "Bold Condensed";
 },
 {
 axesValues = (
-381.5,
+532.2,
 391,
 335.8
 );
@@ -78565,7 +78565,7 @@ name = Thin;
 },
 {
 axesValues = (
-504.9,
+702.6,
 63.1,
 65.9
 );
@@ -78602,7 +78602,7 @@ weightClass = 200;
 },
 {
 axesValues = (
-580,
+741.1,
 87.9,
 78.8
 );
@@ -78639,7 +78639,7 @@ weightClass = 300;
 },
 {
 axesValues = (
-598.1,
+719.3,
 147.8,
 124.253
 );
@@ -78675,7 +78675,7 @@ name = Regular;
 },
 {
 axesValues = (
-627,
+730.6,
 181,
 160
 );
@@ -78712,7 +78712,7 @@ weightClass = 500;
 },
 {
 axesValues = (
-650.5,
+715.7,
 242.221,
 216.1
 );
@@ -78749,7 +78749,7 @@ weightClass = 600;
 },
 {
 axesValues = (
-731.3,
+890.2,
 308,
 277.2
 );
@@ -78786,7 +78786,7 @@ weightClass = 700;
 },
 {
 axesValues = (
-735.6,
+940.8,
 390.9,
 319.4
 );
@@ -78822,7 +78822,7 @@ name = "Thin Extended";
 },
 {
 axesValues = (
-1136.3,
+1718.6,
 106.1,
 70.9
 );
@@ -78858,7 +78858,7 @@ name = "ExtraLight Extended";
 },
 {
 axesValues = (
-1327.8,
+1473.2,
 98.2,
 88.1
 );
@@ -78894,7 +78894,7 @@ name = "Light Extended";
 },
 {
 axesValues = (
-1364.8,
+1498.7,
 113,
 111
 );
@@ -78930,7 +78930,7 @@ name = "Regular Extended";
 },
 {
 axesValues = (
-1299,
+1542.2,
 220.4,
 197.1
 );
@@ -78966,7 +78966,7 @@ name = "Medium Extended";
 },
 {
 axesValues = (
-1243.7,
+1480.6,
 375.4,
 301.7
 );
@@ -79002,7 +79002,7 @@ name = "Semibold Extended";
 },
 {
 axesValues = (
-1320.6,
+1535.5,
 508,
 360
 );
@@ -79038,7 +79038,7 @@ name = "Bold Extended";
 },
 {
 axesValues = (
-1420.6,
+1642.9,
 579.8,
 391.4
 );
@@ -79074,7 +79074,7 @@ name = "Thin Ultra Extended";
 },
 {
 axesValues = (
-2444.1,
+2654.2,
 79.7,
 69.5
 );
@@ -79110,7 +79110,7 @@ name = "ExtraLight Ultra Extended";
 },
 {
 axesValues = (
-2354.9,
+2534.2,
 115.1,
 101
 );
@@ -79146,7 +79146,7 @@ name = "Light Ultra Extended";
 },
 {
 axesValues = (
-2416,
+2679.6,
 134,
 128
 );
@@ -79182,7 +79182,7 @@ name = "Regular Ultra Extended";
 },
 {
 axesValues = (
-2280.4,
+2528.2,
 244.9,
 199.5
 );
@@ -79218,7 +79218,7 @@ name = "Medium Ultra Extended";
 },
 {
 axesValues = (
-2333.5,
+2502.3,
 323.2,
 273.5
 );
@@ -79254,7 +79254,7 @@ name = "Semibold Ultra Extended";
 },
 {
 axesValues = (
-2401.9,
+2744.3,
 465.6,
 358.2
 );
@@ -79290,7 +79290,7 @@ name = "Bold Ultra Extended";
 },
 {
 axesValues = (
-2520,
+2738.5,
 619.7,
 331.9
 );

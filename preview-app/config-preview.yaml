@@ -1,12 +1,9 @@
 sources:
 - ../sources/Crispy.glyphs
 familyName: Crispy
-spacingAxis:
-  min: -100
-  max: 110
 
 fvarInstances:
-  Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
+  Crispy[XOPQ,XTRA,YOPQ].ttf:
   - name: Thin
     coordinates:
       opsz: 48
@@ -43,8 +40,48 @@ fvarInstances:
       wdth: 100
       wght: 700
 
+stat:
+  Crispy[XOPQ,XTRA,YOPQ].ttf:
+  - name: Optical Size
+    tag: opsz
+    values:
+    - name: 12pt
+      value: 12
+    - name: 72pt
+      value: 72
+  - name: Width
+    tag: wdth
+    values:
+    - name: '52'
+      value: 52
+    - name: Normal
+      value: 100
+    - name: '182'
+      value: 182
+    - name: '300'
+      value: 300
+  - name: Weight
+    tag: wght
+    values:
+    - name: Thin
+      value: 100
+    - name: ExtraLight
+      value: 200
+    - name: Light
+      value: 300
+    - name: Regular
+      value: 400
+      linkedValue: 700
+      flags: 2
+    - name: Medium
+      value: 500
+    - name: SemiBold
+      value: 600
+    - name: Bold
+      value: 700
+
 avar2:
-  Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
+  Crispy[XOPQ,XTRA,YOPQ].ttf:
 
   # =========================
   # Width = 52
@@ -94,7 +131,7 @@ avar2:
       wdth: 52
       wght: 200
     out:
-      XTRA: 248
+      XTRA: 326.8
       XOPQ: 78
       YOPQ: 85
 
@@ -118,7 +155,7 @@ avar2:
       wdth: 52
       wght: 300
     out:
-      XTRA: 280
+      XTRA: 368.5
       XOPQ: 95
       YOPQ: 90
 
@@ -142,7 +179,7 @@ avar2:
       wdth: 52
       wght: 400
     out:
-      XTRA: 350.6
+      XTRA: 613.9
       XOPQ: 139.5
       YOPQ: 130
 
@@ -166,7 +203,7 @@ avar2:
       wdth: 52
       wght: 500
     out:
-      XTRA: 405.6
+      XTRA: 642.4
       XOPQ: 266.1
       YOPQ: 240
 
@@ -190,7 +227,7 @@ avar2:
       wdth: 52
       wght: 600
     out:
-      XTRA: 354
+      XTRA: 544
       XOPQ: 336
       YOPQ: 262.9
 
@@ -214,7 +251,7 @@ avar2:
       wdth: 52
       wght: 700
     out:
-      XTRA: 381.5
+      XTRA: 532.2
       XOPQ: 391
       YOPQ: 335.8
 
@@ -242,7 +279,7 @@ avar2:
       wdth: 100
       wght: 100
     out:
-      XTRA: 504.9
+      XTRA: 702.6
       XOPQ: 63.1
       YOPQ: 65.9
 
@@ -266,7 +303,7 @@ avar2:
       wdth: 100
       wght: 200
     out:
-      XTRA: 580
+      XTRA: 741.1
       XOPQ: 87.9
       YOPQ: 78.8
 
@@ -290,7 +327,7 @@ avar2:
       wdth: 100
       wght: 300
     out:
-      XTRA: 598.1
+      XTRA: 719.3
       XOPQ: 147.8
       YOPQ: 124.253
 
@@ -314,7 +351,7 @@ avar2:
       wdth: 100
       wght: 400
     out:
-      XTRA: 627
+      XTRA: 730.6
       XOPQ: 181
       YOPQ: 160
 
@@ -338,7 +375,7 @@ avar2:
       wdth: 100
       wght: 500
     out:
-      XTRA: 650.5
+      XTRA: 715.7
       XOPQ: 242.221
       YOPQ: 216.1
 
@@ -362,7 +399,7 @@ avar2:
       wdth: 100
       wght: 600
     out:
-      XTRA: 731.3
+      XTRA: 890.2
       XOPQ: 308
       YOPQ: 277.2
 
@@ -386,7 +423,7 @@ avar2:
       wdth: 100
       wght: 700
     out:
-      XTRA: 735.6
+      XTRA: 940.8
       XOPQ: 390.9
       YOPQ: 319.4
 
@@ -414,7 +451,7 @@ avar2:
       wdth: 182
       wght: 100
     out:
-      XTRA: 1136.3
+      XTRA: 1718.6
       XOPQ: 106.1
       YOPQ: 70.9
 
@@ -438,7 +475,7 @@ avar2:
       wdth: 182
       wght: 200
     out:
-      XTRA: 1327.8
+      XTRA: 1473.2
       XOPQ: 98.2
       YOPQ: 88.1
 
@@ -462,7 +499,7 @@ avar2:
       wdth: 182
       wght: 300
     out:
-      XTRA: 1364.8
+      XTRA: 1498.7
       XOPQ: 113
       YOPQ: 111
 
@@ -486,7 +523,7 @@ avar2:
       wdth: 182
       wght: 400
     out:
-      XTRA: 1299
+      XTRA: 1542.2
       XOPQ: 220.4
       YOPQ: 197.1
 
@@ -510,7 +547,7 @@ avar2:
       wdth: 182
       wght: 500
     out:
-      XTRA: 1243.7
+      XTRA: 1480.6
       XOPQ: 375.4
       YOPQ: 301.7
 
@@ -534,7 +571,7 @@ avar2:
       wdth: 182
       wght: 600
     out:
-      XTRA: 1320.6
+      XTRA: 1535.5
       XOPQ: 508
       YOPQ: 360
 
@@ -558,7 +595,7 @@ avar2:
       wdth: 182
       wght: 700
     out:
-      XTRA: 1420.6
+      XTRA: 1642.9
       XOPQ: 579.8
       YOPQ: 391.4
 
@@ -586,7 +623,7 @@ avar2:
       wdth: 300
       wght: 100
     out:
-      XTRA: 2444.1
+      XTRA: 2654.2
       XOPQ: 79.7
       YOPQ: 69.5
 
@@ -610,7 +647,7 @@ avar2:
       wdth: 300
       wght: 200
     out:
-      XTRA: 2354.9
+      XTRA: 2534.2
       XOPQ: 115.1
       YOPQ: 101
 
@@ -634,7 +671,7 @@ avar2:
       wdth: 300
       wght: 300
     out:
-      XTRA: 2416
+      XTRA: 2679.6
       XOPQ: 134
       YOPQ: 128
 
@@ -658,7 +695,7 @@ avar2:
       wdth: 300
       wght: 400
     out:
-      XTRA: 2280.4
+      XTRA: 2528.2
       XOPQ: 244.9
       YOPQ: 199.5
 
@@ -682,7 +719,7 @@ avar2:
       wdth: 300
       wght: 500
     out:
-      XTRA: 2333.5
+      XTRA: 2502.3
       XOPQ: 323.2
       YOPQ: 273.5
 
@@ -706,7 +743,7 @@ avar2:
       wdth: 300
       wght: 600
     out:
-      XTRA: 2401.9
+      XTRA: 2744.3
       XOPQ: 465.6
       YOPQ: 358.2
 
@@ -730,6 +767,6 @@ avar2:
       wdth: 300
       wght: 700
     out:
-      XTRA: 2520
+      XTRA: 2738.5
       XOPQ: 619.7
       YOPQ: 331.9

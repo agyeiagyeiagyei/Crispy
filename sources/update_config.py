@@ -787,8 +787,29 @@ def write_config(
                     if line.strip() or (new_lines and new_lines[-1].strip()):
                         new_lines.append(line)
     
-    # Insert stat section
+    # Insert stat section (add if missing, replace if exists)
     if stat_start_idx is not None:
+        # Replace existing stat section
+        stat_yaml_lines = yaml.dump(
+            {"stat": config["stat"]},
+            default_flow_style=False,
+            sort_keys=False,
+            allow_unicode=True,
+        ).strip().splitlines()
+        new_lines.extend(stat_yaml_lines)
+        new_lines.append("")
+    elif "stat" in config and avar2_start_idx is not None:
+        # Add stat section before avar2 if it doesn't exist
+        stat_yaml_lines = yaml.dump(
+            {"stat": config["stat"]},
+            default_flow_style=False,
+            sort_keys=False,
+            allow_unicode=True,
+        ).strip().splitlines()
+        new_lines.extend(stat_yaml_lines)
+        new_lines.append("")
+    elif "stat" in config and fvar_instances_end_idx is not None:
+        # Add stat section after fvarInstances if avar2 doesn't exist
         stat_yaml_lines = yaml.dump(
             {"stat": config["stat"]},
             default_flow_style=False,
@@ -804,6 +825,14 @@ def write_config(
             # Skip blank lines between sections
             between = original_lines[stat_end_idx:avar2_start_idx]
             new_lines.extend([l for l in between if l.strip() or not new_lines or new_lines[-1].strip()])
+    elif "stat" in config and stat_start_idx is None and avar2_start_idx is not None and fvar_instances_end_idx is not None:
+        # STAT was just added, handle spacing between fvarInstances and avar2
+        # Skip blank lines between fvarInstances and avar2 (STAT is now in between)
+        between = original_lines[fvar_instances_end_idx:avar2_start_idx]
+        # Filter out excessive blank lines
+        for line in between:
+            if line.strip() or (new_lines and new_lines[-1].strip()):
+                new_lines.append(line)
 
     # Insert avar2 section (preserve formatting with comments)
     if avar2_start_idx is not None:
