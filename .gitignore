@@ -38,6 +38,8 @@ Thumbs.db
 *（自动存储）.*
 *（已自動儲存）.*
 preview-app/preview-fonts/
+preview-app/fonts-avar2/
+preview-app/build-temp/
 
 # Static font outputs (variable fonts are tracked)
 fonts/otf/

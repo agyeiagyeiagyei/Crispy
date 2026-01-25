@@ -71,6 +71,39 @@ export const api = {
     return `${API_BASE}/preview-font?t=${timestamp}`;
   },
 
+  getAvar2FontUrl() {
+    // Add cache busting timestamp to force reload when font is rebuilt
+    const timestamp = Date.now();
+    return `${API_BASE}/avar2-font?t=${timestamp}`;
+  },
+
+  async checkSyncStatus() {
+    const response = await fetch(`${API_BASE}/check-sync-status`);
+    if (!response.ok) {
+      throw new Error('Failed to check sync status');
+    }
+    return parseJSON(response);
+  },
+
+  async buildAvar2Font(traditionalAxes, avar2Axes, includeSpac) {
+    const response = await fetch(`${API_BASE}/build-avar2`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        traditional_axes: traditionalAxes,
+        avar2_axes: avar2Axes,
+        include_spac: includeSpac,
+      }),
+    });
+    if (!response.ok) {
+      const error = await parseJSON(response);
+      throw new Error(error.error || 'Build failed');
+    }
+    return parseJSON(response);
+  },
+
   async createInstance(instanceName, coordinates, insertAfter = null) {
     const body = { name: instanceName, coordinates };
     if (insertAfter) {

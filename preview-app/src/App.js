@@ -4,6 +4,8 @@ import { api } from './api';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import InstanceRows from './components/InstanceRows';
+import BuildAvar2Modal from './components/BuildAvar2Modal';
+import Avar2Preview from './components/Avar2Preview';
 
 const DEFAULT_SAMPLE_TEXT = "The Quick Brown Fox Jumps Over The Lazy Dog 0123456789 &!";
 
@@ -31,6 +33,11 @@ function App() {
   const [spacValues, setSpacValues] = useState({}); // { instanceName: SPAC_value }
   const [spacBuilding, setSpacBuilding] = useState(false);
   const [spacError, setSpacError] = useState(null);
+  const [avar2PreviewMode, setAvar2PreviewMode] = useState(false); // New mode: Default vs Avar2 Preview
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [showBuildAvar2Modal, setShowBuildAvar2Modal] = useState(false);
+  const [avar2FontUrl, setAvar2FontUrl] = useState(null);
+  const [avar2FontLoaded, setAvar2FontLoaded] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -39,6 +46,8 @@ function App() {
     loadAvar2Data().catch(() => {
       // Silently fail - avar2 is optional
     });
+    // Check sync status
+    checkSyncStatus();
     // Check SPAC axis status and enable mode if axis exists
     checkSpacAxisStatus().then((exists) => {
       if (exists) {
@@ -52,7 +61,8 @@ function App() {
     }).catch(() => {
       // Silently fail - SPAC is optional
     });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Intentionally empty - only run on mount
   
   // Unregister instance when deselected or component unmounts
   useEffect(() => {
@@ -76,7 +86,7 @@ function App() {
       // Keep data in memory but don't display it
       // This allows instant toggle back without reloading
     }
-  }, [avar2Mode]);
+  }, [avar2Mode, avar2Instances.length, avar2Axes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ensure selected instance is in CSV when avar2 mode is enabled
   useEffect(() => {
@@ -91,7 +101,7 @@ function App() {
         loadAvar2Data();
       }
     }
-  }, [avar2Mode, selectedInstance, avar2Instances.length]);
+  }, [avar2Mode, selectedInstance, avar2Instances]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Poll for font rebuilds (check every 2 seconds)
   useEffect(() => {
@@ -157,7 +167,7 @@ function App() {
     }, 2000); // Poll every 2 seconds
 
     return () => clearInterval(interval);
-  }, [lastBuildTime]);
+  }, [lastBuildTime, selectedInstance?.name, spacMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     try {
@@ -187,10 +197,11 @@ function App() {
         setFontUrl(api.getPreviewFontUrl());
         setFontLoaded(true);
         
-        // Check if SPAC is already in axes list
+        // SPAC axis will be added with correct range from checkSpacAxisStatus
+        // But ensure it's added here if not already present
         const hasSpac = axesList.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
         if (!hasSpac) {
-          // Add SPAC axis to the list
+          // Add SPAC axis temporarily - checkSpacAxisStatus will update with correct range
           axesList = [...axesList, {
             tag: 'SPAC',
             name: 'Spacing',
@@ -298,10 +309,64 @@ function App() {
       const result = await api.checkSpacAxis();
       const exists = result.exists || false;
       setSpacAxisExists(exists);
+      
+      // Always add/update SPAC axis in axes array when spacMode is enabled
+      // This ensures the slider appears even if the axis doesn't exist in the font yet
+      setAxes(prev => {
+        const hasSpac = prev.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
+        if (exists && result.range) {
+          // Update or add SPAC axis with font range
+          const spacRange = result.range;
+          if (hasSpac) {
+            // Update existing SPAC axis with font range
+            return prev.map(axis => 
+              (axis.tag === 'SPAC' || axis.tag === 'spac') 
+                ? { ...axis, min: spacRange.min, max: spacRange.max, default: spacRange.default }
+                : axis
+            );
+          } else {
+            // Add SPAC axis with font range
+            return [...prev, {
+              tag: 'SPAC',
+              name: 'Spacing',
+              min: spacRange.min,
+              max: spacRange.max,
+              default: spacRange.default
+            }];
+          }
+        } else if (spacMode && !hasSpac) {
+          // Add SPAC axis with default range when spacMode is enabled but axis doesn't exist yet
+          return [...prev, {
+            tag: 'SPAC',
+            name: 'Spacing',
+            min: -100,
+            max: 100,
+            default: 0
+          }];
+        }
+        return prev;
+      });
+      
       return exists; // Return boolean for use in initialization
     } catch (err) {
       console.error('Failed to check SPAC axis:', err);
       setSpacAxisExists(false);
+      // Still add SPAC axis if spacMode is enabled
+      if (spacMode) {
+        setAxes(prev => {
+          const hasSpac = prev.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
+          if (!hasSpac) {
+            return [...prev, {
+              tag: 'SPAC',
+              name: 'Spacing',
+              min: -100,
+              max: 100,
+              default: 0
+            }];
+          }
+          return prev;
+        });
+      }
       return false;
     }
   };
@@ -345,20 +410,8 @@ function App() {
           // Switch to preview font URL when SPAC mode is enabled
           setFontUrl(api.getPreviewFontUrl());
           setFontLoaded(true);
-          // Add SPAC to axes list
-          setAxes(prev => {
-            const hasSpac = prev.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
-            if (!hasSpac) {
-              return [...prev, {
-                tag: 'SPAC',
-                name: 'Spacing',
-                min: -100,
-                max: 100,
-                default: 0
-              }];
-            }
-            return prev;
-          });
+        // SPAC axis will be added with correct range from checkSpacAxisStatus
+        // No need to add here with hardcoded values
         } catch (err) {
           console.error('Failed to initialize SPAC axis:', err);
           setSpacError(err.message || 'Failed to initialize SPAC axis');
@@ -373,20 +426,8 @@ function App() {
         // Switch to preview font URL when SPAC mode is enabled
         setFontUrl(api.getPreviewFontUrl());
         setFontLoaded(true);
-        // Add SPAC to axes list if not already there
-        setAxes(prev => {
-          const hasSpac = prev.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
-          if (!hasSpac) {
-            return [...prev, {
-              tag: 'SPAC',
-              name: 'Spacing',
-              min: -100,
-              max: 100,
-              default: 0
-            }];
-          }
-          return prev;
-        });
+        // Ensure SPAC axis is added to axes array
+        await checkSpacAxisStatus();
       }
     } else {
       // Disable SPAC mode - switch back to regular font
@@ -395,6 +436,111 @@ function App() {
       setFontLoaded(true);
       // Remove SPAC from axes list
       setAxes(prev => prev.filter(axis => axis.tag !== 'SPAC' && axis.tag !== 'spac'));
+    }
+  };
+
+  const checkSyncStatus = async () => {
+    try {
+      const status = await api.checkSyncStatus();
+      setSyncStatus(status);
+    } catch (err) {
+      console.error('Failed to check sync status:', err);
+      setSyncStatus({ synced: false, message: 'Failed to check sync status' });
+    }
+  };
+
+  const handleBuildAvar2Font = async ({ traditionalAxes, avar2Axes, includeSpac }) => {
+    try {
+      setBuilding(true);
+      setError(null);
+      
+      const result = await api.buildAvar2Font(traditionalAxes, avar2Axes, includeSpac);
+      
+      // Update sync status from response
+      if (result.sync_status) {
+        setSyncStatus(result.sync_status);
+      }
+      
+      // If in avar2 preview mode, load the font
+      // Also auto-switch to avar2 preview mode after successful build
+      if (!avar2PreviewMode) {
+        setAvar2PreviewMode(true);
+      }
+      
+      const fontUrl = api.getAvar2FontUrl();
+      setAvar2FontUrl(fontUrl);
+      setAvar2FontLoaded(true);
+      
+      // Load font using FontFace API
+      try {
+        // Remove old font if it exists to force reload
+        const oldFont = Array.from(document.fonts).find(f => f.family === 'Crispy-VF');
+        if (oldFont) {
+          document.fonts.delete(oldFont);
+        }
+        
+        const fontFace = new FontFace('Crispy-VF', `url(${fontUrl})`);
+        await fontFace.load();
+        document.fonts.add(fontFace);
+        await document.fonts.ready;
+      } catch (err) {
+        console.error('Failed to load avar2 font:', err);
+      }
+      
+      // Show success message (could be a toast notification)
+      console.log('Avar2 font built successfully:', result.font_path);
+      
+      return result;
+    } catch (err) {
+      setError(err.message || 'Failed to build avar2 font');
+      throw err;
+    } finally {
+      setBuilding(false);
+    }
+  };
+
+  const handleAvar2PreviewModeChange = async (enabled) => {
+    setAvar2PreviewMode(enabled);
+    
+    if (enabled) {
+      // Switch to Avar2 Preview mode
+      // Load avar2 data if not already loaded
+      if (avar2Instances.length === 0 || !avar2Axes) {
+        await loadAvar2Data();
+      }
+      
+      // Load avar2 font if it exists
+      try {
+        const fontUrl = api.getAvar2FontUrl();
+        // Try to load font to check if it exists
+        const response = await fetch(fontUrl);
+        if (response.ok) {
+          setAvar2FontUrl(fontUrl);
+          setAvar2FontLoaded(true);
+          
+          // Load font using FontFace API
+          const fontFace = new FontFace('Crispy-VF', `url(${fontUrl})`);
+          await fontFace.load();
+          document.fonts.add(fontFace);
+          await document.fonts.ready;
+        } else {
+          // Font doesn't exist yet, user needs to build it
+          setAvar2FontLoaded(false);
+        }
+      } catch (err) {
+        // Font doesn't exist yet
+        setAvar2FontLoaded(false);
+      }
+    } else {
+      // Switch back to Default mode
+      // Use regular font URL
+      if (spacMode) {
+        setFontUrl(api.getPreviewFontUrl());
+      } else {
+        setFontUrl(api.getFontUrl());
+      }
+      setAvar2FontUrl(null);
+      setAvar2FontLoaded(false);
     }
   };
 
@@ -796,9 +942,20 @@ function App() {
         familyName={familyName}
         avar2Mode={avar2Mode}
         onAvar2ModeChange={setAvar2Mode}
+        avar2PreviewMode={avar2PreviewMode}
+        onAvar2PreviewModeChange={handleAvar2PreviewModeChange}
+        onBuildAvar2Font={() => setShowBuildAvar2Modal(true)}
         spacMode={spacMode}
         onSpacModeChange={handleSpacModeChange}
         spacBuilding={spacBuilding}
+      />
+      
+      <BuildAvar2Modal
+        isOpen={showBuildAvar2Modal}
+        onClose={() => setShowBuildAvar2Modal(false)}
+        onBuild={handleBuildAvar2Font}
+        syncStatus={syncStatus}
+        avar2Axes={avar2Axes}
       />
       
       {error && (
@@ -808,58 +965,72 @@ function App() {
       )}
 
       <div className="main-content">
-        <Sidebar
-          axes={axes}
-          coordinates={editingCoordinates}
-          onAxisChange={handleAxisChange}
-          disabled={!selectedInstance}
-          sampleText={sampleText}
-          onSampleTextChange={setSampleText}
-          selectedInstance={selectedInstance}
-          onUpdateInstance={handleUpdateInstance}
-          onResetCoordinates={handleResetCoordinates}
-          originalCoordinates={originalCoordinates}
-          fontSize={fontSize}
-          onFontSizeChange={setFontSize}
-          onDuplicateInstance={handleDuplicateInstance}
-          avar2Mode={avar2Mode}
-          avar2Instances={avar2Instances}
-          avar2Axes={avar2Axes}
-          onAddAvar2Axis={handleAddAvar2Axis}
-          onUpdateAvar2Axis={handleUpdateAvar2Axis}
-          onUpdateAvar2Mapping={handleUpdateAvar2Mapping}
-          onReloadAvar2Data={loadAvar2Data}
-          spacMode={spacMode}
-          spacAxisExists={spacAxisExists}
-          spacValue={selectedInstance ? (spacValues[selectedInstance.name] || 0) : 0}
-          originalSpacValue={originalSpacValue}
-          onSpacChange={handleSpacChange}
-          onSpacApply={handleSpacApply}
-          spacBuilding={spacBuilding}
-          spacError={spacError}
-          onSpacRetry={handleSpacRebuild}
-        />
-        
         <div className="content-area">
-          <InstanceRows
-            instances={instances}
-            selectedInstance={selectedInstance}
-            onSelectInstance={handleSelectInstance}
-            editingCoordinates={editingCoordinates}
-            instanceEditingCoordinates={instanceEditingCoordinates}
-            sampleText={sampleText}
-            fontUrl={fontUrl}
-            spacMode={spacMode}
-            spacAxisExists={spacAxisExists}
-            spacValues={spacValues}
-            fontLoaded={fontLoaded}
-            onReorderInstances={setInstances}
-            fontSize={fontSize}
-            onDeleteInstance={handleDeleteInstance}
-            getInstanceSyncStatus={getInstanceSyncStatus}
-            onMoveInstance={handleMoveInstance}
-            onRenameInstance={handleRenameInstance}
-          />
+          {avar2PreviewMode ? (
+            <Avar2Preview
+              avar2Instances={avar2Instances}
+              avar2Axes={avar2Axes}
+              fontUrl={avar2FontUrl}
+              fontLoaded={avar2FontLoaded}
+              sampleText={sampleText}
+              onSampleTextChange={setSampleText}
+              fontSize={fontSize}
+              onFontSizeChange={setFontSize}
+            />
+          ) : (
+            <>
+              <Sidebar
+                axes={axes}
+                coordinates={editingCoordinates}
+                onAxisChange={handleAxisChange}
+                disabled={!selectedInstance}
+                sampleText={sampleText}
+                onSampleTextChange={setSampleText}
+                selectedInstance={selectedInstance}
+                onUpdateInstance={handleUpdateInstance}
+                onResetCoordinates={handleResetCoordinates}
+                originalCoordinates={originalCoordinates}
+                fontSize={fontSize}
+                onFontSizeChange={setFontSize}
+                onDuplicateInstance={handleDuplicateInstance}
+                avar2Mode={avar2Mode}
+                avar2Instances={avar2Instances}
+                avar2Axes={avar2Axes}
+                onAddAvar2Axis={handleAddAvar2Axis}
+                onUpdateAvar2Axis={handleUpdateAvar2Axis}
+                onUpdateAvar2Mapping={handleUpdateAvar2Mapping}
+                onReloadAvar2Data={loadAvar2Data}
+                spacMode={spacMode}
+                spacAxisExists={spacAxisExists}
+                spacValue={selectedInstance ? (spacValues[selectedInstance.name] || 0) : 0}
+                originalSpacValue={originalSpacValue}
+                onSpacChange={handleSpacChange}
+                onSpacApply={handleSpacApply}
+                spacBuilding={spacBuilding}
+                spacError={spacError}
+                onSpacRetry={handleSpacRebuild}
+              />
+              <InstanceRows
+                instances={instances}
+                selectedInstance={selectedInstance}
+                onSelectInstance={handleSelectInstance}
+                editingCoordinates={editingCoordinates}
+                instanceEditingCoordinates={instanceEditingCoordinates}
+                sampleText={sampleText}
+                fontUrl={fontUrl}
+                spacMode={spacMode}
+                spacAxisExists={spacAxisExists}
+                spacValues={spacValues}
+                fontLoaded={fontLoaded}
+                onReorderInstances={setInstances}
+                fontSize={fontSize}
+                onDeleteInstance={handleDeleteInstance}
+                getInstanceSyncStatus={getInstanceSyncStatus}
+                onMoveInstance={handleMoveInstance}
+                onRenameInstance={handleRenameInstance}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

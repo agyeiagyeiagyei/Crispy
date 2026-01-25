@@ -243,6 +243,32 @@ def extract_axis_values_from_csv(csv_path: Path) -> Dict[str, List[int]]:
     return result
 
 
+def extract_spac_range_from_csv(csv_path: Path) -> Optional[Tuple[float, float]]:
+    """Extract SPAC axis min/max values from CSV.
+    
+    Returns (min, max) tuple if SPAC column exists and has values, None otherwise.
+    """
+    spac_values = []
+    
+    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        if "SPAC" not in reader.fieldnames:
+            return None
+        
+        for row in reader:
+            spac_str = row.get("SPAC", "").strip()
+            if spac_str:
+                try:
+                    spac_values.append(float(spac_str))
+                except (ValueError, TypeError):
+                    continue
+    
+    if not spac_values:
+        return None
+    
+    return (min(spac_values), max(spac_values))
+
+
 def get_weight_name(value: int) -> str:
     """Map weight value to STAT name."""
     names = {
@@ -461,9 +487,10 @@ def generate_avar2_yaml_string(
             lines.append(f"      {k}: {_fmt_decimal(in_axes_to_output[k])}")
 
         lines.append("    out:")
-        # Preserve out-axis order from CSV header
+        # Preserve out-axis order from CSV header, but exclude SPAC (spacing axis is handled separately)
         for k in m.out_axis_order:
-            lines.append(f"      {k}: {_fmt_decimal(m.out_axes[k])}")
+            if k != "SPAC":  # Exclude SPAC from avar2 out mappings
+                lines.append(f"      {k}: {_fmt_decimal(m.out_axes[k])}")
 
     lines.append("")
     return "\n".join(lines)
@@ -519,12 +546,14 @@ def merge_config(
     avar2_yaml: str,
     font_key: str,
     add_contrast: bool = False,
+    csv_path: Optional[Path] = None,
 ) -> Tuple[Dict, str]:
     """Merge stat and avar2 sections into config.
     
     Returns (updated_config_dict, avar2_yaml_string) for writing.
     
     If add_contrast is True, automatically adds cntr: 0 to all fvarInstances.
+    Note: spacingAxis section is preserved as-is and never updated automatically.
     """
     # Update/replace stat section
     config["stat"] = stat_data
@@ -532,6 +561,9 @@ def merge_config(
     # Parse avar2 YAML to validate structure, but we'll use the string for output
     avar2_parsed = yaml.safe_load(avar2_yaml)
     config["avar2"] = avar2_parsed["avar2"]
+    
+    # Note: spacingAxis section is preserved as-is and never updated automatically
+    # The spacingAxis min/max values should be set manually in the config file
     
     # If contrast was added, update fvarInstances to include cntr: 0
     if add_contrast:
@@ -666,16 +698,64 @@ def write_config(
     new_lines = []
 
     # Determine which sections need to be updated
-    # Order: fvarInstances, stat, avar2 (in file order)
+    # Order: spacingAxis, fvarInstances, stat, avar2 (in file order)
     
-    # Find the first section that needs updating
+    # Find spacingAxis section
+    spacing_axis_start_idx = None
+    spacing_axis_end_idx = None
+    in_spacing_axis = False
+    spacing_axis_indent = None
+    
+    for i, line in enumerate(original_lines):
+        stripped = line.strip()
+        if stripped == "spacingAxis:" or stripped.startswith("spacingAxis:"):
+            spacing_axis_start_idx = i
+            in_spacing_axis = True
+            spacing_axis_indent = len(line) - len(line.lstrip())
+            continue
+        if in_spacing_axis:
+            if not line.strip():
+                continue
+            current_indent = len(line) - len(line.lstrip())
+            if ":" in line and not line.strip().startswith("#"):
+                if current_indent <= spacing_axis_indent and stripped != "spacingAxis:":
+                    spacing_axis_end_idx = i
+                    in_spacing_axis = False
+    if in_spacing_axis:
+        spacing_axis_end_idx = len(original_lines)
+    
+    # Find the first section that needs updating (excluding spacingAxis for now)
     first_update_idx = None
     for idx in [fvar_instances_start_idx, stat_start_idx, avar2_start_idx]:
         if idx is not None and (first_update_idx is None or idx < first_update_idx):
             first_update_idx = idx
     
-    # Part before first section to update
-    if first_update_idx is not None:
+    # Part before first section to update (but handle spacingAxis separately)
+    if spacing_axis_start_idx is not None and "spacingAxis" in config:
+        # Write everything before spacingAxis
+        new_lines.extend(original_lines[:spacing_axis_start_idx])
+        
+        # Write updated spacingAxis
+        spacing_yaml_lines = yaml.dump(
+            {"spacingAxis": config["spacingAxis"]},
+            default_flow_style=False,
+            sort_keys=False,
+            allow_unicode=True,
+        ).strip().splitlines()
+        new_lines.extend(spacing_yaml_lines)
+        new_lines.append("")
+        
+        # Skip original spacingAxis section, continue from after it
+        if spacing_axis_end_idx is not None:
+            # Find next section after spacingAxis
+            next_section_start = first_update_idx if first_update_idx is not None else len(original_lines)
+            if spacing_axis_end_idx < next_section_start:
+                # Add any blank lines between spacingAxis and next section
+                between_lines = original_lines[spacing_axis_end_idx:next_section_start]
+                for line in between_lines:
+                    if line.strip() or (new_lines and new_lines[-1].strip()):
+                        new_lines.append(line)
+    elif first_update_idx is not None:
         new_lines.extend(original_lines[:first_update_idx])
     else:
         new_lines.extend(original_lines)
@@ -1047,7 +1127,11 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         # Step 7: Merge into config
         print("Step 7: Merging sections into config...", file=sys.stderr)
-        merged_config, avar2_yaml_final = merge_config(config, stat_data, avar2_yaml, font_key, add_contrast=args.add_contrast)
+        merged_config, avar2_yaml_final = merge_config(
+            config, stat_data, avar2_yaml, font_key, 
+            add_contrast=args.add_contrast,
+            csv_path=csv_to_use
+        )
         if args.add_contrast:
             # Verify fvarInstances were updated
             fvar_inst = merged_config.get("fvarInstances", {}).get(font_key, [])

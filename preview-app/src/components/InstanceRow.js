@@ -24,8 +24,9 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
   // SPAC ranges from -100 to +100
   // Map to letter-spacing: SPAC 100 = 0.1em, SPAC -100 = -0.1em
   // This is an approximation - actual font rebuild happens on "Apply"
+  // Changed: Removed spacAxisExists check so SPAC preview always uses letter-spacing
   let letterSpacing = undefined;
-  if (spacMode && spacAxisExists && spacValue !== undefined && spacValue !== 0) {
+  if (spacMode && spacValue !== undefined && spacValue !== 0) {
     // Convert SPAC value to em units (SPAC 100 = 0.1em)
     letterSpacing = `${(spacValue / 1000)}em`;
   }

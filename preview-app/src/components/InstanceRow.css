@@ -211,7 +211,7 @@
   gap: 0.5rem;
 }
 
-.preview-text {
+.instance-row .preview-text {
   /* font-size is set inline via fontSize prop */
   line-height: 1.4;
   overflow-x: auto;
@@ -221,22 +221,30 @@
   min-height: 3rem;
   border-top: 1px solid #eee;
   padding-top: 0.5rem;
+  text-align: left !important;
+  background: transparent !important;
+  border: none !important;
+  border-top: 1px solid #eee !important;
+  border-radius: 0 !important;
+  display: block !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
-.preview-text::-webkit-scrollbar {
+.instance-row .preview-text::-webkit-scrollbar {
   height: 6px;
 }
 
-.preview-text::-webkit-scrollbar-track {
+.instance-row .preview-text::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 3px;
 }
 
-.preview-text::-webkit-scrollbar-thumb {
+.instance-row .preview-text::-webkit-scrollbar-thumb {
   background: #888;
   border-radius: 3px;
 }
 
-.preview-text::-webkit-scrollbar-thumb:hover {
+.instance-row .preview-text::-webkit-scrollbar-thumb:hover {
   background: #555;
 }

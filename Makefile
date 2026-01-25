@@ -9,7 +9,7 @@ help:
 	@echo "###"
 	@echo
 	@echo "  make build:       Builds the fonts and places them in the fonts/ directory"
-	@echo "  make build-test:  Test build using preview-app/Crispy-avar.csv (safe, doesn't modify sources)"
+	@echo "  make build-test:  Test build using preview-app/Crispy-avar.csv and config-preview.yaml (safe, doesn't modify sources)"
 	@echo "  make test:        Tests the fonts with fontspector"
 	@echo "  make proof:       Creates HTML proof documents in the proof/ directory"
 	@echo "  make images:      Creates PNG specimen images in the documentation/ directory"
@@ -52,36 +52,39 @@ images: venv $(DRAWBOT_OUTPUT)
 %.png: %.py build.stamp
 	. venv/bin/activate; python3 $< --output $@
 
-# Test build using preview CSV without modifying source files
-# Outputs to fonts-test/ directory for inspection
-build-test: venv preview-app/Crispy-avar.csv sources/config.yaml sources/Crispy.glyphs $(SOURCES)
-	@echo "=== TEST BUILD: Using preview-app/Crispy-avar.csv ==="
-	@echo "This build will NOT modify source files"
-	@echo "Output will be in fonts-test/ directory (completely isolated)"
+# Test build using preview CSV and config-preview.yaml
+# Outputs to preview-app/fonts-avar2/ directory
+build-test: venv preview-app/Crispy-avar.csv preview-app/config-preview.yaml sources/Crispy.glyphs $(SOURCES)
+	@echo "=== TEST BUILD: Using preview-app/Crispy-avar.csv and config-preview.yaml ==="
+	@echo "This build validates CSV is synced with Glyphs, then updates config before building"
+	@echo "Output will be in preview-app/fonts-avar2/ directory"
 	@echo ""
-	rm -rf test-build fonts-test;
+	rm -rf test-build;
 	. venv/bin/activate && \
-	mkdir -p fonts-test/variable test-build/sources && \
-	cp sources/config.yaml test-build/sources/test-config.yaml && \
-	sed -i '' 's|- Crispy.glyphs|- Crispy.glyphs|' test-build/sources/test-config.yaml 2>/dev/null || sed -i 's|- Crispy.glyphs|- Crispy.glyphs|' test-build/sources/test-config.yaml && \
-	python3 sources/update_config.py --csv preview-app/Crispy-avar.csv --config test-build/sources/test-config.yaml --no-backup && \
+	mkdir -p preview-app/fonts-avar2/variable test-build/sources && \
+	python3 scripts/check-csv-sync.py --glyphs sources/Crispy.glyphs --csv preview-app/Crispy-avar.csv || (echo "ERROR: CSV is not synced with Glyphs file. Please sync first." && exit 1) && \
+	python3 sources/update_config.py --csv preview-app/Crispy-avar.csv --config preview-app/config-preview.yaml --no-backup && \
+	cp preview-app/config-preview.yaml test-build/sources/test-config.yaml && \
+	sed -i '' 's|- ../sources/Crispy.glyphs|- Crispy.glyphs|' test-build/sources/test-config.yaml 2>/dev/null || sed -i 's|- ../sources/Crispy.glyphs|- Crispy.glyphs|' test-build/sources/test-config.yaml && \
+	python3 -c "import yaml; f=open('test-build/sources/test-config.yaml','r'); d=yaml.safe_load(f); f.close(); d.pop('spacingAxis', None); old_key='Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf'; new_key='Crispy[XOPQ,XTRA,YOPQ].ttf'; fvar=d.get('fvarInstances',{}); avar2=d.get('avar2',{}); stat=d.get('stat',{}); fvar.update({new_key: fvar.pop(old_key)}) if old_key in fvar else None; avar2.update({new_key: avar2.pop(old_key)}) if old_key in avar2 else None; stat.update({new_key: stat.pop(old_key)}) if old_key in stat else None; f=open('test-build/sources/test-config.yaml','w'); yaml.dump(d, f, default_flow_style=False, sort_keys=False, allow_unicode=True); f.close()" && \
 	ln -s ../../sources/Crispy.glyphs test-build/sources/Crispy.glyphs && \
-	ln -s ../fonts-test test-build/fonts && \
+	ln -sf ../preview-app/fonts-avar2 test-build/fonts && \
 	cd test-build/sources && gftools builder --experimental-fontc $$(which fontc) test-config.yaml && \
 	cd ../.. && \
-	FONT_FILE="fonts-test/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf" && \
+	FONT_FILE="preview-app/fonts-avar2/variable/Crispy[XOPQ,XTRA,YOPQ].ttf" && \
 	if [ ! -f "$$FONT_FILE" ]; then \
 		echo "Error: Variable font not found at $$FONT_FILE"; \
-		ls -la fonts-test/variable/ 2>/dev/null || echo "fonts-test/variable/ does not exist"; \
+		ls -la preview-app/fonts-avar2/variable/ 2>/dev/null || echo "preview-app/fonts-avar2/variable/ does not exist"; \
 		rm -rf test-build; \
 		exit 1; \
 	fi && \
-	gftools avar2-to-avar1 "$$FONT_FILE" -m scripts/mapping.yaml -o "fonts-test/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ]-avar1.ttf" && \
+	gftools avar2-to-avar1 "$$FONT_FILE" -m scripts/mapping.yaml -o "preview-app/fonts-avar2/variable/Crispy[XOPQ,XTRA,YOPQ]-avar1.ttf" && \
 	rm -rf test-build && \
 	echo "" && \
 	echo "=== TEST BUILD COMPLETE ===" && \
-	echo "Test fonts are in fonts-test/variable/" && \
-	echo "Build was completely isolated - no interference with fonts/ or sources/"
+	echo "Test fonts are in preview-app/fonts-avar2/variable/" && \
+	echo "Build was completely isolated - no interference with fonts/ or sources/" && \
+	echo "CSV was validated to be synced with Glyphs before building"
 
 clean:
 	rm -rf venv fonts-test test-build test-config.yaml

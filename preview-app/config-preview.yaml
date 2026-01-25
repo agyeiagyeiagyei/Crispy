@@ -1,148 +1,735 @@
 sources:
-- /Users/agyei/Documents/Crispy/sources/Crispy.glyphs
+- ../sources/Crispy.glyphs
 familyName: Crispy
-fvarInstances:
-  Crispy[SPAC,XTRA,XOPQ,YOPQ].ttf:
-  - name: Thin Condensed
-    coordinates:
-      xtra: 181.2
-      xopq: 40.3
-      yopq: 41.3
-  - name: ExtraLight Condensed
-    coordinates:
-      xtra: 248.0
-      xopq: 78.0
-      yopq: 85.0
-  - name: Light Condensed
-    coordinates:
-      xtra: 280.0
-      xopq: 95.0
-      yopq: 90.0
-  - name: Regular Condensed
-    coordinates:
-      xtra: 290.0
-      xopq: 147.0
-      yopq: 130.0
-  - name: Medium Condensed
-    coordinates:
-      xtra: 345.0
-      xopq: 240.0
-      yopq: 240.0
-  - name: Semibold Condensed
-    coordinates:
-      xtra: 354.0
-      xopq: 322.0
-      yopq: 268.0
-  - name: Bold Condensed
-    coordinates:
-      xtra: 318.0
-      xopq: 407.0
-      yopq: 347.0
-  - name: Thin
-    coordinates:
-      xtra: 461.8
-      xopq: 46.9
-      yopq: 44.0
-  - name: ExtraLight
-    coordinates:
-      xtra: 580.0
-      xopq: 78.575
-      yopq: 78.59
-  - name: Light
-    coordinates:
-      xtra: 603.55
-      xopq: 133.124
-      yopq: 124.253
-  - name: Regular
-    coordinates:
-      xtra: 627.0
-      xopq: 187.672
-      yopq: 160.0
-  - name: Medium
-    coordinates:
-      xtra: 650.5
-      xopq: 242.221
-      yopq: 216.1
-  - name: SemiBold
-    coordinates:
-      xtra: 693.05
-      xopq: 321.48
-      yopq: 286.0
-  - name: Bold
-    coordinates:
-      xtra: 735.6
-      xopq: 400.738
-      yopq: 324.7
-  - name: Thin Extended
-    coordinates:
-      xtra: 1136.3
-      xopq: 54.6
-      yopq: 47.3
-  - name: ExtraLight Extended
-    coordinates:
-      xtra: 1259.0
-      xopq: 85.0
-      yopq: 84.0
-  - name: Light Extended
-    coordinates:
-      xtra: 1259.0
-      xopq: 113.0
-      yopq: 111.0
-  - name: Regular Extended
-    coordinates:
-      xtra: 1252.1
-      xopq: 220.4
-      yopq: 197.1
-  - name: Medium Extended
-    coordinates:
-      xtra: 1213.0
-      xopq: 370.0
-      yopq: 318.0
-  - name: Semibold Extended
-    coordinates:
-      xtra: 1275.0
-      xopq: 508.0
-      yopq: 360.0
-  - name: Bold Extended
-    coordinates:
-      xtra: 1350.0
-      xopq: 579.8
-      yopq: 391.4
-  - name: Thin Ultra Extended
-    coordinates:
-      xtra: 2300.0
-      xopq: 61.4
-      yopq: 60.1
-  - name: ExtraLight Ultra Extended
-    coordinates:
-      xtra: 2300.0
-      xopq: 100.0
-      yopq: 98.0
-  - name: Light Ultra Extended
-    coordinates:
-      xtra: 2290.0
-      xopq: 134.0
-      yopq: 128.0
-  - name: Regular Ultra Extended
-    coordinates:
-      xtra: 2210.6
-      xopq: 235.2
-      yopq: 199.5
-  - name: Medium Ultra Extended
-    coordinates:
-      xtra: 2290.0
-      xopq: 317.0
-      yopq: 259.0
-  - name: Semibold Ultra Extended
-    coordinates:
-      xtra: 2346.0
-      xopq: 465.6
-      yopq: 358.2
-  - name: Bold Ultra Extended
-    coordinates:
-      xtra: 2369.9
-      xopq: 638.2
-      yopq: 387.1
 spacingAxis:
   min: -100
-  max: 100
+  max: 110
+
+fvarInstances:
+  Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
+  - name: Thin
+    coordinates:
+      opsz: 48
+      wdth: 100
+      wght: 100
+  - name: ExtraLight
+    coordinates:
+      opsz: 48
+      wdth: 100
+      wght: 200
+  - name: Light
+    coordinates:
+      opsz: 48
+      wdth: 100
+      wght: 300
+  - name: Regular
+    coordinates:
+      opsz: 48
+      wdth: 100
+      wght: 400
+  - name: Medium
+    coordinates:
+      opsz: 48
+      wdth: 100
+      wght: 500
+  - name: SemiBold
+    coordinates:
+      opsz: 48
+      wdth: 100
+      wght: 600
+  - name: Bold
+    coordinates:
+      opsz: 48
+      wdth: 100
+      wght: 700
+
+avar2:
+  Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
+
+  # =========================
+  # Width = 52
+  # =========================
+
+  # OPSZ = 72
+
+  # Thin Condensed
+  - in:
+      opsz: 72
+      wdth: 52
+      wght: 100
+    out:
+      XTRA: 181.2
+      XOPQ: 40.3
+      YOPQ: 41.3
+
+  # OPSZ = 12
+
+  # Thin Condensed SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 52
+      wght: 100
+    out:
+      XTRA: 194.1
+      XOPQ: 60.2
+      YOPQ: 40.8
+
+  # OPSZ = 72
+
+  # ExtraLight Condensed
+  - in:
+      opsz: 72
+      wdth: 52
+      wght: 200
+    out:
+      XTRA: 248
+      XOPQ: 78
+      YOPQ: 85
+
+  # OPSZ = 12
+
+  # ExtraLight Condensed SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 52
+      wght: 200
+    out:
+      XTRA: 248
+      XOPQ: 78
+      YOPQ: 85
+
+  # OPSZ = 72
+
+  # Light Condensed
+  - in:
+      opsz: 72
+      wdth: 52
+      wght: 300
+    out:
+      XTRA: 280
+      XOPQ: 95
+      YOPQ: 90
+
+  # OPSZ = 12
+
+  # Light Condensed SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 52
+      wght: 300
+    out:
+      XTRA: 280
+      XOPQ: 95
+      YOPQ: 90
+
+  # OPSZ = 72
+
+  # Regular Condensed
+  - in:
+      opsz: 72
+      wdth: 52
+      wght: 400
+    out:
+      XTRA: 290
+      XOPQ: 147
+      YOPQ: 130
+
+  # OPSZ = 12
+
+  # Regular Condensed SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 52
+      wght: 400
+    out:
+      XTRA: 350.6
+      XOPQ: 139.5
+      YOPQ: 130
+
+  # OPSZ = 72
+
+  # Medium Condensed
+  - in:
+      opsz: 72
+      wdth: 52
+      wght: 500
+    out:
+      XTRA: 345
+      XOPQ: 240
+      YOPQ: 240
+
+  # OPSZ = 12
+
+  # Medium Condensed SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 52
+      wght: 500
+    out:
+      XTRA: 405.6
+      XOPQ: 266.1
+      YOPQ: 240
+
+  # OPSZ = 72
+
+  # Semibold Condensed
+  - in:
+      opsz: 72
+      wdth: 52
+      wght: 600
+    out:
+      XTRA: 354
+      XOPQ: 322
+      YOPQ: 268
+
+  # OPSZ = 12
+
+  # Semibold Condensed SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 52
+      wght: 600
+    out:
+      XTRA: 354
+      XOPQ: 336
+      YOPQ: 262.9
+
+  # OPSZ = 72
+
+  # Bold Condensed
+  - in:
+      opsz: 72
+      wdth: 52
+      wght: 700
+    out:
+      XTRA: 318
+      XOPQ: 407
+      YOPQ: 347
+
+  # OPSZ = 12
+
+  # Bold Condensed SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 52
+      wght: 700
+    out:
+      XTRA: 381.5
+      XOPQ: 391
+      YOPQ: 335.8
+
+  # =========================
+  # Width = 100
+  # =========================
+
+  # OPSZ = 72
+
+  # Thin
+  - in:
+      opsz: 72
+      wdth: 100
+      wght: 100
+    out:
+      XTRA: 461.8
+      XOPQ: 46.9
+      YOPQ: 44
+
+  # OPSZ = 12
+
+  # Thin SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 100
+    out:
+      XTRA: 504.9
+      XOPQ: 63.1
+      YOPQ: 65.9
+
+  # OPSZ = 72
+
+  # ExtraLight
+  - in:
+      opsz: 72
+      wdth: 100
+      wght: 200
+    out:
+      XTRA: 580
+      XOPQ: 78.575
+      YOPQ: 78.59
+
+  # OPSZ = 12
+
+  # ExtraLight SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 200
+    out:
+      XTRA: 580
+      XOPQ: 87.9
+      YOPQ: 78.8
+
+  # OPSZ = 72
+
+  # Light
+  - in:
+      opsz: 72
+      wdth: 100
+      wght: 300
+    out:
+      XTRA: 603.55
+      XOPQ: 133.124
+      YOPQ: 124.253
+
+  # OPSZ = 12
+
+  # Light SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 300
+    out:
+      XTRA: 598.1
+      XOPQ: 147.8
+      YOPQ: 124.253
+
+  # OPSZ = 72
+
+  # Regular
+  - in:
+      opsz: 72
+      wdth: 100
+      wght: 400
+    out:
+      XTRA: 627
+      XOPQ: 187.672
+      YOPQ: 160
+
+  # OPSZ = 12
+
+  # Regular SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 400
+    out:
+      XTRA: 627
+      XOPQ: 181
+      YOPQ: 160
+
+  # OPSZ = 72
+
+  # Medium
+  - in:
+      opsz: 72
+      wdth: 100
+      wght: 500
+    out:
+      XTRA: 650.5
+      XOPQ: 242.221
+      YOPQ: 216.1
+
+  # OPSZ = 12
+
+  # Medium SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 500
+    out:
+      XTRA: 650.5
+      XOPQ: 242.221
+      YOPQ: 216.1
+
+  # OPSZ = 72
+
+  # SemiBold
+  - in:
+      opsz: 72
+      wdth: 100
+      wght: 600
+    out:
+      XTRA: 693.05
+      XOPQ: 321.48
+      YOPQ: 286
+
+  # OPSZ = 12
+
+  # SemiBold SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 600
+    out:
+      XTRA: 731.3
+      XOPQ: 308
+      YOPQ: 277.2
+
+  # OPSZ = 72
+
+  # Bold
+  - in:
+      opsz: 72
+      wdth: 100
+      wght: 700
+    out:
+      XTRA: 735.6
+      XOPQ: 400.738
+      YOPQ: 324.7
+
+  # OPSZ = 12
+
+  # Bold SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 100
+      wght: 700
+    out:
+      XTRA: 735.6
+      XOPQ: 390.9
+      YOPQ: 319.4
+
+  # =========================
+  # Width = 182
+  # =========================
+
+  # OPSZ = 72
+
+  # Thin Extended
+  - in:
+      opsz: 72
+      wdth: 182
+      wght: 100
+    out:
+      XTRA: 1136.3
+      XOPQ: 54.6
+      YOPQ: 47.3
+
+  # OPSZ = 12
+
+  # Thin Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 182
+      wght: 100
+    out:
+      XTRA: 1136.3
+      XOPQ: 106.1
+      YOPQ: 70.9
+
+  # OPSZ = 72
+
+  # ExtraLight Extended
+  - in:
+      opsz: 72
+      wdth: 182
+      wght: 200
+    out:
+      XTRA: 1259
+      XOPQ: 85
+      YOPQ: 84
+
+  # OPSZ = 12
+
+  # ExtraLight Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 182
+      wght: 200
+    out:
+      XTRA: 1327.8
+      XOPQ: 98.2
+      YOPQ: 88.1
+
+  # OPSZ = 72
+
+  # Light Extended
+  - in:
+      opsz: 72
+      wdth: 182
+      wght: 300
+    out:
+      XTRA: 1259
+      XOPQ: 113
+      YOPQ: 111
+
+  # OPSZ = 12
+
+  # Light Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 182
+      wght: 300
+    out:
+      XTRA: 1364.8
+      XOPQ: 113
+      YOPQ: 111
+
+  # OPSZ = 72
+
+  # Regular Extended
+  - in:
+      opsz: 72
+      wdth: 182
+      wght: 400
+    out:
+      XTRA: 1252.1
+      XOPQ: 220.4
+      YOPQ: 197.1
+
+  # OPSZ = 12
+
+  # Regular Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 182
+      wght: 400
+    out:
+      XTRA: 1299
+      XOPQ: 220.4
+      YOPQ: 197.1
+
+  # OPSZ = 72
+
+  # Medium Extended
+  - in:
+      opsz: 72
+      wdth: 182
+      wght: 500
+    out:
+      XTRA: 1213
+      XOPQ: 370
+      YOPQ: 318
+
+  # OPSZ = 12
+
+  # Medium Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 182
+      wght: 500
+    out:
+      XTRA: 1243.7
+      XOPQ: 375.4
+      YOPQ: 301.7
+
+  # OPSZ = 72
+
+  # Semibold Extended
+  - in:
+      opsz: 72
+      wdth: 182
+      wght: 600
+    out:
+      XTRA: 1275
+      XOPQ: 508
+      YOPQ: 360
+
+  # OPSZ = 12
+
+  # Semibold Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 182
+      wght: 600
+    out:
+      XTRA: 1320.6
+      XOPQ: 508
+      YOPQ: 360
+
+  # OPSZ = 72
+
+  # Bold Extended
+  - in:
+      opsz: 72
+      wdth: 182
+      wght: 700
+    out:
+      XTRA: 1350
+      XOPQ: 579.8
+      YOPQ: 391.4
+
+  # OPSZ = 12
+
+  # Bold Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 182
+      wght: 700
+    out:
+      XTRA: 1420.6
+      XOPQ: 579.8
+      YOPQ: 391.4
+
+  # =========================
+  # Width = 300
+  # =========================
+
+  # OPSZ = 72
+
+  # Thin Ultra Extended
+  - in:
+      opsz: 72
+      wdth: 300
+      wght: 100
+    out:
+      XTRA: 2300
+      XOPQ: 61.4
+      YOPQ: 60.1
+
+  # OPSZ = 12
+
+  # Thin Ultra Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 300
+      wght: 100
+    out:
+      XTRA: 2444.1
+      XOPQ: 79.7
+      YOPQ: 69.5
+
+  # OPSZ = 72
+
+  # ExtraLight Ultra Extended
+  - in:
+      opsz: 72
+      wdth: 300
+      wght: 200
+    out:
+      XTRA: 2300
+      XOPQ: 100
+      YOPQ: 98
+
+  # OPSZ = 12
+
+  # ExtraLight Ultra Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 300
+      wght: 200
+    out:
+      XTRA: 2354.9
+      XOPQ: 115.1
+      YOPQ: 101
+
+  # OPSZ = 72
+
+  # Light Ultra Extended
+  - in:
+      opsz: 72
+      wdth: 300
+      wght: 300
+    out:
+      XTRA: 2290
+      XOPQ: 134
+      YOPQ: 128
+
+  # OPSZ = 12
+
+  # Light Ultra Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 300
+      wght: 300
+    out:
+      XTRA: 2416
+      XOPQ: 134
+      YOPQ: 128
+
+  # OPSZ = 72
+
+  # Regular Ultra Extended
+  - in:
+      opsz: 72
+      wdth: 300
+      wght: 400
+    out:
+      XTRA: 2210.6
+      XOPQ: 235.2
+      YOPQ: 199.5
+
+  # OPSZ = 12
+
+  # Regular Ultra Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 300
+      wght: 400
+    out:
+      XTRA: 2280.4
+      XOPQ: 244.9
+      YOPQ: 199.5
+
+  # OPSZ = 72
+
+  # Medium Ultra Extended
+  - in:
+      opsz: 72
+      wdth: 300
+      wght: 500
+    out:
+      XTRA: 2290
+      XOPQ: 317
+      YOPQ: 259
+
+  # OPSZ = 12
+
+  # Medium Ultra Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 300
+      wght: 500
+    out:
+      XTRA: 2333.5
+      XOPQ: 323.2
+      YOPQ: 273.5
+
+  # OPSZ = 72
+
+  # Semibold Ultra Extended
+  - in:
+      opsz: 72
+      wdth: 300
+      wght: 600
+    out:
+      XTRA: 2346
+      XOPQ: 465.6
+      YOPQ: 358.2
+
+  # OPSZ = 12
+
+  # Semibold Ultra Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 300
+      wght: 600
+    out:
+      XTRA: 2401.9
+      XOPQ: 465.6
+      YOPQ: 358.2
+
+  # OPSZ = 72
+
+  # Bold Ultra Extended
+  - in:
+      opsz: 72
+      wdth: 300
+      wght: 700
+    out:
+      XTRA: 2369.9
+      XOPQ: 619.7
+      YOPQ: 362
+
+  # OPSZ = 12
+
+  # Bold Ultra Extended SmallOpsz
+  - in:
+      opsz: 12
+      wdth: 300
+      wght: 700
+    out:
+      XTRA: 2520
+      XOPQ: 619.7
+      YOPQ: 331.9

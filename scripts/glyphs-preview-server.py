@@ -1065,6 +1065,103 @@ def _get_preview_font_dir() -> Optional[Path]:
     return font_dir
 
 
+def _get_avar2_font_dir() -> Optional[Path]:
+    """Get avar2 font directory (preview-app/fonts-avar2/variable/)."""
+    preview_dir = _get_preview_dir()
+    if not preview_dir:
+        return None
+    font_dir = preview_dir / "fonts-avar2" / "variable"
+    font_dir.mkdir(parents=True, exist_ok=True)
+    return font_dir
+
+
+def _check_preview_csv_sync_status() -> Dict[str, any]:
+    """
+    Check if preview CSV is synced with Glyphs file.
+    
+    Returns dict with:
+    - synced: bool
+    - message: str
+    - glyphs_instances: list of instance names in Glyphs
+    - csv_instances: list of instance names in CSV
+    """
+    try:
+        csv_path = _get_preview_csv_path()
+        if not csv_path or not csv_path.exists():
+            return {
+                "synced": False,
+                "message": "Preview CSV not found",
+                "glyphs_instances": [],
+                "csv_instances": []
+            }
+        
+        if not GLYPHS_PATH or not GLYPHS_PATH.exists():
+            return {
+                "synced": False,
+                "message": "Glyphs file not found",
+                "glyphs_instances": [],
+                "csv_instances": []
+            }
+        
+        # Read instances from Glyphs file
+        # Import sync script functions using importlib (handles hyphenated module names)
+        import importlib.util
+        sync_script_path = Path(__file__).parent / "sync-glyphs-to-avar2.py"
+        spec = importlib.util.spec_from_file_location("sync_glyphs_to_avar2", sync_script_path)
+        sync_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sync_module)
+        
+        glyphs_instances_dict = sync_module.get_glyphs_instances(GLYPHS_PATH)
+        glyphs_instances = set(glyphs_instances_dict.keys())
+        
+        # Read instances from CSV
+        csv_rows, fieldnames = sync_module.read_csv_mappings(csv_path)
+        instance_name_col = "Instance Name"
+        if instance_name_col not in fieldnames:
+            return {
+                "synced": False,
+                "message": "CSV missing 'Instance Name' column",
+                "glyphs_instances": sorted(glyphs_instances),
+                "csv_instances": []
+            }
+        
+        csv_instances = {row[instance_name_col].strip() for row in csv_rows if row.get(instance_name_col)}
+        
+        # Check if they match
+        missing_in_csv = glyphs_instances - csv_instances
+        missing_in_glyphs = csv_instances - glyphs_instances
+        
+        synced = len(missing_in_csv) == 0 and len(missing_in_glyphs) == 0
+        
+        if synced:
+            message = "CSV is synced with Glyphs file"
+        else:
+            parts = []
+            if missing_in_csv:
+                parts.append(f"{len(missing_in_csv)} instance(s) in Glyphs but not in CSV: {', '.join(sorted(missing_in_csv))}")
+            if missing_in_glyphs:
+                parts.append(f"{len(missing_in_glyphs)} instance(s) in CSV but not in Glyphs: {', '.join(sorted(missing_in_glyphs))}")
+            message = "; ".join(parts)
+        
+        return {
+            "synced": synced,
+            "message": message,
+            "glyphs_instances": sorted(glyphs_instances),
+            "csv_instances": sorted(csv_instances),
+            "missing_in_csv": sorted(missing_in_csv),
+            "missing_in_glyphs": sorted(missing_in_glyphs)
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            "synced": False,
+            "message": f"Error checking sync status: {str(e)}",
+            "glyphs_instances": [],
+            "csv_instances": []
+        }
+
+
 def _initialize_preview_csv_from_glyphs() -> Optional[Path]:
     """
     Initialize preview CSV from Glyphs file.
@@ -1231,6 +1328,30 @@ def _check_spac_axis_in_font(font_path: Path) -> bool:
     except Exception as e:
         print(f"Error checking SPAC axis in font: {e}", file=sys.stderr)
         return False
+
+
+def _get_spac_axis_range_from_font(font_path: Path) -> Optional[Dict[str, float]]:
+    """Get SPAC axis min/max/default values from font's fvar table.
+    
+    Returns dict with 'min', 'max', 'default' if SPAC axis exists, None otherwise.
+    """
+    try:
+        font = TTFont(str(font_path))
+        if "fvar" not in font:
+            return None
+        
+        fvar = font["fvar"]
+        for axis in fvar.axes:
+            if axis.axisTag == "SPAC":
+                return {
+                    "min": float(axis.minValue),
+                    "max": float(axis.maxValue),
+                    "default": float(axis.defaultValue)
+                }
+        return None
+    except Exception as e:
+        print(f"Error getting SPAC axis range from font: {e}", file=sys.stderr)
+        return None
 
 
 def _load_axis_metadata() -> Dict[str, Dict[str, any]]:
@@ -2144,7 +2265,7 @@ def init_spac_axis():
 
 @app.route('/api/spacing/check', methods=['GET'])
 def check_spac_axis():
-    """Check if SPAC axis exists in preview font."""
+    """Check if SPAC axis exists in preview font and return its range."""
     try:
         preview_font_dir = _get_preview_font_dir()
         if not preview_font_dir:
@@ -2166,11 +2287,18 @@ def check_spac_axis():
             spac_font = max(font_files, key=lambda p: p.stat().st_mtime)
         
         has_spac = _check_spac_axis_in_font(spac_font)
+        spac_range = None
+        if has_spac:
+            spac_range = _get_spac_axis_range_from_font(spac_font)
         
-        return jsonify({
+        result = {
             "exists": has_spac,
             "font_path": str(spac_font)
-        })
+        }
+        if spac_range:
+            result["range"] = spac_range
+        
+        return jsonify(result)
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -2440,6 +2568,220 @@ def rebuild_preview_font_with_spac():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/check-sync-status', methods=['GET'])
+def check_sync_status():
+    """Check if preview CSV is synced with Glyphs file."""
+    try:
+        status = _check_preview_csv_sync_status()
+        return jsonify(status)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/build-avar2', methods=['POST'])
+def build_avar2_font():
+    """Build avar2 font from preview CSV with selected axes."""
+    global BUILDING
+    
+    if BUILDING:
+        return jsonify({"error": "Build already in progress"}), 409
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+        
+        # Get selected axes
+        selected_traditional_axes = data.get("traditional_axes", [])  # e.g., ["wght", "wdth", "opsz", "cntr"]
+        selected_avar2_axes = data.get("avar2_axes", [])  # e.g., ["XTRA", "XOPQ", "YOPQ"]
+        include_spac = data.get("include_spac", True)  # SPAC axis (always available)
+        
+        if not selected_traditional_axes:
+            return jsonify({"error": "At least one traditional axis must be selected"}), 400
+        
+        # Check sync status - CSV must be synced with Glyphs before building
+        sync_status = _check_preview_csv_sync_status()
+        if not sync_status.get("synced", False):
+            return jsonify({
+                "error": "CSV is not synced with Glyphs file",
+                "details": sync_status.get("message", "Unknown sync error"),
+                "sync_status": sync_status
+            }), 400
+        
+        # Get paths
+        preview_csv = _get_preview_csv_path()
+        if not preview_csv or not preview_csv.exists():
+            return jsonify({"error": "Preview CSV not found"}), 404
+        
+        avar2_font_dir = _get_avar2_font_dir()
+        if not avar2_font_dir:
+            return jsonify({"error": "Could not create avar2 font directory"}), 500
+        
+        BUILDING = True
+        
+        try:
+            # Get preview config path - this is what we'll update and build from
+            preview_config_path = _get_preview_config_path()
+            if not preview_config_path or not preview_config_path.exists():
+                # Fallback to sources/config.yaml if preview config doesn't exist
+                base_config_path = Path.cwd() / "sources" / "config.yaml"
+                if not base_config_path.exists():
+                    return jsonify({"error": "Neither preview-app/config-preview.yaml nor sources/config.yaml found"}), 404
+                # If using sources/config.yaml, update it in place
+                config_to_update = base_config_path
+            else:
+                # Use preview-app/config-preview.yaml - update it in place
+                config_to_update = preview_config_path
+            
+            # Update config-preview.yaml with CSV values BEFORE copying
+            # This ensures config-preview.yaml stays in sync with CSV
+            # CSV is already validated to be synced with Glyphs above
+            update_config_script = Path.cwd() / "sources" / "update_config.py"
+            update_config_cmd = [
+                sys.executable,
+                str(update_config_script),
+                "--csv", str(preview_csv),
+                "--config", str(config_to_update),
+                "--no-backup"
+            ]
+            
+            result = subprocess.run(
+                update_config_cmd,
+                capture_output=True,
+                text=True,
+                cwd=str(Path.cwd())
+            )
+            
+            if result.returncode != 0:
+                BUILDING = False
+                return jsonify({
+                    "error": "Failed to update config",
+                    "details": result.stderr
+                }), 500
+            
+            # Ensure config file has correct Glyphs path
+            # gftools builder resolves paths relative to config file location
+            # Since config-preview.yaml is in preview-app/, use ../sources/Crispy.glyphs
+            import yaml as yaml_module
+            with config_to_update.open('r', encoding='utf-8') as f:
+                config_content = yaml_module.safe_load(f)
+            
+            # Determine correct path based on config file location
+            sources_list = config_content.get('sources', [])
+            needs_update = False
+            if sources_list:
+                first_source = str(sources_list[0])
+                # If config is in preview-app/, use relative path from there
+                if 'preview-app' in str(config_to_update) or 'preview_app' in str(config_to_update):
+                    if '../sources/Crispy.glyphs' not in first_source and 'sources/Crispy.glyphs' == first_source:
+                        # Update to use relative path from preview-app/ directory
+                        config_content['sources'] = ['../sources/Crispy.glyphs']
+                        needs_update = True
+                else:
+                    # Config is in sources/, use relative path from there
+                    if 'Crispy.glyphs' == first_source or first_source.endswith('Crispy.glyphs'):
+                        # Keep as is or update to just Crispy.glyphs
+                        if first_source != 'Crispy.glyphs':
+                            config_content['sources'] = ['Crispy.glyphs']
+                            needs_update = True
+            
+            if needs_update:
+                with config_to_update.open('w', encoding='utf-8') as f:
+                    yaml_module.dump(config_content, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            
+            # Build font using gftools builder directly from config-preview.yaml
+            # gftools builder creates fonts/ directory relative to where it runs (project root)
+            fontc_path = shutil.which("fontc")
+            if not fontc_path:
+                BUILDING = False
+                return jsonify({"error": "fontc not found in PATH"}), 500
+            
+            builder_cmd = [
+                "gftools", "builder",
+                "--experimental-fontc", fontc_path,
+                str(config_to_update.resolve())  # Use absolute path to config-preview.yaml
+            ]
+            
+            result = subprocess.run(
+                builder_cmd,
+                capture_output=True,
+                text=True,
+                cwd=str(Path.cwd())  # Run from project root
+            )
+            
+            if result.returncode != 0:
+                BUILDING = False
+                error_details = result.stderr or result.stdout or "No error details available"
+                return jsonify({
+                    "error": "Font build failed",
+                    "details": error_details,
+                    "stdout": result.stdout[:1000] if result.stdout else None,
+                    "stderr": result.stderr[:1000] if result.stderr else None,
+                    "returncode": result.returncode
+                }), 500
+            
+            # gftools builder outputs to fonts/variable/ in project root
+            # Move the font to preview-app/fonts-avar2/variable/
+            project_fonts_dir = Path.cwd() / "fonts" / "variable"
+            built_font = project_fonts_dir / "Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf"
+            
+            if not built_font.exists():
+                BUILDING = False
+                return jsonify({
+                    "error": "Built font not found",
+                    "details": f"Expected at {built_font}. gftools builder output: {result.stdout[:500]}"
+                }), 500
+            
+            # Ensure avar2 font directory exists
+            avar2_font_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Move font to preview-app/fonts-avar2/variable/
+            font_file = avar2_font_dir / "Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf"
+            shutil.move(str(built_font), str(font_file))
+            
+            BUILDING = False
+            
+            return jsonify({
+                "success": True,
+                "font_path": str(font_file),
+                "sync_status": sync_status,
+                "message": "Avar2 font built successfully"
+            })
+            
+        except Exception as e:
+            BUILDING = False
+            raise
+            
+    except Exception as e:
+        BUILDING = False
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/avar2-font', methods=['GET'])
+def get_avar2_font():
+    """Serve the avar2 font file."""
+    avar2_font_dir = _get_avar2_font_dir()
+    if not avar2_font_dir or not avar2_font_dir.exists():
+        return jsonify({"error": "Avar2 font directory not found"}), 404
+    
+    # Look for the avar2 font
+    font_file = avar2_font_dir / "Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf"
+    
+    if not font_file.exists():
+        return jsonify({"error": "Avar2 font not built yet"}), 404
+    
+    return send_file(
+        str(font_file),
+        mimetype="font/ttf",
+        as_attachment=False,
+        download_name=font_file.name
+    )
 
 
 def main():

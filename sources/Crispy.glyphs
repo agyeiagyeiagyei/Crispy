@@ -78315,9 +78315,9 @@ name = "Thin Condensed";
 },
 {
 axesValues = (
-181.2,
-40.3,
-41.3
+194.1,
+60.2,
+40.8
 );
 instanceInterpolations = {
 "0457B203-0D8E-47C5-900E-12B2256A2F18" = 0.03363;
@@ -79290,7 +79290,7 @@ name = "Bold Ultra Extended";
 },
 {
 axesValues = (
-2369.9,
+2520,
 619.7,
 331.9
 );

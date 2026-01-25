@@ -89,3 +89,39 @@
   background-color: white;
   color: #333;
 }
+
+.mode-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.mode-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.mode-button:not(:last-child) {
+  border-right: 1px solid #ccc;
+}
+
+.mode-button:hover:not(:disabled) {
+  background-color: #f0f0f0;
+}
+
+.mode-button.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.mode-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

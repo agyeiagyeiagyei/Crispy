@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import './Sidebar.css';
 import AxisControl from './AxisControl';
 import SpacAxisControl from './SpacAxisControl';
@@ -6,18 +6,8 @@ import UpdateButton from './UpdateButton';
 import DuplicateModal from './DuplicateModal';
 import AddAxisModal from './AddAxisModal';
 import EditAxisModal from './EditAxisModal';
-import { api } from '../api';
-
-const DEFAULT_SAMPLE_TEXT = "The Quick Brown Fox Jumps Over The Lazy Dog 0123456789 &!";
 
 function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance, avar2Mode, avar2Instances, avar2Axes, onAddAvar2Axis, onUpdateAvar2Axis, onUpdateAvar2Mapping, onReloadAvar2Data, spacMode, spacAxisExists, spacValue, originalSpacValue, onSpacChange, onSpacApply, spacBuilding, spacError, onSpacRetry }) {
-  // Map axis tags to names for avar2 display
-  const axisNames = {
-    wght: 'Weight',
-    wdth: 'Width',
-    opsz: 'Optical Size',
-    cntr: 'Contrast'
-  };
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showAddAxisModal, setShowAddAxisModal] = useState(false);
   const [showEditAxisModal, setShowEditAxisModal] = useState(false);
@@ -84,7 +74,9 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
           }
           
           // Render SPAC axis with special control (Apply button next to slider)
-          if ((axis.tag === 'SPAC' || axis.tag === 'spac') && spacMode && spacAxisExists) {
+          // Changed: Show SPAC slider when spacMode is enabled, regardless of spacAxisExists
+          // This matches InstanceRow.js which always uses letter-spacing for SPAC preview
+          if ((axis.tag === 'SPAC' || axis.tag === 'spac') && spacMode) {
             return (
               <SpacAxisControl
                 key={axis.tag}
@@ -155,7 +147,6 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
             
             // If no traditional axes exist, show "Add Axis" button
             if (!hasTraditionalAxes) {
-              const axisColumns = [];
               return (
                 <div className="avar2-add-axis-section">
                   <button
@@ -340,8 +331,6 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
                     <button
                       className="btn btn-add-axis"
                       onClick={() => {
-                        // Get existing axis names for validation
-                        const existingAxisNames = axisColumns;
                         setShowAddAxisModal(true);
                       }}
                     >
@@ -352,7 +341,6 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
               );
             }
             // No mapping for this instance, but traditional axes exist - show "Add Axis" button
-            const axisColumns = avar2Axes?.traditional_axes?.columns || [];
             return (
               <div className="avar2-add-axis-section">
                 <button
