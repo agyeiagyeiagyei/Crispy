@@ -1,0 +1,51 @@
+{
+  "XTRA": {
+    "display_name": "X-Transparency",
+    "registered_tag": "xtra",
+    "min": 94.0,
+    "max": 3330.0,
+    "is_parametric": true
+  },
+  "XOPQ": {
+    "display_name": "X-Opacity",
+    "registered_tag": "xopq",
+    "min": 2.0,
+    "max": 1016.0,
+    "is_parametric": true
+  },
+  "YOPQ": {
+    "display_name": "Y-Opacity",
+    "registered_tag": "yopq",
+    "min": 2.0,
+    "max": 462.0,
+    "is_parametric": true
+  },
+  "SPAC": {
+    "display_name": "Spacing",
+    "registered_tag": "spac",
+    "min": -1000,
+    "max": 1000,
+    "is_parametric": false
+  },
+  "OPSZ": {
+    "display_name": "Optical Size",
+    "registered_tag": "opsz",
+    "is_parametric": false,
+    "min": 12,
+    "max": 72
+  },
+  "WGHT": {
+    "display_name": "Weight",
+    "registered_tag": "wght",
+    "is_parametric": false,
+    "min": 100,
+    "max": 900
+  },
+  "WDTH": {
+    "display_name": "Width",
+    "registered_tag": "wdth",
+    "is_parametric": false,
+    "min": 52,
+    "max": 300
+  }
+}

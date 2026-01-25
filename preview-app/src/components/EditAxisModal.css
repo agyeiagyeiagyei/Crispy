@@ -1,0 +1,71 @@
+.edit-axis-modal {
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.edit-axis-modal .form-group {
+  margin-bottom: 1.25rem;
+}
+
+.edit-axis-modal label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.edit-axis-modal .required {
+  color: #dc3545;
+}
+
+.edit-axis-modal input[type="text"],
+.edit-axis-modal input[type="number"] {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.edit-axis-modal input[type="text"]:focus,
+.edit-axis-modal input[type="number"]:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.edit-axis-modal input.error {
+  border-color: #dc3545;
+}
+
+.edit-axis-modal .error-message {
+  display: block;
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.edit-axis-modal small {
+  display: block;
+  color: #666;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.edit-axis-modal .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Hide number input spinner arrows */
+.edit-axis-modal .axis-number-input::-webkit-inner-spin-button,
+.edit-axis-modal .axis-number-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.edit-axis-modal .axis-number-input[type=number] {
+  -moz-appearance: textfield;
+}

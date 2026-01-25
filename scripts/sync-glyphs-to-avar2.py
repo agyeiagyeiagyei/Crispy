@@ -17,10 +17,12 @@ Only updates axes that exist in the Glyphs file (XTRA, XOPQ, YOPQ).
 
 import argparse
 import csv
+import json
+import os
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 try:
     from watchdog.observers import Observer
@@ -93,7 +95,8 @@ def read_csv_mappings(csv_path: Path) -> List[Dict[str, str]]:
 def update_csv_from_glyphs(
     glyphs_path: Path,
     csv_path: Path,
-    dry_run: bool = False
+    dry_run: bool = False,
+    skip_instances: Optional[set] = None
 ) -> bool:
     """
     Update CSV file with coordinates from Glyphs file.
@@ -159,8 +162,18 @@ def update_csv_from_glyphs(
         added_count = 0
         
         # Process existing CSV rows
+        skip_instances = skip_instances or set()
         for row in csv_rows:
             instance_name = row.get(instance_name_col, "").strip()
+            
+            # Skip instances that are being edited (protected from sync)
+            if instance_name in skip_instances:
+                updated_rows.append(row)  # Keep existing row unchanged
+                # Still remove from set so we don't add it as new
+                glyphs_instance_names.discard(instance_name)
+                if not dry_run:
+                    print(f"Skipping sync for '{instance_name}' (currently being edited)", file=sys.stderr)
+                continue
             
             # Check if this instance exists in Glyphs file (exact match, case-sensitive)
             if instance_name in glyphs_coords:
@@ -343,9 +356,17 @@ def main():
         if args.once or not args.watch:
             sys.exit(0)
     
+    # Get skip instances from environment (when called from preview server)
+    skip_instances = None
+    if 'SKIP_INSTANCES' in os.environ:
+        try:
+            skip_instances = set(json.loads(os.environ['SKIP_INSTANCES']))
+        except (json.JSONDecodeError, TypeError):
+            skip_instances = None
+    
     # Update once
     if args.once or not args.watch:
-        success = update_csv_from_glyphs(args.glyphs, args.csv, dry_run=args.dry_run)
+        success = update_csv_from_glyphs(args.glyphs, args.csv, dry_run=args.dry_run, skip_instances=skip_instances)
         sys.exit(0 if success else 1)
     
     # Watch mode

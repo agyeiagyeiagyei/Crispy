@@ -4,7 +4,6 @@ import { api } from './api';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import InstanceRows from './components/InstanceRows';
-import UpdateButton from './components/UpdateButton';
 
 const DEFAULT_SAMPLE_TEXT = "The Quick Brown Fox Jumps Over The Lazy Dog 0123456789 &!";
 
@@ -40,10 +39,31 @@ function App() {
     loadAvar2Data().catch(() => {
       // Silently fail - avar2 is optional
     });
-    // Check SPAC axis status and load values
-    checkSpacAxisStatus();
-    loadSpacValues();
+    // Check SPAC axis status and enable mode if axis exists
+    checkSpacAxisStatus().then((exists) => {
+      if (exists) {
+        // SPAC axis exists - enable mode by default and load values
+        setSpacMode(true);
+        loadSpacValues();
+        // Switch to preview font URL when SPAC mode is enabled
+        setFontUrl(api.getPreviewFontUrl());
+        setFontLoaded(true);
+      }
+    }).catch(() => {
+      // Silently fail - SPAC is optional
+    });
   }, []);
+  
+  // Unregister instance when deselected or component unmounts
+  useEffect(() => {
+    const currentInstance = selectedInstance;
+    return () => {
+      // Cleanup: unregister instance when deselected or component unmounts
+      if (currentInstance) {
+        api.unregisterEditingInstance(currentInstance.name).catch(() => {});
+      }
+    };
+  }, [selectedInstance]);
 
   // Load avar2 data when mode is enabled (if not already loaded)
   useEffect(() => {
@@ -82,6 +102,10 @@ function App() {
         
         // If font was rebuilt (new build time), reload
         if (health.font_built && health.last_build_time && health.last_build_time !== lastBuildTime) {
+          // Store scroll position before reloading
+          const scrollY = window.scrollY;
+          const selectedInstanceName = selectedInstance?.name;
+          
           setLastBuildTime(health.last_build_time);
           // Force font reload by generating new URL with timestamp
           setFontLoaded(false); // Reset first to trigger reload
@@ -90,12 +114,41 @@ function App() {
             setFontLoaded(true);
           }, 100);
           // Reload instances and axes in case they changed
-          const [instancesData, axesData] = await Promise.all([
+          const [instancesData, axesData, spacExists] = await Promise.all([
             api.getInstances(),
             api.getAxes(),
+            checkSpacAxisStatus().catch(() => false),
           ]);
           setInstances(instancesData.instances);
-          setAxes(axesData.axes);
+          
+          // Add SPAC to axes if it exists and spacMode is enabled
+          let axesList = axesData.axes || [];
+          if (spacExists && spacMode) {
+            const hasSpac = axesList.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
+            if (!hasSpac) {
+              axesList = [...axesList, {
+                tag: 'SPAC',
+                name: 'Spacing',
+                min: -100,
+                max: 100,
+                default: 0
+              }];
+            }
+          }
+          setAxes(axesList);
+          
+          // Restore scroll position after a brief delay
+          if (selectedInstanceName) {
+            setTimeout(() => {
+              const element = document.querySelector(`[data-instance-name="${selectedInstanceName}"]`);
+              if (element) {
+                element.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+              } else {
+                // Fallback to stored scroll position
+                window.scrollTo(0, scrollY);
+              }
+            }, 200);
+          }
         }
       } catch (err) {
         // Silently fail polling errors
@@ -114,14 +167,41 @@ function App() {
       // Check health and font status
       const health = await api.health();
       
-      // Load instances and axes
-      const [instancesData, axesData] = await Promise.all([
+      // Load instances and axes, and check SPAC status in parallel
+      const [instancesData, axesData, spacExists] = await Promise.all([
         api.getInstances(),
         api.getAxes(),
+        checkSpacAxisStatus().catch(() => false), // Don't fail if SPAC check fails
       ]);
 
       setInstances(instancesData.instances);
-      setAxes(axesData.axes);
+      
+      // Check if SPAC axis exists and add it to axes if present
+      let axesList = axesData.axes || [];
+      if (spacExists) {
+        // Enable SPAC mode by default when axis exists
+        setSpacMode(true);
+        // Load SPAC values
+        loadSpacValues();
+        // Switch to preview font URL when SPAC mode is enabled
+        setFontUrl(api.getPreviewFontUrl());
+        setFontLoaded(true);
+        
+        // Check if SPAC is already in axes list
+        const hasSpac = axesList.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
+        if (!hasSpac) {
+          // Add SPAC axis to the list
+          axesList = [...axesList, {
+            tag: 'SPAC',
+            name: 'Spacing',
+            min: -100,
+            max: 100,
+            default: 0
+          }];
+        }
+      }
+      
+      setAxes(axesList);
       setFontLoaded(health.font_built);
       setFamilyName(health.family_name || null);
       setLastBuildTime(health.last_build_time || null);
@@ -157,7 +237,12 @@ function App() {
       });
       
       // Wait for both to complete (but state updates happen immediately)
-      await Promise.all([instancesPromise, axesPromise]);
+      const [, axesData] = await Promise.all([instancesPromise, axesPromise]);
+      
+      // Auto-enable avar2 mode if traditional axes exist
+      if (axesData?.traditional_axes?.columns && axesData.traditional_axes.columns.length > 0) {
+        setAvar2Mode(true);
+      }
     } catch (err) {
       console.error('Failed to load avar2 data:', err);
       // Don't show error to user - avar2 mode is optional
@@ -211,10 +296,13 @@ function App() {
   const checkSpacAxisStatus = async () => {
     try {
       const result = await api.checkSpacAxis();
-      setSpacAxisExists(result.exists || false);
+      const exists = result.exists || false;
+      setSpacAxisExists(exists);
+      return exists; // Return boolean for use in initialization
     } catch (err) {
       console.error('Failed to check SPAC axis:', err);
       setSpacAxisExists(false);
+      return false;
     }
   };
 
@@ -228,7 +316,14 @@ function App() {
         });
       }
       setSpacValues(valuesMap);
+      
+      // Update original SPAC value if an instance is selected
+      if (selectedInstance) {
+        const currentSpacValue = valuesMap[selectedInstance.name] || 0;
+        setOriginalSpacValue(currentSpacValue);
+      }
     } catch (err) {
+      console.error('Failed to load SPAC values:', err);
       console.error('Failed to load SPAC values:', err);
       // Don't show error - SPAC is optional
     }
@@ -250,6 +345,20 @@ function App() {
           // Switch to preview font URL when SPAC mode is enabled
           setFontUrl(api.getPreviewFontUrl());
           setFontLoaded(true);
+          // Add SPAC to axes list
+          setAxes(prev => {
+            const hasSpac = prev.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
+            if (!hasSpac) {
+              return [...prev, {
+                tag: 'SPAC',
+                name: 'Spacing',
+                min: -100,
+                max: 100,
+                default: 0
+              }];
+            }
+            return prev;
+          });
         } catch (err) {
           console.error('Failed to initialize SPAC axis:', err);
           setSpacError(err.message || 'Failed to initialize SPAC axis');
@@ -264,12 +373,28 @@ function App() {
         // Switch to preview font URL when SPAC mode is enabled
         setFontUrl(api.getPreviewFontUrl());
         setFontLoaded(true);
+        // Add SPAC to axes list if not already there
+        setAxes(prev => {
+          const hasSpac = prev.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
+          if (!hasSpac) {
+            return [...prev, {
+              tag: 'SPAC',
+              name: 'Spacing',
+              min: -100,
+              max: 100,
+              default: 0
+            }];
+          }
+          return prev;
+        });
       }
     } else {
       // Disable SPAC mode - switch back to regular font
       setSpacMode(false);
       setFontUrl(api.getFontUrl());
       setFontLoaded(true);
+      // Remove SPAC from axes list
+      setAxes(prev => prev.filter(axis => axis.tag !== 'SPAC' && axis.tag !== 'spac'));
     }
   };
 
@@ -294,27 +419,37 @@ function App() {
     }
   };
 
-  const handleSpacChange = async (value) => {
+  const handleSpacChange = (value) => {
+    if (!selectedInstance) return;
+    
+    // Update local state immediately for responsive UI (CSS approximation)
+    // Don't rebuild font - use CSS letter-spacing for real-time preview
+    setSpacValues(prev => ({ ...prev, [selectedInstance.name]: value }));
+  };
+
+  const handleSpacApply = async () => {
     if (!selectedInstance) return;
     
     try {
       setSpacError(null);
-      // Update local state immediately for responsive UI
-      setSpacValues(prev => ({ ...prev, [selectedInstance.name]: value }));
+      setSpacBuilding(true);
       
-      // Update backend
-      await api.updateSpacValue(selectedInstance.name, value);
+      const newSpacValue = spacValues[selectedInstance.name] || 0;
+      // Update backend with current SPAC value
+      await api.updateSpacValue(selectedInstance.name, newSpacValue);
+      
+      // Update original SPAC value after successful apply
+      setOriginalSpacValue(newSpacValue);
       
       // Trigger rebuild for accurate preview (if SPAC axis exists)
       if (spacAxisExists) {
         await handleSpacRebuild();
       }
     } catch (err) {
-      console.error('Failed to update SPAC value:', err);
-      // Revert on error
-      const previousValue = spacValues[selectedInstance.name] || 0;
-      setSpacValues(prev => ({ ...prev, [selectedInstance.name]: previousValue }));
-      setSpacError(err.message || 'Failed to update spacing');
+      console.error('Failed to apply SPAC value:', err);
+      setSpacError(err.message || 'Failed to apply spacing');
+    } finally {
+      setSpacBuilding(false);
     }
   };
 
@@ -337,6 +472,33 @@ function App() {
   };
 
   const [originalCoordinates, setOriginalCoordinates] = useState({});
+  const [originalSpacValue, setOriginalSpacValue] = useState(0); // Track original SPAC value for selected instance
+
+  // Calculate sync status for an instance
+  const getInstanceSyncStatus = useCallback((instance) => {
+    // For selected instance, compare editingCoordinates with originalCoordinates
+    if (selectedInstance && selectedInstance.name === instance.name) {
+      // If originalCoordinates is empty, consider it synced (initial state)
+      if (!originalCoordinates || Object.keys(originalCoordinates).length === 0) {
+        return 'green';
+      }
+      const isSynced = JSON.stringify(editingCoordinates) === JSON.stringify(originalCoordinates);
+      if (!isSynced) {
+        return 'orange'; // Edited but not saved
+      }
+      return 'green'; // Synced
+    }
+    
+    // For other instances, compare instanceEditingCoordinates with instance.coordinates
+    const savedCoordinates = instanceEditingCoordinates[instance.name];
+    if (savedCoordinates && Object.keys(savedCoordinates).length > 0) {
+      const isSynced = JSON.stringify(savedCoordinates) === JSON.stringify(instance.coordinates);
+      if (!isSynced) {
+        return 'orange'; // Edited but not saved
+      }
+    }
+    return 'green'; // Synced (default: no edits)
+  }, [selectedInstance, editingCoordinates, originalCoordinates, instanceEditingCoordinates]);
 
   const handleSelectInstance = useCallback((instance) => {
     // If clicking the same instance, don't reset coordinates
@@ -364,9 +526,18 @@ function App() {
     
     // Store original coordinates for reset
     setOriginalCoordinates({ ...instance.coordinates });
-  }, [selectedInstance, editingCoordinates, instanceEditingCoordinates]);
+    
+    // Set original SPAC value for the selected instance
+    const currentSpacValue = spacValues[instance.name] || 0;
+    setOriginalSpacValue(currentSpacValue);
+  }, [selectedInstance, editingCoordinates, instanceEditingCoordinates, spacValues]);
 
   const handleAxisChange = useCallback((tag, value) => {
+    // Register instance as editing when first axis change happens
+    if (selectedInstance && Object.keys(editingCoordinates).length === 0) {
+      api.registerEditingInstance(selectedInstance.name).catch(() => {});
+    }
+    
     setEditingCoordinates(prev => {
       const updated = {
         ...prev,
@@ -381,7 +552,21 @@ function App() {
       }
       return updated;
     });
-  }, [selectedInstance]);
+  }, [selectedInstance, editingCoordinates]);
+
+  // Helper function to wait for font to be loaded and ready
+  const waitForFontReady = async (maxAttempts = 50, delayMs = 100) => {
+    for (let i = 0; i < maxAttempts; i++) {
+      // Check if font is loaded by checking document.fonts
+      if (document.fonts && document.fonts.check('12px "Crispy-VF"')) {
+        // Also wait for fonts.ready to ensure font is fully ready
+        await document.fonts.ready;
+        return true;
+      }
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+    return false; // Timeout - font might not be ready, but proceed anyway
+  };
 
   const handleUpdateInstance = async () => {
     if (!selectedInstance) return;
@@ -412,8 +597,29 @@ function App() {
         setOriginalCoordinates({ ...updated.coordinates });
       }
 
+      // Unregister instance from editing (we're saving, so sync is OK now)
+      await api.unregisterEditingInstance(selectedInstance.name).catch(() => {});
+      
+      // Store instance name before rebuild (in case it changes)
+      const instanceNameToScroll = selectedInstance.name;
+      
       // Auto-rebuild font after update
       await handleBuildFont();
+      
+      // Wait for font to be rebuilt and loaded before scrolling
+      await waitForFontReady();
+      
+      // Additional small delay to ensure DOM is updated after font load
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Scroll to updated instance after font is ready
+      const element = document.querySelector(`[data-instance-name="${instanceNameToScroll}"]`);
+      if (element) {
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
     } catch (err) {
       setError(err.message);
       console.error('Update failed:', err);
@@ -423,7 +629,11 @@ function App() {
   const handleResetCoordinates = useCallback(() => {
     if (!selectedInstance) return;
     setEditingCoordinates({ ...originalCoordinates });
-  }, [selectedInstance, originalCoordinates]);
+    // Also reset SPAC value to original value for the selected instance if SPAC mode is enabled
+    if (spacMode) {
+      setSpacValues(prev => ({ ...prev, [selectedInstance.name]: originalSpacValue }));
+    }
+  }, [selectedInstance, originalCoordinates, spacMode, originalSpacValue]);
 
   const handleDuplicateInstance = async (newInstanceName) => {
     if (!selectedInstance) return;
@@ -468,6 +678,48 @@ function App() {
     } catch (err) {
       setError(err.message);
       console.error('Duplicate failed:', err);
+    }
+  };
+
+  const handleRenameInstance = async (oldName, newName) => {
+    if (!oldName || !newName || oldName === newName) {
+      return;
+    }
+
+    try {
+      setError(null);
+      await api.renameInstance(oldName, newName);
+      
+      // Reload instances to get updated data
+      const instancesData = await api.getInstances();
+      setInstances(instancesData.instances);
+      
+      // Update selected instance if it was renamed
+      if (selectedInstance && selectedInstance.name === oldName) {
+        const renamed = instancesData.instances.find(
+          inst => inst.name === newName
+        );
+        if (renamed) {
+          setSelectedInstance(renamed);
+          setEditingCoordinates({ ...renamed.coordinates });
+          setOriginalCoordinates({ ...renamed.coordinates });
+          
+          // Scroll to renamed instance
+          setTimeout(() => {
+            const element = document.querySelector(`[data-instance-name="${newName}"]`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+          }, 100);
+        }
+      }
+      
+      // Auto-rebuild font after rename
+      await handleBuildFont();
+    } catch (err) {
+      setError(err.message);
+      console.error('Rename failed:', err);
+      throw err; // Re-throw to let component handle error display
     }
   };
 
@@ -580,7 +832,9 @@ function App() {
           spacMode={spacMode}
           spacAxisExists={spacAxisExists}
           spacValue={selectedInstance ? (spacValues[selectedInstance.name] || 0) : 0}
+          originalSpacValue={originalSpacValue}
           onSpacChange={handleSpacChange}
+          onSpacApply={handleSpacApply}
           spacBuilding={spacBuilding}
           spacError={spacError}
           onSpacRetry={handleSpacRebuild}
@@ -602,7 +856,9 @@ function App() {
             onReorderInstances={setInstances}
             fontSize={fontSize}
             onDeleteInstance={handleDeleteInstance}
+            getInstanceSyncStatus={getInstanceSyncStatus}
             onMoveInstance={handleMoveInstance}
+            onRenameInstance={handleRenameInstance}
           />
         </div>
       </div>

@@ -32,6 +32,31 @@
   gap: 0.5rem;
 }
 
+.instance-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sync-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: block;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.sync-status-green {
+  background-color: #28a745;
+}
+
+.sync-status-orange {
+  background-color: #ff9800;
+}
+
+
 .instance-name {
   font-family: monospace;
   font-size: 0.6375rem; /* 0.85rem * 0.75 = 25% reduction */
@@ -41,6 +66,27 @@
   border-radius: 3px;
   margin: 0;
   display: inline-block;
+}
+
+.instance-name.clickable {
+  cursor: text;
+}
+
+.instance-name.clickable:hover {
+  background-color: #e0e0e0;
+}
+
+.instance-name-input {
+  font-family: monospace;
+  font-size: 0.6375rem;
+  color: #333;
+  background-color: white;
+  padding: 0.2rem 0.4rem;
+  border: 2px solid #007bff;
+  border-radius: 3px;
+  margin: 0;
+  min-width: 100px;
+  outline: none;
 }
 
 .instance-coordinates {

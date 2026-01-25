@@ -8,10 +8,11 @@ help:
 	@echo "# Build targets for $(FAMILY)"
 	@echo "###"
 	@echo
-	@echo "  make build:  Builds the fonts and places them in the fonts/ directory"
-	@echo "  make test:   Tests the fonts with fontspector"
-	@echo "  make proof:  Creates HTML proof documents in the proof/ directory"
-	@echo "  make images: Creates PNG specimen images in the documentation/ directory"
+	@echo "  make build:       Builds the fonts and places them in the fonts/ directory"
+	@echo "  make build-test:  Test build using preview-app/Crispy-avar.csv (safe, doesn't modify sources)"
+	@echo "  make test:        Tests the fonts with fontspector"
+	@echo "  make proof:       Creates HTML proof documents in the proof/ directory"
+	@echo "  make images:      Creates PNG specimen images in the documentation/ directory"
 	@echo
 
 build: build.stamp
@@ -51,8 +52,39 @@ images: venv $(DRAWBOT_OUTPUT)
 %.png: %.py build.stamp
 	. venv/bin/activate; python3 $< --output $@
 
+# Test build using preview CSV without modifying source files
+# Outputs to fonts-test/ directory for inspection
+build-test: venv preview-app/Crispy-avar.csv sources/config.yaml sources/Crispy.glyphs $(SOURCES)
+	@echo "=== TEST BUILD: Using preview-app/Crispy-avar.csv ==="
+	@echo "This build will NOT modify source files"
+	@echo "Output will be in fonts-test/ directory (completely isolated)"
+	@echo ""
+	rm -rf test-build fonts-test;
+	. venv/bin/activate && \
+	mkdir -p fonts-test/variable test-build/sources && \
+	cp sources/config.yaml test-build/sources/test-config.yaml && \
+	sed -i '' 's|- Crispy.glyphs|- Crispy.glyphs|' test-build/sources/test-config.yaml 2>/dev/null || sed -i 's|- Crispy.glyphs|- Crispy.glyphs|' test-build/sources/test-config.yaml && \
+	python3 sources/update_config.py --csv preview-app/Crispy-avar.csv --config test-build/sources/test-config.yaml --no-backup && \
+	ln -s ../../sources/Crispy.glyphs test-build/sources/Crispy.glyphs && \
+	ln -s ../fonts-test test-build/fonts && \
+	cd test-build/sources && gftools builder --experimental-fontc $$(which fontc) test-config.yaml && \
+	cd ../.. && \
+	FONT_FILE="fonts-test/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf" && \
+	if [ ! -f "$$FONT_FILE" ]; then \
+		echo "Error: Variable font not found at $$FONT_FILE"; \
+		ls -la fonts-test/variable/ 2>/dev/null || echo "fonts-test/variable/ does not exist"; \
+		rm -rf test-build; \
+		exit 1; \
+	fi && \
+	gftools avar2-to-avar1 "$$FONT_FILE" -m scripts/mapping.yaml -o "fonts-test/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ]-avar1.ttf" && \
+	rm -rf test-build && \
+	echo "" && \
+	echo "=== TEST BUILD COMPLETE ===" && \
+	echo "Test fonts are in fonts-test/variable/" && \
+	echo "Build was completely isolated - no interference with fonts/ or sources/"
+
 clean:
-	rm -rf venv
+	rm -rf venv fonts-test test-build test-config.yaml
 	find . -name "*.pyc" -delete
 
 update-project-template:

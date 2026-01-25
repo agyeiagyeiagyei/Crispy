@@ -67,6 +67,7 @@ USE_FONTC: bool = True  # Use fontc by default, fallback to fontmake
 PREVIEW_DIR: Optional[Path] = None  # Directory for preview tool files (preview-app/)
 PREVIEW_CSV_PATH: Optional[Path] = None  # Path to preview CSV (e.g., preview-app/Crispy-avar.csv)
 PREVIEW_CONFIG_PATH: Optional[Path] = None  # Path to preview config (e.g., preview-app/config-preview.yaml)
+EDITING_INSTANCES: set = set()  # Track instances currently being edited (protected from sync)
 
 
 def _force_reload_glyphs_document(glyphs_path: Path, font_object=None) -> None:
@@ -468,6 +469,53 @@ def create_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates
         return False
 
 
+def rename_instance_in_glyphs(glyphs_path: Path, old_name: str, new_name: str) -> bool:
+    """
+    Rename an instance in Glyphs file.
+    
+    Returns True if rename was successful, False otherwise.
+    Raises ValueError if new name already exists.
+    """
+    try:
+        font = load(str(glyphs_path))
+        
+        # Check if new name already exists
+        for inst in font.instances:
+            if inst.name == new_name:
+                raise ValueError(f"Instance '{new_name}' already exists")
+        
+        # Find the instance by old name
+        instance = None
+        for inst in font.instances:
+            if inst.name == old_name:
+                instance = inst
+                break
+        
+        if not instance:
+            return False
+        
+        # Rename the instance
+        instance.name = new_name
+        
+        # Save the font
+        font.save(str(glyphs_path))
+        
+        # Force Glyphs.app to reload the document (save unsaved changes, close, reopen)
+        # Pass font object so we can re-save after Glyphs.app saves
+        _force_reload_glyphs_document(glyphs_path, font_object=font)
+        
+        return True
+    
+    except ValueError:
+        # Re-raise ValueError (duplicate name)
+        raise
+    except Exception as e:
+        print(f"Error renaming instance in Glyphs file: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def update_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates: Dict[str, float]) -> bool:
     """
     Update instance coordinates in Glyphs file.
@@ -665,6 +713,9 @@ def create_instance():
     except (ValueError, TypeError):
         return jsonify({"error": "Coordinates must be numeric"}), 400
     
+    # Explicitly exclude SPAC from coordinates (SPAC is only stored in preview CSV, not Glyphs file)
+    coordinates = {k: v for k, v in coordinates.items() if k.upper() != 'SPAC'}
+    
     # Optional: insert after a specific instance
     insert_after = data.get('insert_after', None)
     if insert_after:
@@ -674,6 +725,66 @@ def create_instance():
         success = create_instance_in_glyphs(GLYPHS_PATH, instance_name, coordinates, insert_after_instance_name=insert_after)
         
         if success:
+            # Add new instance to preview CSV if it exists
+            csv_path = _get_preview_csv_path()
+            if csv_path and csv_path.exists():
+                try:
+                    # Read existing CSV
+                    rows = []
+                    fieldnames = []
+                    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+                        reader = csv.DictReader(f)
+                        fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+                        for row in reader:
+                            rows.append(row)
+                    
+                    # Ensure SPAC column exists
+                    if "SPAC" not in fieldnames:
+                        fieldnames.append("SPAC")
+                        for row in rows:
+                            if "SPAC" not in row:
+                                row["SPAC"] = "0"
+                    
+                    # Get parametric axis values from coordinates
+                    new_row = {"Instance Name": instance_name}
+                    # Get parametric axes from Glyphs file to know which columns to populate
+                    if GLYPHS_PATH and GLYPHS_PATH.exists():
+                        try:
+                            font = load(str(GLYPHS_PATH))
+                            for axis in font.axes:
+                                if hasattr(axis, 'axisTag'):
+                                    tag = axis.axisTag.upper()
+                                    # Use coordinate if provided, otherwise 0
+                                    new_row[tag] = str(coordinates.get(axis.axisTag, coordinates.get(tag, 0)))
+                        except Exception as e:
+                            print(f"Warning: Could not read axes from Glyphs file: {e}", file=sys.stderr)
+                    
+                    # Initialize SPAC to 0
+                    new_row["SPAC"] = "0"
+                    
+                    # Ensure all fieldnames are present in new_row
+                    for field in fieldnames:
+                        if field not in new_row:
+                            new_row[field] = "0"
+                    
+                    # Add new instance row
+                    rows.append(new_row)
+                    
+                    # Write updated CSV
+                    with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                        writer = csv.DictWriter(f, fieldnames=fieldnames)
+                        writer.writeheader()
+                        writer.writerows(rows)
+                    
+                    # Update modification time cache to prevent false "external edit" detection
+                    _update_csv_modification_time(csv_path)
+                    
+                    print(f"Added instance '{instance_name}' to preview CSV", file=sys.stderr)
+                except Exception as e:
+                    print(f"Warning: Could not add instance to preview CSV: {e}", file=sys.stderr)
+                    import traceback
+                    traceback.print_exc()
+            
             # Trigger immediate rebuild after creating instance
             # This ensures font is rebuilt right away, not waiting for periodic check
             print(f"Instance created, triggering immediate rebuild...", file=sys.stderr)
@@ -689,7 +800,7 @@ def create_instance():
 
 @app.route('/api/instance/<instance_name>', methods=['PUT'])
 def update_instance(instance_name: str):
-    """Update instance coordinates in the Glyphs file."""
+    """Update instance coordinates in the Glyphs file. Writes parametric coordinates (XTRA, XOPQ, YOPQ) to Glyphs."""
     data = request.get_json()
     if not data or 'coordinates' not in data:
         return jsonify({"error": "Missing 'coordinates' in request body"}), 400
@@ -702,17 +813,116 @@ def update_instance(instance_name: str):
     except (ValueError, TypeError):
         return jsonify({"error": "Coordinates must be numeric"}), 400
     
-    success = update_instance_in_glyphs(GLYPHS_PATH, instance_name, coordinates)
+    # Filter to only parametric axes that exist in Glyphs file (XTRA, XOPQ, YOPQ)
+    # SPAC is CSV-only, traditional axes (WGHT, WDTH, OPSZ) are not in Glyphs file
+    font = load(str(GLYPHS_PATH))
+    glyphs_axis_tags = {axis.axisTag for axis in font.axes}
+    
+    # Only include coordinates for axes that exist in Glyphs file
+    glyphs_coordinates = {
+        tag: value for tag, value in coordinates.items()
+        if tag in glyphs_axis_tags
+    }
+    
+    # Remove from editing set since we're saving
+    global EDITING_INSTANCES
+    EDITING_INSTANCES.discard(instance_name)
+    
+    success = update_instance_in_glyphs(GLYPHS_PATH, instance_name, glyphs_coordinates)
     
     if success:
+        # Sync CSV to update with new Glyphs coordinates (but skip this instance if still editing)
+        csv_path = _get_avar2_csv_path()
+        if csv_path and csv_path.exists():
+            try:
+                import subprocess
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        str(Path(__file__).parent / "sync-glyphs-to-avar2.py"),
+                        "--glyphs", str(GLYPHS_PATH),
+                        "--csv", str(csv_path),
+                        "--once"
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                if result.returncode == 0:
+                    print(f"CSV synced after instance update", file=sys.stderr)
+            except Exception as e:
+                print(f"Warning: Could not sync CSV after update: {e}", file=sys.stderr)
+        
         # Trigger immediate rebuild after updating instance
-        # This ensures font is rebuilt right away, not waiting for periodic check
         print(f"Instance updated, triggering immediate rebuild...", file=sys.stderr)
         trigger_build()
         
         return jsonify({"success": True, "message": f"Updated instance '{instance_name}' in Glyphs file"})
     else:
         return jsonify({"error": f"Failed to update instance '{instance_name}'"}), 500
+
+
+@app.route('/api/instance/<instance_name>/rename', methods=['PUT'])
+def rename_instance(instance_name: str):
+    """Rename an instance in the Glyphs file."""
+    data = request.get_json()
+    if not data or 'new_name' not in data:
+        return jsonify({"error": "Missing 'new_name' in request body"}), 400
+    
+    new_name = data['new_name'].strip()
+    if not new_name:
+        return jsonify({"error": "New instance name cannot be empty"}), 400
+    
+    if new_name == instance_name:
+        return jsonify({"error": "New name is the same as current name"}), 400
+    
+    try:
+        success = rename_instance_in_glyphs(GLYPHS_PATH, instance_name, new_name)
+        
+        if success:
+            # Update preview CSV if it exists
+            csv_path = _get_preview_csv_path()
+            if csv_path and csv_path.exists():
+                try:
+                    rows = []
+                    fieldnames = []
+                    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+                        reader = csv.DictReader(f)
+                        fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+                        for row in reader:
+                            if row.get("Instance Name", "").strip() == instance_name:
+                                row["Instance Name"] = new_name
+                            rows.append(row)
+                    
+                    # Write updated CSV
+                    with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                        writer = csv.DictWriter(f, fieldnames=fieldnames)
+                        writer.writeheader()
+                        writer.writerows(rows)
+                    
+                    # Update modification time cache
+                    _update_csv_modification_time(csv_path)
+                    
+                    print(f"Renamed instance '{instance_name}' to '{new_name}' in preview CSV", file=sys.stderr)
+                except Exception as e:
+                    print(f"Warning: Could not update instance name in preview CSV: {e}", file=sys.stderr)
+                    import traceback
+                    traceback.print_exc()
+            
+            # Trigger immediate rebuild after renaming instance
+            print(f"Instance renamed, triggering immediate rebuild...", file=sys.stderr)
+            trigger_build()
+            
+            return jsonify({"success": True, "message": f"Renamed instance '{instance_name}' to '{new_name}'"})
+        else:
+            return jsonify({"error": f"Failed to rename instance '{instance_name}'"}), 500
+    except ValueError as e:
+        # Duplicate name error
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 def get_font_family_name(glyphs_path: Path) -> Optional[str]:
@@ -759,6 +969,12 @@ _CSV_MODIFICATION_TIMES: Dict[str, float] = {}
 
 def _get_avar2_csv_path() -> Optional[Path]:
     """Get path to avar2-mappings.csv (relative to Glyphs file or explicit)."""
+    # For preview tool: use preview CSV if it exists (fresh start workflow)
+    preview_csv = _get_preview_csv_path()
+    if preview_csv and preview_csv.exists():
+        return preview_csv
+    
+    # Fallback to explicit CSV path if set
     global CSV_PATH
     if CSV_PATH:
         return CSV_PATH
@@ -775,9 +991,15 @@ def _get_avar2_csv_path() -> Optional[Path]:
 def _get_avar2_metadata_path() -> Optional[Path]:
     """Get path to avar2-axis-metadata.json (same directory as CSV)."""
     csv_path = _get_avar2_csv_path()
-    if csv_path:
-        return csv_path.parent / "avar2-axis-metadata.json"
-    return None
+    if not csv_path:
+        return None
+    # For preview CSV, use preview directory for metadata
+    preview_csv = _get_preview_csv_path()
+    if preview_csv and csv_path == preview_csv:
+        preview_dir = _get_preview_dir()
+        if preview_dir:
+            return preview_dir / "avar2-axis-metadata.json"
+    return csv_path.parent / "avar2-axis-metadata.json"
 
 
 def _get_preview_dir() -> Optional[Path]:
@@ -1452,6 +1674,20 @@ def get_avar2_axes():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/instance/<instance_name>/editing', methods=['POST'])
+def register_editing_instance(instance_name: str):
+    """Register an instance as being edited (protect from sync)."""
+    global EDITING_INSTANCES
+    EDITING_INSTANCES.add(instance_name)
+    return jsonify({"success": True, "message": f"Instance '{instance_name}' registered as editing"})
+
+@app.route('/api/instance/<instance_name>/editing', methods=['DELETE'])
+def unregister_editing_instance(instance_name: str):
+    """Unregister an instance from editing (allow sync)."""
+    global EDITING_INSTANCES
+    EDITING_INSTANCES.discard(instance_name)
+    return jsonify({"success": True, "message": f"Instance '{instance_name}' unregistered from editing"})
+
 @app.route('/api/avar2/sync-csv', methods=['POST'])
 def sync_csv():
     """Update CSV parametric values to match Glyphs file."""
@@ -1462,8 +1698,15 @@ def sync_csv():
                 "error": "avar2-mappings.csv not found"
             }), 404
         
-        # Use existing sync script via subprocess
+        # Use existing sync script via subprocess, skipping editing instances
         import subprocess
+        import json as json_module
+        
+        # Pass editing instances via environment variable (since subprocess doesn't support sets)
+        env = os.environ.copy()
+        if EDITING_INSTANCES:
+            env['SKIP_INSTANCES'] = json_module.dumps(list(EDITING_INSTANCES))
+        
         result = subprocess.run(
             [
                 sys.executable,
@@ -1473,7 +1716,8 @@ def sync_csv():
                 "--once"
             ],
             capture_output=True,
-            text=True
+            text=True,
+            env=env
         )
         
         if result.returncode != 0:
@@ -1485,7 +1729,8 @@ def sync_csv():
         return jsonify({
             "success": True,
             "csv_path": str(csv_path),
-            "output": result.stdout
+            "output": result.stdout,
+            "skipped_instances": list(EDITING_INSTANCES)
         })
     except Exception as e:
         import traceback
@@ -1870,6 +2115,9 @@ def init_spac_axis():
             writer.writeheader()
             writer.writerows(rows)
         
+        # Update modification time cache to prevent false "external edit" detection
+        _update_csv_modification_time(csv_path)
+        
         # Update config.yaml to add spacingAxis section
         if yaml:
             with config_path.open("r", encoding="utf-8") as f:
@@ -2016,6 +2264,9 @@ def update_spac_value(instance_name: str):
             writer.writeheader()
             writer.writerows(rows)
         
+        # Update modification time cache to prevent false "external edit" detection
+        _update_csv_modification_time(csv_path)
+        
         # Update config.yaml spacingAxis min/max based on all SPAC values
         _update_spacing_axis_range()
         
@@ -2031,7 +2282,7 @@ def update_spac_value(instance_name: str):
 
 
 def _update_spacing_axis_range():
-    """Update config.yaml spacingAxis min/max based on SPAC values in CSV."""
+    """Update config.yaml spacingAxis min/max to always be -100 to 100."""
     if not yaml:
         return
     
@@ -2041,41 +2292,14 @@ def _update_spacing_axis_range():
         return
     
     try:
-        # Read SPAC values from CSV
-        spac_values = []
-        with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                spac_str = row.get("SPAC", "0").strip()
-                try:
-                    spac_values.append(float(spac_str) if spac_str else 0.0)
-                except ValueError:
-                    spac_values.append(0.0)
-        
-        if not spac_values:
-            return
-        
-        # Calculate min/max (with some padding)
-        min_spac = min(spac_values)
-        max_spac = max(spac_values)
-        
-        # Add padding (10% or at least 5 units)
-        padding = max(abs(min_spac) * 0.1, abs(max_spac) * 0.1, 5)
-        min_spac = min_spac - padding
-        max_spac = max_spac + padding
-        
-        # Clamp to reasonable range
-        min_spac = max(-100, min_spac)
-        max_spac = min(100, max_spac)
-        
         # Read config
         with config_path.open("r", encoding="utf-8") as f:
             config = yaml.safe_load(f) or {}
         
-        # Update spacingAxis
+        # Always set spacingAxis to -100 to 100 (full range)
         config["spacingAxis"] = {
-            "min": int(min_spac),
-            "max": int(max_spac)
+            "min": -100,
+            "max": 100
         }
         
         # Write config back
@@ -2298,43 +2522,121 @@ def main():
     if preview_config:
         print(f"Preview config: {preview_config}", file=sys.stderr)
     
-    # Set up periodic file checking (every 15 seconds) instead of file watching
-    # This checks file modification time and only rebuilds if file changed
-    PERIODIC_CHECK_INTERVAL = 15  # seconds
-    
-    def check_and_rebuild_periodically():
-        """Check if Glyphs file was modified and rebuild if needed."""
-        global VARIABLE_FONT_PATH, LAST_BUILD_TIME
+    # Set up real-time file watching using watchdog
+    def sync_csv_with_glyphs():
+        """Sync CSV with Glyphs file, skipping instances being edited."""
+        global EDITING_INSTANCES
         
-        if BUILDING:
+        csv_path = _get_avar2_csv_path()
+        if not csv_path or not csv_path.exists():
             return
         
         try:
-            if not GLYPHS_PATH.exists():
+            # Use subprocess to call sync script (cleaner than importing)
+            import subprocess
+            import json as json_module
+            
+            # Pass editing instances via environment variable
+            env = os.environ.copy()
+            if EDITING_INSTANCES:
+                env['SKIP_INSTANCES'] = json_module.dumps(list(EDITING_INSTANCES))
+            
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent / "sync-glyphs-to-avar2.py"),
+                    "--glyphs", str(GLYPHS_PATH),
+                    "--csv", str(csv_path),
+                    "--once"
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                env=env
+            )
+            
+            if result.returncode == 0:
+                skipped_msg = f" (skipped {len(EDITING_INSTANCES)} editing instances)" if EDITING_INSTANCES else ""
+                print(f"CSV synced with Glyphs file{skipped_msg}", file=sys.stderr)
+            else:
+                print(f"Warning: CSV sync had issues: {result.stderr[:200]}", file=sys.stderr)
+        except Exception as e:
+            print(f"Warning: Could not sync CSV: {e}", file=sys.stderr)
+    
+    class GlyphsFileHandler(FileSystemEventHandler):
+        """Watchdog handler for real-time Glyphs file changes."""
+        
+        def __init__(self):
+            self.last_modified = 0
+            self.debounce_interval = 0.5  # seconds
+        
+        def on_modified(self, event):
+            """Handle file modification events."""
+            if event.is_directory:
                 return
             
-            current_mtime = GLYPHS_PATH.stat().st_mtime
+            # Only process our Glyphs file
+            if Path(event.src_path).resolve() != GLYPHS_PATH.resolve():
+                return
             
-            # Only rebuild if file was modified since last build
-            if LAST_BUILD_TIME is None or current_mtime > LAST_BUILD_TIME:
-                print(f"\nGlyphs file modified, rebuilding font...", file=sys.stderr)
+            # Debounce rapid saves
+            current_time = time.time()
+            if current_time - self.last_modified < self.debounce_interval:
+                return
+            self.last_modified = current_time
+            
+            global BUILDING, VARIABLE_FONT_PATH, LAST_BUILD_TIME
+            
+            if BUILDING:
+                return
+            
+            try:
+                print(f"\nGlyphs file modified, syncing CSV and rebuilding...", file=sys.stderr)
+                
+                # Sync CSV first (skips editing instances)
+                sync_csv_with_glyphs()
+                
+                # Rebuild font
                 trigger_build()
-        except Exception as e:
-            print(f"Error in periodic check: {e}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error handling file change: {e}", file=sys.stderr)
     
-    def start_periodic_checker():
-        """Start background thread to periodically check for file changes."""
-        def periodic_loop():
-            while True:
-                time.sleep(PERIODIC_CHECK_INTERVAL)
-                check_and_rebuild_periodically()
+    # Set up file watcher if watchdog is available
+    if WATCHDOG_AVAILABLE:
+        event_handler = GlyphsFileHandler()
+        observer = Observer()
+        observer.schedule(event_handler, path=str(GLYPHS_PATH.parent), recursive=False)
+        observer.start()
+        OBSERVER = observer
+        print(f"Real-time file watching enabled: watching {GLYPHS_PATH}", file=sys.stderr)
+    else:
+        print(f"Warning: watchdog not available, falling back to periodic checking", file=sys.stderr)
+        # Fallback to periodic checking
+        PERIODIC_CHECK_INTERVAL = 15
+        def check_and_rebuild_periodically():
+            global VARIABLE_FONT_PATH, LAST_BUILD_TIME
+            if BUILDING:
+                return
+            try:
+                if not GLYPHS_PATH.exists():
+                    return
+                current_mtime = GLYPHS_PATH.stat().st_mtime
+                if LAST_BUILD_TIME is None or current_mtime > LAST_BUILD_TIME:
+                    sync_csv_with_glyphs()
+                    trigger_build()
+            except Exception as e:
+                print(f"Error in periodic check: {e}", file=sys.stderr)
         
-        checker_thread = threading.Thread(target=periodic_loop, daemon=True)
-        checker_thread.start()
-        print(f"Periodic file checking enabled: checking every {PERIODIC_CHECK_INTERVAL} seconds", file=sys.stderr)
-    
-    # Start periodic checker
-    start_periodic_checker()
+        def start_periodic_checker():
+            def periodic_loop():
+                while True:
+                    time.sleep(PERIODIC_CHECK_INTERVAL)
+                    check_and_rebuild_periodically()
+            checker_thread = threading.Thread(target=periodic_loop, daemon=True)
+            checker_thread.start()
+            print(f"Periodic file checking enabled: checking every {PERIODIC_CHECK_INTERVAL} seconds", file=sys.stderr)
+        
+        start_periodic_checker()
     
     try:
         app.run(host=args.host, port=args.port, debug=True)

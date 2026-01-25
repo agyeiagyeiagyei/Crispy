@@ -116,13 +116,26 @@ echo "Backend server started (PID: $SERVER_PID)"
 # Start React frontend
 echo "Starting React frontend on port 3000..."
 cd preview-app
-PORT=3000 BROWSER=none npm start > /tmp/preview-app.log 2>&1 &
+
+# Check if production build exists, if not build it
+if [ ! -d "build" ]; then
+    echo "Building production version..."
+    CI=false npm run build > /tmp/preview-build.log 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Error: Production build failed. Check /tmp/preview-build.log"
+        exit 1
+    fi
+fi
+
+# Use production build with serve (works reliably in background)
+# React dev server (npm start) doesn't work well with output redirection
+serve -s build -l 3000 > /tmp/preview-app.log 2>&1 &
 REACT_PID=$!
 cd ..
 echo $REACT_PID > /tmp/preview-app.pid
 
 # Wait a moment for React app to start
-sleep 3
+sleep 2
 
 echo ""
 echo "=========================================="

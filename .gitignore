@@ -49,3 +49,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 test-output/
+
+# Test build output (isolated from production fonts/)
+fonts-test/

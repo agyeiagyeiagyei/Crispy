@@ -332,16 +332,23 @@
 
 /* SPAC axis control styling */
 .spac-axis-control {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid #e0e0e0;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
-.spac-axis-control .axis-label-row {
+.spac-header-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.spac-label-value {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
 }
 
 .spac-axis-control .axis-label {
@@ -397,6 +404,7 @@
   font-family: monospace;
   color: #999;
   text-align: right;
+  margin-bottom: 0.25rem;
 }
 
 .spac-building-indicator {
@@ -447,4 +455,27 @@
 
 .spac-error .retry-btn:hover {
   background-color: #c82333;
+}
+
+.btn-apply-spac-inline {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.6375rem;
+  font-family: monospace;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.btn-apply-spac-inline:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.btn-apply-spac-inline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

@@ -1,0 +1,148 @@
+sources:
+- /Users/agyei/Documents/Crispy/sources/Crispy.glyphs
+familyName: Crispy
+fvarInstances:
+  Crispy[SPAC,XTRA,XOPQ,YOPQ].ttf:
+  - name: Thin Condensed
+    coordinates:
+      xtra: 181.2
+      xopq: 40.3
+      yopq: 41.3
+  - name: ExtraLight Condensed
+    coordinates:
+      xtra: 248.0
+      xopq: 78.0
+      yopq: 85.0
+  - name: Light Condensed
+    coordinates:
+      xtra: 280.0
+      xopq: 95.0
+      yopq: 90.0
+  - name: Regular Condensed
+    coordinates:
+      xtra: 290.0
+      xopq: 147.0
+      yopq: 130.0
+  - name: Medium Condensed
+    coordinates:
+      xtra: 345.0
+      xopq: 240.0
+      yopq: 240.0
+  - name: Semibold Condensed
+    coordinates:
+      xtra: 354.0
+      xopq: 322.0
+      yopq: 268.0
+  - name: Bold Condensed
+    coordinates:
+      xtra: 318.0
+      xopq: 407.0
+      yopq: 347.0
+  - name: Thin
+    coordinates:
+      xtra: 461.8
+      xopq: 46.9
+      yopq: 44.0
+  - name: ExtraLight
+    coordinates:
+      xtra: 580.0
+      xopq: 78.575
+      yopq: 78.59
+  - name: Light
+    coordinates:
+      xtra: 603.55
+      xopq: 133.124
+      yopq: 124.253
+  - name: Regular
+    coordinates:
+      xtra: 627.0
+      xopq: 187.672
+      yopq: 160.0
+  - name: Medium
+    coordinates:
+      xtra: 650.5
+      xopq: 242.221
+      yopq: 216.1
+  - name: SemiBold
+    coordinates:
+      xtra: 693.05
+      xopq: 321.48
+      yopq: 286.0
+  - name: Bold
+    coordinates:
+      xtra: 735.6
+      xopq: 400.738
+      yopq: 324.7
+  - name: Thin Extended
+    coordinates:
+      xtra: 1136.3
+      xopq: 54.6
+      yopq: 47.3
+  - name: ExtraLight Extended
+    coordinates:
+      xtra: 1259.0
+      xopq: 85.0
+      yopq: 84.0
+  - name: Light Extended
+    coordinates:
+      xtra: 1259.0
+      xopq: 113.0
+      yopq: 111.0
+  - name: Regular Extended
+    coordinates:
+      xtra: 1252.1
+      xopq: 220.4
+      yopq: 197.1
+  - name: Medium Extended
+    coordinates:
+      xtra: 1213.0
+      xopq: 370.0
+      yopq: 318.0
+  - name: Semibold Extended
+    coordinates:
+      xtra: 1275.0
+      xopq: 508.0
+      yopq: 360.0
+  - name: Bold Extended
+    coordinates:
+      xtra: 1350.0
+      xopq: 579.8
+      yopq: 391.4
+  - name: Thin Ultra Extended
+    coordinates:
+      xtra: 2300.0
+      xopq: 61.4
+      yopq: 60.1
+  - name: ExtraLight Ultra Extended
+    coordinates:
+      xtra: 2300.0
+      xopq: 100.0
+      yopq: 98.0
+  - name: Light Ultra Extended
+    coordinates:
+      xtra: 2290.0
+      xopq: 134.0
+      yopq: 128.0
+  - name: Regular Ultra Extended
+    coordinates:
+      xtra: 2210.6
+      xopq: 235.2
+      yopq: 199.5
+  - name: Medium Ultra Extended
+    coordinates:
+      xtra: 2290.0
+      xopq: 317.0
+      yopq: 259.0
+  - name: Semibold Ultra Extended
+    coordinates:
+      xtra: 2346.0
+      xopq: 465.6
+      yopq: 358.2
+  - name: Bold Ultra Extended
+    coordinates:
+      xtra: 2369.9
+      xopq: 638.2
+      yopq: 387.1
+spacingAxis:
+  min: -100
+  max: 100

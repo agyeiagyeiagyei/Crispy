@@ -113,6 +113,25 @@ export const api = {
     return parseJSON(response);
   },
 
+  async renameInstance(instanceName, newName) {
+    const response = await fetch(`${API_BASE}/instance/${encodeURIComponent(instanceName)}/rename`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ new_name: newName }),
+    });
+    if (!response.ok) {
+      try {
+        const error = await parseJSON(response);
+        throw new Error(error.error || 'Rename failed');
+      } catch (e) {
+        throw new Error(`Rename failed: ${response.status} ${response.statusText}`);
+      }
+    }
+    return parseJSON(response);
+  },
+
   async getAvar2Instances() {
     const response = await fetch(`${API_BASE}/avar2/instances`);
     if (!response.ok) {
@@ -223,6 +242,28 @@ export const api = {
     if (!response.ok) {
       const error = await parseJSON(response).catch(() => ({ error: `Failed to rebuild preview font: ${response.status}` }));
       throw new Error(error.error || `Failed to rebuild preview font: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
+  async registerEditingInstance(instanceName) {
+    const response = await fetch(`${API_BASE}/instance/${encodeURIComponent(instanceName)}/editing`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      // Silently fail - editing registration is best effort
+      return;
+    }
+    return parseJSON(response);
+  },
+
+  async unregisterEditingInstance(instanceName) {
+    const response = await fetch(`${API_BASE}/instance/${encodeURIComponent(instanceName)}/editing`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      // Silently fail - editing registration is best effort
+      return;
     }
     return parseJSON(response);
   },

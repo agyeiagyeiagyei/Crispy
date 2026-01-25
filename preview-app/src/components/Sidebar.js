@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import './Sidebar.css';
 import AxisControl from './AxisControl';
+import SpacAxisControl from './SpacAxisControl';
 import UpdateButton from './UpdateButton';
 import DuplicateModal from './DuplicateModal';
 import AddAxisModal from './AddAxisModal';
@@ -9,7 +10,7 @@ import { api } from '../api';
 
 const DEFAULT_SAMPLE_TEXT = "The Quick Brown Fox Jumps Over The Lazy Dog 0123456789 &!";
 
-function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance, avar2Mode, avar2Instances, avar2Axes, onAddAvar2Axis, onUpdateAvar2Axis, onUpdateAvar2Mapping, onReloadAvar2Data, spacMode, spacAxisExists, spacValue, onSpacChange, spacBuilding, spacError, onSpacRetry }) {
+function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance, avar2Mode, avar2Instances, avar2Axes, onAddAvar2Axis, onUpdateAvar2Axis, onUpdateAvar2Mapping, onReloadAvar2Data, spacMode, spacAxisExists, spacValue, originalSpacValue, onSpacChange, onSpacApply, spacBuilding, spacError, onSpacRetry }) {
   // Map axis tags to names for avar2 display
   const axisNames = {
     wght: 'Weight',
@@ -76,44 +77,50 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
       </div>
       
       <div className="axis-controls">
-        {axes.map(axis => (
-          <AxisControl
-            key={axis.tag}
-            axis={axis}
-            value={coordinates[axis.tag] ?? axis.default}
-            onChange={(value) => onAxisChange(axis.tag, value)}
-            disabled={disabled}
-          />
-        ))}
-        
-        {/* SPAC axis control - shown when spacMode is ON and axis exists */}
-        {spacMode && spacAxisExists && selectedInstance && (
-          <div className="axis-control spac-axis-control">
-            <div className="axis-label-row">
-              <label className="axis-label">SPAC</label>
-              <span className="axis-value">{spacValue.toFixed(1)}</span>
-            </div>
-            <input
-              type="range"
-              min="-100"
-              max="100"
-              step="0.1"
-              value={spacValue}
-              onChange={(e) => onSpacChange(parseFloat(e.target.value))}
-              disabled={disabled || spacBuilding}
-              className="axis-slider"
+        {axes.map(axis => {
+          // Skip SPAC axis if spacMode is OFF
+          if ((axis.tag === 'SPAC' || axis.tag === 'spac') && !spacMode) {
+            return null;
+          }
+          
+          // Render SPAC axis with special control (Apply button next to slider)
+          if ((axis.tag === 'SPAC' || axis.tag === 'spac') && spacMode && spacAxisExists) {
+            return (
+              <SpacAxisControl
+                key={axis.tag}
+                axis={axis}
+                value={spacValue}
+                originalValue={originalSpacValue || 0}
+                onChange={onSpacChange}
+                onApply={onSpacApply}
+                disabled={disabled}
+                building={spacBuilding}
+              />
+            );
+          }
+          // Render other axes normally
+          return (
+            <AxisControl
+              key={axis.tag}
+              axis={axis}
+              value={coordinates[axis.tag] ?? axis.default}
+              onChange={(value) => onAxisChange(axis.tag, value)}
+              disabled={disabled}
             />
-            <div className="axis-range">-100 to +100</div>
-            {spacBuilding && (
-              <div className="spac-building-indicator">Rebuilding font...</div>
-            )}
-            {spacError && (
-              <div className="spac-error">
-                <div className="error-message">{spacError}</div>
-                <button onClick={onSpacRetry} className="retry-btn">Retry</button>
-              </div>
-            )}
+          );
+        })}
+        
+        {/* SPAC error display */}
+        {spacMode && spacAxisExists && spacError && (
+          <div className="spac-error">
+            <div className="error-message">{spacError}</div>
+            <button onClick={onSpacRetry} className="retry-btn">Retry</button>
           </div>
+        )}
+        
+        {/* SPAC building indicator */}
+        {spacMode && spacAxisExists && spacBuilding && (
+          <div className="spac-building-indicator">Rebuilding font...</div>
         )}
         
         {/* SPAC error state - when toggle is ON but axis doesn't exist */}
@@ -133,7 +140,11 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
         )}
       </div>
       
-      {avar2Mode && selectedInstance && (
+      {avar2Mode && selectedInstance && (() => {
+        // Check if there are any traditional axes in the CSV
+        const hasTraditionalAxes = avar2Axes?.traditional_axes?.columns && avar2Axes.traditional_axes.columns.length > 0;
+        
+        return (
         <div className="avar2-traditional-axes">
           <h3 className="avar2-section-title">AVAR2 MAPPINGS</h3>
           {(() => {
@@ -142,10 +153,28 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
               return <div className="avar2-loading">Loading mappings...</div>;
             }
             
+            // If no traditional axes exist, show "Add Axis" button
+            if (!hasTraditionalAxes) {
+              const axisColumns = [];
+              return (
+                <div className="avar2-add-axis-section">
+                  <button
+                    className="btn btn-add-axis"
+                    onClick={() => {
+                      setShowAddAxisModal(true);
+                    }}
+                  >
+                    + Add Axis
+                  </button>
+                </div>
+              );
+            }
+            
             const mapping = avar2Instances.find(
               inst => inst.instance_name === selectedInstance.name
             );
-            if (mapping && mapping.avar2_mapping && mapping.avar2_mapping.in) {
+            // Only show mappings if there are traditional axes (in:) to display
+            if (mapping && mapping.avar2_mapping && mapping.avar2_mapping.in && Object.keys(mapping.avar2_mapping.in).length > 0) {
               const traditionalAxes = mapping.avar2_mapping.in;
               const metadata = avar2Axes?.metadata || {};
               
@@ -155,7 +184,13 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
               return (
                 <>
                   <div className="traditional-axes-list">
-                    {Object.entries(traditionalAxes).map(([tag, value]) => {
+                    {Object.entries(traditionalAxes)
+                      .filter(([tag]) => {
+                        // Exclude SPAC from avar2 mappings
+                        const normalizedTag = tag.toLowerCase();
+                        return normalizedTag !== 'spac';
+                      })
+                      .map(([tag, value]) => {
                       // Map normalized tag (wght, wdth, etc.) to CSV column name
                       // The backend provides normalized tags in avar2_mapping.in, but we need CSV column names
                       const tagToColumnMap = {
@@ -168,6 +203,11 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
                       // Try to find CSV column by matching normalized tag
                       let axisColumn = tagToColumnMap[tag] || tag.toUpperCase();
                       
+                      // Skip SPAC column
+                      if (axisColumn === 'SPAC' || axisColumn === 'spac') {
+                        return null;
+                      }
+                      
                       // If not found in map, try to find in columns by normalizing
                       if (!axisColumns.includes(axisColumn)) {
                         const found = axisColumns.find(col => {
@@ -176,6 +216,11 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
                           return tagMap[normalized] === tag;
                         });
                         if (found) axisColumn = found;
+                      }
+                      
+                      // Skip SPAC again after column lookup
+                      if (axisColumn === 'SPAC' || axisColumn === 'spac') {
+                        return null;
                       }
                       
                       // Use metadata from backend (which ensures all axes are in JSON)
@@ -224,6 +269,12 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
                               defaultValue={value}
                               step="0.1"
                               autoFocus
+                              ref={(input) => {
+                                // Select all text when input becomes focused
+                                if (input) {
+                                  input.select();
+                                }
+                              }}
                               onBlur={async (e) => {
                                 const newValue = parseFloat(e.target.value);
                                 if (isNaN(newValue)) {
@@ -300,12 +351,31 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
                 </>
               );
             }
+            // No mapping for this instance, but traditional axes exist - show "Add Axis" button
+            const axisColumns = avar2Axes?.traditional_axes?.columns || [];
             return (
-              <div className="avar2-no-mapping">
-                No mapping available for this instance
+              <div className="avar2-add-axis-section">
+                <button
+                  className="btn btn-add-axis"
+                  onClick={() => {
+                    setShowAddAxisModal(true);
+                  }}
+                >
+                  + Add Axis
+                </button>
               </div>
             );
           })()}
+        </div>
+        );
+      })()}
+      
+      {selectedInstance && (
+        <div className="update-button-section">
+          <UpdateButton
+            onClick={onUpdateInstance}
+            instanceName={selectedInstance.name}
+          />
         </div>
       )}
       
@@ -322,22 +392,14 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
       )}
       
       {selectedInstance && (
-        <>
-          <div className="duplicate-button-section">
-            <button
-              onClick={() => setShowDuplicateModal(true)}
-              className="btn btn-duplicate"
-            >
-              {duplicateButtonText}
-            </button>
-          </div>
-          <div className="update-button-section">
-            <UpdateButton
-              onClick={onUpdateInstance}
-              instanceName={selectedInstance.name}
-            />
-          </div>
-        </>
+        <div className="duplicate-button-section">
+          <button
+            onClick={() => setShowDuplicateModal(true)}
+            className="btn btn-duplicate"
+          >
+            {duplicateButtonText}
+          </button>
+        </div>
       )}
       
       <DuplicateModal

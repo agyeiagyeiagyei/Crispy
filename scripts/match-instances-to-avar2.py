@@ -31,6 +31,7 @@ import sys
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+import sys
 
 try:
     from glyphsLib import load
@@ -86,20 +87,25 @@ def _normalize_in_axis_name(col_name: str) -> str:
         "WDTH": "wdth",
         "OPSZ": "opsz",
         "CONTRAST": "cntr",
+        "CNTR": "cntr",
     }
     return axis_map.get(col_upper, col_upper.lower())
 
 
-def read_csv_mappings(csv_path: Path) -> Tuple[List[Dict[str, str]], List[str], List[str], List[str]]:
+def read_csv_mappings(csv_path: Path, glyphs_path: Optional[Path] = None) -> Tuple[List[Dict[str, str]], List[str], List[str], List[str]]:
     """
     Read CSV file and return mappings.
+    
+    Uses Glyphs file as source of truth to determine parametric vs traditional axes.
+    - Parametric axes: axes that exist in the Glyphs file
+    - Traditional axes: axes in CSV that are NOT in the Glyphs file
     
     Returns:
         (rows, fieldnames, in_cols, out_cols)
         - rows: List of row dicts
         - fieldnames: List of column names
-        - in_cols: List of traditional axis columns (WGHT, WDTH, OPSZ)
-        - out_cols: List of parametric axis columns (XTRA, XOPQ, YOPQ, SPAC)
+        - in_cols: List of traditional axis columns (not in Glyphs file)
+        - out_cols: List of parametric axis columns (axes from Glyphs file)
     """
     rows = []
     with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
@@ -109,31 +115,67 @@ def read_csv_mappings(csv_path: Path) -> Tuple[List[Dict[str, str]], List[str], 
         if not fieldnames:
             raise ValueError("CSV has no header row")
         
-        # Strip whitespace from fieldnames
-        fieldnames = [h.strip() for h in fieldnames]
+        # Strip whitespace and normalize column names (uppercase for consistency)
+        # Preserve original case mapping for writing back, but use normalized for processing
+        normalized_fieldnames = []
+        fieldname_mapping = {}  # normalized -> original
+        for h in fieldnames:
+            original = h.strip()
+            normalized = original.upper() if original != "Instance Name" else original
+            normalized_fieldnames.append(normalized)
+            fieldname_mapping[normalized] = original
         
         name_col = "Instance Name"
-        if name_col not in fieldnames:
-            raise ValueError(f"CSV must include '{name_col}' column. Found: {fieldnames}")
+        if name_col not in normalized_fieldnames:
+            raise ValueError(f"CSV must include '{name_col}' column. Found: {normalized_fieldnames}")
         
-        # Detect in: columns (traditional axes)
-        in_cols = []
-        traditional_axes = {"WGHT", "WDTH", "OPSZ", "CONTRAST"}
+        # Use normalized fieldnames for processing
+        fieldnames = normalized_fieldnames
+        
+        # Get parametric axes from Glyphs file (source of truth)
+        # Check font.axes (the actual axes defined in the font), not instance coordinates
+        parametric_axis_tags = set()
+        if glyphs_path and glyphs_path.exists():
+            try:
+                font = load(str(glyphs_path))
+                # Get axis tags directly from font.axes
+                for axis in font.axes:
+                    if hasattr(axis, 'axisTag'):
+                        parametric_axis_tags.add(axis.axisTag.upper())
+            except Exception as e:
+                print(f"Warning: Could not read Glyphs file to determine parametric axes: {e}", file=sys.stderr)
+        
+        # Separate columns into traditional (in:) and parametric (out:)
+        # Parametric axes are those that exist in the Glyphs file
+        out_cols = []  # Parametric axes (from Glyphs file)
+        in_cols = []   # Traditional axes (not in Glyphs file)
+        
         for c in fieldnames:
+            if c == name_col:
+                continue
+            
             col_upper = c.upper()
-            if col_upper in traditional_axes or col_upper.endswith("-E"):
+            # Check if this column matches a parametric axis from Glyphs file
+            # Match by exact tag (parametric_axis_tags are already uppercase)
+            is_parametric = col_upper in parametric_axis_tags
+            
+            if is_parametric:
+                out_cols.append(c)
+            else:
+                # Traditional axis (not in Glyphs file)
                 in_cols.append(c)
         
-        # Parametric columns are everything else (except name)
-        # Note: SPAC may or may not be present, treat it like any other axis
-        out_cols = [c for c in fieldnames if c not in (name_col,) and c not in in_cols]
-        
         for row in reader:
-            # Strip whitespace from keys and values
-            cleaned_row = {k.strip(): (v.strip() if v else "") for k, v in row.items()}
+            # Normalize row keys to match normalized fieldnames, strip whitespace from values
+            cleaned_row = {}
+            for k, v in row.items():
+                original_key = k.strip()
+                # Map to normalized key
+                normalized_key = original_key.upper() if original_key != "Instance Name" else original_key
+                cleaned_row[normalized_key] = (v.strip() if v else "")
             rows.append(cleaned_row)
     
-    return rows, fieldnames, in_cols, out_cols
+    return rows, fieldnames, in_cols, out_cols, fieldname_mapping
 
 
 def _parse_decimal(value: str) -> Optional[Decimal]:
@@ -232,8 +274,8 @@ def match_instances(
     # Read Glyphs instances (source of truth, preserves order)
     glyphs_instances = get_glyphs_instances(glyphs_path)
     
-    # Read CSV mappings
-    csv_rows, fieldnames, in_cols, out_cols = read_csv_mappings(csv_path)
+    # Read CSV mappings (pass glyphs_path to determine parametric vs traditional)
+    csv_rows, fieldnames, in_cols, out_cols, _ = read_csv_mappings(csv_path, glyphs_path)
     
     name_col = "Instance Name"
     

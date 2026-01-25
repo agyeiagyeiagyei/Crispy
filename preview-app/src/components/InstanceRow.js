@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import './InstanceRow.css';
 
-function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, instanceEditingCoordinates, sampleText, fontLoaded, fontSize, onDelete, onMove, allInstances, spacMode, spacAxisExists, spacValue }) {
+function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, instanceEditingCoordinates, sampleText, fontLoaded, fontSize, onDelete, onMove, allInstances, spacMode, spacAxisExists, spacValue, syncStatus = 'green', onRename }) {
   const [showMoveControls, setShowMoveControls] = useState(false);
   const [movePosition, setMovePosition] = useState('before');
   const [targetInstance, setTargetInstance] = useState(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editingName, setEditingName] = useState(instance.name);
   // Build font-variation-settings CSS from coordinates
   // If this row is selected, use editing coordinates (from sliders)
   // Otherwise, use persisted editing coordinates if they exist, or instance coordinates
@@ -17,12 +19,15 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
     .map(([tag, value]) => `"${tag}" ${value}`)
     .join(', ');
   
-  // Add SPAC axis if SPAC mode is enabled and axis exists
-  if (spacMode && spacAxisExists) {
-    const spacSetting = `"SPAC" ${spacValue}`;
-    fontVariationSettings = fontVariationSettings 
-      ? `${fontVariationSettings}, ${spacSetting}`
-      : spacSetting;
+  // Calculate CSS letter-spacing approximation for SPAC
+  // Only apply if spacMode is enabled
+  // SPAC ranges from -100 to +100
+  // Map to letter-spacing: SPAC 100 = 0.1em, SPAC -100 = -0.1em
+  // This is an approximation - actual font rebuild happens on "Apply"
+  let letterSpacing = undefined;
+  if (spacMode && spacAxisExists && spacValue !== undefined && spacValue !== 0) {
+    // Convert SPAC value to em units (SPAC 100 = 0.1em)
+    letterSpacing = `${(spacValue / 1000)}em`;
   }
 
   return (
@@ -32,15 +37,56 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
       data-instance-name={instance.name}
     >
       <div className="instance-row-header">
-        <h3 className="instance-name">{instance.name}</h3>
+        <div className="instance-name-wrapper">
+          {isEditingName ? (
+            <input
+              type="text"
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              onBlur={async () => {
+                if (editingName.trim() && editingName.trim() !== instance.name && onRename) {
+                  try {
+                    await onRename(instance.name, editingName.trim());
+                  } catch (err) {
+                    // Revert on error
+                    setEditingName(instance.name);
+                    alert(err.message || 'Failed to rename instance');
+                  }
+                } else {
+                  // Revert if empty or unchanged
+                  setEditingName(instance.name);
+                }
+                setIsEditingName(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.target.blur();
+                } else if (e.key === 'Escape') {
+                  setEditingName(instance.name);
+                  setIsEditingName(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="instance-name-input"
+              autoFocus
+            />
+          ) : (
+            <h3 
+              className="instance-name clickable"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isSelected && onRename) {
+                  setIsEditingName(true);
+                  setEditingName(instance.name);
+                }
+              }}
+              title={isSelected && onRename ? "Click to edit name" : ""}
+            >
+              {instance.name}
+            </h3>
+          )}
+        </div>
         <div className="instance-header-right">
-          <div className="instance-coordinates">
-            {Object.entries(instance.coordinates).map(([tag, value]) => (
-              <span key={tag} className="coordinate">
-                {tag}: {value.toFixed(1)}
-              </span>
-            ))}
-          </div>
           {/* Always render icons but hide when not selected to prevent layout shift */}
           {onMove && (
             <button
@@ -76,6 +122,24 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
               🗑️
             </button>
           )}
+          <div className="instance-coordinates">
+            {Object.entries(instance.coordinates).map(([tag, value]) => (
+              <span key={tag} className="coordinate">
+                {tag}: {value.toFixed(1)}
+              </span>
+            ))}
+            {/* Show SPAC coordinate when SPAC mode is enabled */}
+            {spacMode && spacAxisExists && spacValue !== undefined && (
+              <span className="coordinate">
+                SPAC: {spacValue.toFixed(1)}
+              </span>
+            )}
+          </div>
+          <span className={`sync-status-dot sync-status-${syncStatus}`} title={
+            syncStatus === 'green' ? 'Synced with Glyphs file' :
+            syncStatus === 'orange' ? 'Edited but not saved' :
+            'Unknown status'
+          }></span>
         </div>
       </div>
       
@@ -143,6 +207,7 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
             fontVariationSettings: fontLoaded ? fontVariationSettings : undefined,
             fontFeatureSettings: 'normal',
             fontSize: `${fontSize}rem`,
+            letterSpacing: letterSpacing, // CSS approximation for SPAC
           }}
         >
           {sampleText}
