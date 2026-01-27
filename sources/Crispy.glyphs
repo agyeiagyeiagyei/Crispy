@@ -76779,6 +76779,15 @@ value = "Copyright 2025 The Crispy Project Authors (https://github.com/agyeiagye
 );
 },
 {
+key = designers;
+values = (
+{
+language = dflt;
+value = "Agyei Archer";
+}
+);
+},
+{
 key = licenses;
 values = (
 {
