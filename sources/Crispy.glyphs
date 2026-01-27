@@ -76774,7 +76774,7 @@ key = copyrights;
 values = (
 {
 language = dflt;
-value = "Copyright 2025 Agyei Archer (https://github.com/agyeiagyeiagyei/Crispy)";
+value = "Copyright 2025 The Crispy Project Authors (https://github.com/agyeiagyeiagyei/Crispy)";
 }
 );
 },
