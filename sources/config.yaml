@@ -57,14 +57,14 @@ stat:
   - name: Width
     tag: wdth
     values:
-    - name: '52'
-      value: 52
+    - name: 'UltraCondensed'
+      value: 50
     - name: Normal
       value: 100
-    - name: '182'
-      value: 182
-    - name: '300'
-      value: 300
+    - name: 'Expanded'
+      value: 125
+    - name: 'UltraExpanded'
+      value: 200
   - name: Weight
     tag: wght
     values:
