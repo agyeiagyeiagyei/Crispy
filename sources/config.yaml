@@ -45,6 +45,26 @@ fvarInstances:
 
 stat:
   Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
+  - name: Spacing
+    tag: SPAC
+    values:
+    - name: Default
+      value: 0
+  - name: Counter Width
+    tag: XTRA
+    values:
+    - name: Normal
+      value: 627
+  - name: Thin Stroke
+    tag: YOPQ
+    values:
+    - name: Normal
+      value: 160
+  - name: Thick Stroke
+    tag: XOPQ
+    values:
+    - name: Normal
+      value: 187.67
   - name: Optical Size
     tag: opsz
     values:
@@ -57,13 +77,13 @@ stat:
   - name: Width
     tag: wdth
     values:
-    - name: 'UltraCondensed'
-      value: 50
+    - name: UltraCondensed
+      value: 52
     - name: Normal
       value: 100
-    - name: 'Expanded'
+    - name: Expanded
       value: 125
-    - name: 'UltraExpanded'
+    - name: UltraExpanded
       value: 200
   - name: Weight
     tag: wght
@@ -97,7 +117,7 @@ avar2:
   # Thin Condensed-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 52
+      wdth: 50
       wght: 100
     out:
       XTRA: 181.2
@@ -110,7 +130,7 @@ avar2:
   # Thin Condensed
   - in:
       opsz: 48
-      wdth: 52
+      wdth: 50
       wght: 100
     out:
       XTRA: 181.2
@@ -123,7 +143,7 @@ avar2:
   # Thin Condensed-MinOPSZ
   - in:
       opsz: 12
-      wdth: 52
+      wdth: 50
       wght: 100
     out:
       XTRA: 190.26
@@ -136,7 +156,7 @@ avar2:
   # ExtraLight Condensed-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 52
+      wdth: 50
       wght: 200
     out:
       XTRA: 248
@@ -149,7 +169,7 @@ avar2:
   # ExtraLight Condensed
   - in:
       opsz: 48
-      wdth: 52
+      wdth: 50
       wght: 200
     out:
       XTRA: 248
@@ -162,7 +182,7 @@ avar2:
   # ExtraLight Condensed-MinOPSZ
   - in:
       opsz: 12
-      wdth: 52
+      wdth: 50
       wght: 200
     out:
       XTRA: 260.4
@@ -175,7 +195,7 @@ avar2:
   # Light Condensed-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 52
+      wdth: 50
       wght: 300
     out:
       XTRA: 280
@@ -188,7 +208,7 @@ avar2:
   # Light Condensed
   - in:
       opsz: 48
-      wdth: 52
+      wdth: 50
       wght: 300
     out:
       XTRA: 280
@@ -201,7 +221,7 @@ avar2:
   # Light Condensed-MinOPSZ
   - in:
       opsz: 12
-      wdth: 52
+      wdth: 50
       wght: 300
     out:
       XTRA: 294
@@ -214,7 +234,7 @@ avar2:
   # Regular Condensed-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 52
+      wdth: 50
       wght: 400
     out:
       XTRA: 290
@@ -227,7 +247,7 @@ avar2:
   # Regular Condensed
   - in:
       opsz: 48
-      wdth: 52
+      wdth: 50
       wght: 400
     out:
       XTRA: 290
@@ -240,7 +260,7 @@ avar2:
   # Regular Condensed-MinOPSZ
   - in:
       opsz: 12
-      wdth: 52
+      wdth: 50
       wght: 400
     out:
       XTRA: 304.5
@@ -253,7 +273,7 @@ avar2:
   # Medium Condensed-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 52
+      wdth: 50
       wght: 500
     out:
       XTRA: 345
@@ -266,7 +286,7 @@ avar2:
   # Medium Condensed
   - in:
       opsz: 48
-      wdth: 52
+      wdth: 50
       wght: 500
     out:
       XTRA: 345
@@ -279,7 +299,7 @@ avar2:
   # Medium Condensed-MinOPSZ
   - in:
       opsz: 12
-      wdth: 52
+      wdth: 50
       wght: 500
     out:
       XTRA: 362.25
@@ -292,7 +312,7 @@ avar2:
   # Semibold Condensed-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 52
+      wdth: 50
       wght: 600
     out:
       XTRA: 354
@@ -305,7 +325,7 @@ avar2:
   # Semibold Condensed
   - in:
       opsz: 48
-      wdth: 52
+      wdth: 50
       wght: 600
     out:
       XTRA: 354
@@ -318,7 +338,7 @@ avar2:
   # Semibold Condensed-MinOPSZ
   - in:
       opsz: 12
-      wdth: 52
+      wdth: 50
       wght: 600
     out:
       XTRA: 371.7
@@ -331,7 +351,7 @@ avar2:
   # Bold Condensed-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 52
+      wdth: 50
       wght: 700
     out:
       XTRA: 318
@@ -344,7 +364,7 @@ avar2:
   # Bold Condensed
   - in:
       opsz: 48
-      wdth: 52
+      wdth: 50
       wght: 700
     out:
       XTRA: 318
@@ -357,7 +377,7 @@ avar2:
   # Bold Condensed-MinOPSZ
   - in:
       opsz: 12
-      wdth: 52
+      wdth: 50
       wght: 700
     out:
       XTRA: 333.9
@@ -495,7 +515,7 @@ avar2:
       wght: 400
     out:
       XTRA: 627
-      XOPQ: 187.672
+      XOPQ: 187.67
       YOPQ: 160
       SPAC: -20
 
@@ -508,7 +528,7 @@ avar2:
       wght: 400
     out:
       XTRA: 627
-      XOPQ: 187.672
+      XOPQ: 187.67
       YOPQ: 160
       SPAC: 25
 
@@ -521,7 +541,7 @@ avar2:
       wght: 400
     out:
       XTRA: 627
-      XOPQ: 187.672
+      XOPQ: 187.67
       YOPQ: 160
       SPAC: 20
 
@@ -651,7 +671,7 @@ avar2:
   # Thin Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 182
+      wdth: 125
       wght: 100
     out:
       XTRA: 1136.3
@@ -664,7 +684,7 @@ avar2:
   # Thin Extended
   - in:
       opsz: 48
-      wdth: 182
+      wdth: 125
       wght: 100
     out:
       XTRA: 1136.3
@@ -677,7 +697,7 @@ avar2:
   # Thin Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 182
+      wdth: 125
       wght: 100
     out:
       XTRA: 1136.3
@@ -690,7 +710,7 @@ avar2:
   # ExtraLight Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 182
+      wdth: 125
       wght: 200
     out:
       XTRA: 1259
@@ -703,7 +723,7 @@ avar2:
   # ExtraLight Extended
   - in:
       opsz: 48
-      wdth: 182
+      wdth: 125
       wght: 200
     out:
       XTRA: 1259
@@ -716,7 +736,7 @@ avar2:
   # ExtraLight Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 182
+      wdth: 125
       wght: 200
     out:
       XTRA: 1259
@@ -729,7 +749,7 @@ avar2:
   # Light Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 182
+      wdth: 125
       wght: 300
     out:
       XTRA: 1259
@@ -742,7 +762,7 @@ avar2:
   # Light Extended
   - in:
       opsz: 48
-      wdth: 182
+      wdth: 125
       wght: 300
     out:
       XTRA: 1259
@@ -755,7 +775,7 @@ avar2:
   # Light Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 182
+      wdth: 125
       wght: 300
     out:
       XTRA: 1259
@@ -768,7 +788,7 @@ avar2:
   # Regular Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 182
+      wdth: 125
       wght: 400
     out:
       XTRA: 1252.1
@@ -781,7 +801,7 @@ avar2:
   # Regular Extended
   - in:
       opsz: 48
-      wdth: 182
+      wdth: 125
       wght: 400
     out:
       XTRA: 1252.1
@@ -794,7 +814,7 @@ avar2:
   # Regular Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 182
+      wdth: 125
       wght: 400
     out:
       XTRA: 1252.1
@@ -807,7 +827,7 @@ avar2:
   # Medium Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 182
+      wdth: 125
       wght: 500
     out:
       XTRA: 1213
@@ -820,7 +840,7 @@ avar2:
   # Medium Extended
   - in:
       opsz: 48
-      wdth: 182
+      wdth: 125
       wght: 500
     out:
       XTRA: 1213
@@ -833,7 +853,7 @@ avar2:
   # Medium Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 182
+      wdth: 125
       wght: 500
     out:
       XTRA: 1213
@@ -846,7 +866,7 @@ avar2:
   # Semibold Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 182
+      wdth: 125
       wght: 600
     out:
       XTRA: 1275
@@ -859,7 +879,7 @@ avar2:
   # Semibold Extended
   - in:
       opsz: 48
-      wdth: 182
+      wdth: 125
       wght: 600
     out:
       XTRA: 1275
@@ -872,7 +892,7 @@ avar2:
   # Semibold Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 182
+      wdth: 125
       wght: 600
     out:
       XTRA: 1275
@@ -885,7 +905,7 @@ avar2:
   # Bold Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 182
+      wdth: 125
       wght: 700
     out:
       XTRA: 1350
@@ -898,7 +918,7 @@ avar2:
   # Bold Extended
   - in:
       opsz: 48
-      wdth: 182
+      wdth: 125
       wght: 700
     out:
       XTRA: 1350
@@ -911,7 +931,7 @@ avar2:
   # Bold Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 182
+      wdth: 125
       wght: 700
     out:
       XTRA: 1350
@@ -928,7 +948,7 @@ avar2:
   # Thin Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 300
+      wdth: 200
       wght: 100
     out:
       XTRA: 2300
@@ -941,7 +961,7 @@ avar2:
   # Thin Ultra Extended
   - in:
       opsz: 48
-      wdth: 300
+      wdth: 200
       wght: 100
     out:
       XTRA: 2300
@@ -954,7 +974,7 @@ avar2:
   # Thin Ultra Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 300
+      wdth: 200
       wght: 100
     out:
       XTRA: 2300
@@ -967,7 +987,7 @@ avar2:
   # ExtraLight Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 300
+      wdth: 200
       wght: 200
     out:
       XTRA: 2300
@@ -980,7 +1000,7 @@ avar2:
   # ExtraLight Ultra Extended
   - in:
       opsz: 48
-      wdth: 300
+      wdth: 200
       wght: 200
     out:
       XTRA: 2300
@@ -993,7 +1013,7 @@ avar2:
   # ExtraLight Ultra Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 300
+      wdth: 200
       wght: 200
     out:
       XTRA: 2300
@@ -1006,7 +1026,7 @@ avar2:
   # Light Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 300
+      wdth: 200
       wght: 300
     out:
       XTRA: 2290
@@ -1019,7 +1039,7 @@ avar2:
   # Light Ultra Extended
   - in:
       opsz: 48
-      wdth: 300
+      wdth: 200
       wght: 300
     out:
       XTRA: 2290
@@ -1032,7 +1052,7 @@ avar2:
   # Light Ultra Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 300
+      wdth: 200
       wght: 300
     out:
       XTRA: 2290
@@ -1045,7 +1065,7 @@ avar2:
   # Regular Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 300
+      wdth: 200
       wght: 400
     out:
       XTRA: 2210.6
@@ -1058,7 +1078,7 @@ avar2:
   # Regular Ultra Extended
   - in:
       opsz: 48
-      wdth: 300
+      wdth: 200
       wght: 400
     out:
       XTRA: 2210.6
@@ -1071,7 +1091,7 @@ avar2:
   # Regular Ultra Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 300
+      wdth: 200
       wght: 400
     out:
       XTRA: 2210.6
@@ -1084,7 +1104,7 @@ avar2:
   # Medium Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 300
+      wdth: 200
       wght: 500
     out:
       XTRA: 2290
@@ -1097,7 +1117,7 @@ avar2:
   # Medium Ultra Extended
   - in:
       opsz: 48
-      wdth: 300
+      wdth: 200
       wght: 500
     out:
       XTRA: 2290
@@ -1110,7 +1130,7 @@ avar2:
   # Medium Ultra Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 300
+      wdth: 200
       wght: 500
     out:
       XTRA: 2290
@@ -1123,7 +1143,7 @@ avar2:
   # Semibold Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 300
+      wdth: 200
       wght: 600
     out:
       XTRA: 2346
@@ -1136,7 +1156,7 @@ avar2:
   # Semibold Ultra Extended
   - in:
       opsz: 48
-      wdth: 300
+      wdth: 200
       wght: 600
     out:
       XTRA: 2346
@@ -1149,7 +1169,7 @@ avar2:
   # Semibold Ultra Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 300
+      wdth: 200
       wght: 600
     out:
       XTRA: 2346
@@ -1162,7 +1182,7 @@ avar2:
   # Bold Ultra Extended-MaxOPSZ
   - in:
       opsz: 72
-      wdth: 300
+      wdth: 200
       wght: 700
     out:
       XTRA: 2369.9
@@ -1175,7 +1195,7 @@ avar2:
   # Bold Ultra Extended
   - in:
       opsz: 48
-      wdth: 300
+      wdth: 200
       wght: 700
     out:
       XTRA: 2369.9
@@ -1188,7 +1208,7 @@ avar2:
   # Bold Ultra Extended-MinOPSZ
   - in:
       opsz: 12
-      wdth: 300
+      wdth: 200
       wght: 700
     out:
       XTRA: 2369.9
