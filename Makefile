@@ -31,7 +31,8 @@ build.stamp: venv sources/config.yaml sources/avar2-mappings.csv sources/Crispy.
 	python3 scripts/sync-glyphs-to-avar2.py --glyphs sources/Crispy.glyphs --csv sources/avar2-mappings.csv --once && \
 	python3 sources/update_config.py --csv sources/avar2-mappings.csv --config sources/config.yaml --no-backup --add-opsz && \
 	(for config in sources/config*.yaml; do gftools builder --experimental-fontc $$(which fontc) $$config; done) && \
-	gftools avar2-to-avar1 "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf" -m scripts/mapping.yaml -o "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ]-avar1.ttf" && \
+        mv fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ,opsz,wdth,wght].ttf && \
+	gftools avar2-to-avar1 "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ,opsz,wdth,wght].ttf" -m scripts/mapping.yaml -o "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ,opsz,wdth,wght]-avar1.ttf" && \
 	touch build.stamp
 
 venv/touchfile: requirements.txt
