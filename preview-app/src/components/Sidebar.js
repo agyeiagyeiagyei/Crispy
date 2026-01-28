@@ -7,7 +7,7 @@ import DuplicateModal from './DuplicateModal';
 import AddAxisModal from './AddAxisModal';
 import EditAxisModal from './EditAxisModal';
 
-function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance, avar2Mode, avar2Instances, avar2Axes, onAddAvar2Axis, onUpdateAvar2Axis, onUpdateAvar2Mapping, onReloadAvar2Data, spacMode, spacAxisExists, spacValue, originalSpacValue, onSpacChange, onSpacApply, spacBuilding, spacError, onSpacRetry }) {
+function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance, avar2Mode, avar2Instances, avar2Axes, onAddAvar2Axis, onUpdateAvar2Axis, onUpdateAvar2Mapping, onReloadAvar2Data, spacMode, spacAxisExists, glyphsFileHasUnsavedChanges }) {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showAddAxisModal, setShowAddAxisModal] = useState(false);
   const [showEditAxisModal, setShowEditAxisModal] = useState(false);
@@ -52,18 +52,25 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
       </div>
       
       <div className="font-size-control">
-        <label className="font-size-label">
-          Font Size: {fontSize.toFixed(1)}rem
-        </label>
-        <input
-          type="range"
-          min="0.5"
-          max="12"
-          step="0.1"
-          value={fontSize}
-          onChange={(e) => onFontSizeChange(parseFloat(e.target.value))}
-          className="font-size-slider"
-        />
+        <div className="axis-header">
+          <label className="axis-name">Font Size: {fontSize.toFixed(1)}rem</label>
+        </div>
+        <div className="axis-slider-container">
+          <input
+            type="range"
+            min="0.5"
+            max="12"
+            step="0.1"
+            value={fontSize}
+            onChange={(e) => onFontSizeChange(parseFloat(e.target.value))}
+            className="axis-slider"
+          />
+          <div className="axis-values">
+            <span className="axis-min">0.5</span>
+            <span className="axis-current">{fontSize.toFixed(1)}</span>
+            <span className="axis-max">12.0</span>
+          </div>
+        </div>
       </div>
       
       <div className="axis-controls">
@@ -73,20 +80,16 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
             return null;
           }
           
-          // Render SPAC axis with special control (Apply button next to slider)
-          // Changed: Show SPAC slider when spacMode is enabled, regardless of spacAxisExists
-          // This matches InstanceRow.js which always uses letter-spacing for SPAC preview
+          // Render SPAC axis - now uses same pattern as other axes (no Apply button)
+          // SPAC preview uses font-variation-settings (not letter-spacing) for accurate rendering
           if ((axis.tag === 'SPAC' || axis.tag === 'spac') && spacMode) {
             return (
               <SpacAxisControl
                 key={axis.tag}
                 axis={axis}
-                value={spacValue}
-                originalValue={originalSpacValue || 0}
-                onChange={onSpacChange}
-                onApply={onSpacApply}
+                value={coordinates[axis.tag] ?? axis.default}
+                onChange={(value) => onAxisChange(axis.tag, value)}
                 disabled={disabled}
-                building={spacBuilding}
               />
             );
           }
@@ -102,32 +105,10 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
           );
         })}
         
-        {/* SPAC error display */}
-        {spacMode && spacAxisExists && spacError && (
-          <div className="spac-error">
-            <div className="error-message">{spacError}</div>
-            <button onClick={onSpacRetry} className="retry-btn">Retry</button>
-          </div>
-        )}
-        
-        {/* SPAC building indicator */}
-        {spacMode && spacAxisExists && spacBuilding && (
-          <div className="spac-building-indicator">Rebuilding font...</div>
-        )}
-        
         {/* SPAC error state - when toggle is ON but axis doesn't exist */}
         {spacMode && !spacAxisExists && (
           <div className="spac-error-state">
-            {spacBuilding ? (
-              <div>Initializing SPAC axis and rebuilding font...</div>
-            ) : spacError ? (
-              <div className="spac-error">
-                <div className="error-message">{spacError}</div>
-                <button onClick={onSpacRetry} className="retry-btn">Retry</button>
-              </div>
-            ) : (
-              <div>SPAC axis not available. Click toggle to initialize.</div>
-            )}
+            <div>SPAC axis not available. Click toggle to initialize.</div>
           </div>
         )}
       </div>
@@ -334,7 +315,7 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
                         setShowAddAxisModal(true);
                       }}
                     >
-                      + Add Axis
+                      Add Axis
                     </button>
                   </div>
                 </>
@@ -363,6 +344,8 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
           <UpdateButton
             onClick={onUpdateInstance}
             instanceName={selectedInstance.name}
+            disabled={glyphsFileHasUnsavedChanges}
+            title={glyphsFileHasUnsavedChanges ? "Save Glyphs file before updating instance" : undefined}
           />
         </div>
       )}

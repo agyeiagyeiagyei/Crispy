@@ -28,6 +28,14 @@ export const api = {
     return parseJSON(response);
   },
 
+  async glyphsFileStatus() {
+    const response = await fetch(`${API_BASE}/glyphs-file-status`);
+    if (!response.ok) {
+      throw new Error(`Failed to check Glyphs file status: ${response.status} ${response.statusText}`);
+    }
+    return parseJSON(response);
+  },
+
   async getInstances() {
     const response = await fetch(`${API_BASE}/instances`);
     if (!response.ok) {

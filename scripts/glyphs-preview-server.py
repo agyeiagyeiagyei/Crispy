@@ -70,6 +70,58 @@ PREVIEW_CONFIG_PATH: Optional[Path] = None  # Path to preview config (e.g., prev
 EDITING_INSTANCES: set = set()  # Track instances currently being edited (protected from sync)
 
 
+def _check_glyphs_file_unsaved_changes(glyphs_path: Path) -> bool:
+    """
+    Check if Glyphs file is open in Glyphs.app and has unsaved changes.
+    
+    Returns True if file has unsaved changes, False otherwise.
+    """
+    if sys.platform != 'darwin':
+        # Only works on macOS with Glyphs.app
+        return False
+    
+    try:
+        abs_path = glyphs_path.resolve()
+        
+        applescript = f'''
+        tell application "Glyphs"
+            try
+                set docPath to POSIX file "{abs_path}" as alias
+                set openDocs to documents whose path is (docPath as string)
+                set docCount to count of openDocs
+                
+                if docCount > 0 then
+                    repeat with aDoc in openDocs
+                        tell aDoc
+                            if modified then
+                                return true
+                            end if
+                        end tell
+                    end repeat
+                end if
+                return false
+            on error
+                return false
+            end try
+        end tell
+        '''
+        
+        result = subprocess.run(
+            ['osascript', '-e', applescript],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False
+        )
+        
+        if result.returncode == 0:
+            return result.stdout.strip().lower() == 'true'
+        return False
+    except Exception as e:
+        print(f"Warning: Could not check Glyphs file unsaved changes: {e}", file=sys.stderr)
+        return False
+
+
 def _force_reload_glyphs_document(glyphs_path: Path, font_object=None) -> None:
     """
     Force Glyphs.app to reload the document by saving unsaved changes, 
@@ -640,12 +692,20 @@ def build_font():
 
 @app.route('/api/font', methods=['GET'])
 def get_font():
-    """Serve the variable font file."""
-    if not VARIABLE_FONT_PATH or not VARIABLE_FONT_PATH.exists():
+    """Serve the variable font file (designspace-generated with SPAC axis)."""
+    # Always serve designspace-generated font if available
+    spac_font_path = _ensure_spac_font_exists()
+    
+    if spac_font_path and spac_font_path.exists():
+        font_path = spac_font_path
+    elif VARIABLE_FONT_PATH and VARIABLE_FONT_PATH.exists():
+        # Fallback to regular variable font if SPAC font not available
+        font_path = VARIABLE_FONT_PATH
+    else:
         return jsonify({"error": "Variable font not built yet."}), 404
     
     response = send_file(
-        str(VARIABLE_FONT_PATH),
+        str(font_path),
         mimetype='font/ttf',
         as_attachment=False
     )
@@ -654,7 +714,7 @@ def get_font():
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     # Add ETag based on file modification time for cache validation
-    mtime = VARIABLE_FONT_PATH.stat().st_mtime
+    mtime = font_path.stat().st_mtime
     response.headers['ETag'] = f'"{int(mtime)}"'
     return response
 
@@ -800,7 +860,11 @@ def create_instance():
 
 @app.route('/api/instance/<instance_name>', methods=['PUT'])
 def update_instance(instance_name: str):
-    """Update instance coordinates in the Glyphs file. Writes parametric coordinates (XTRA, XOPQ, YOPQ) to Glyphs."""
+    """Update instance coordinates in the Glyphs file and CSV.
+    
+    Writes parametric coordinates (XTRA, XOPQ, YOPQ) to Glyphs file.
+    Saves SPAC value to CSV (SPAC is CSV-only, not in Glyphs file).
+    """
     data = request.get_json()
     if not data or 'coordinates' not in data:
         return jsonify({"error": "Missing 'coordinates' in request body"}), 400
@@ -813,53 +877,137 @@ def update_instance(instance_name: str):
     except (ValueError, TypeError):
         return jsonify({"error": "Coordinates must be numeric"}), 400
     
+    # Extract SPAC value (CSV-only)
+    spac_value = coordinates.get('SPAC')
+    
     # Filter to only parametric axes that exist in Glyphs file (XTRA, XOPQ, YOPQ)
     # SPAC is CSV-only, traditional axes (WGHT, WDTH, OPSZ) are not in Glyphs file
     font = load(str(GLYPHS_PATH))
     glyphs_axis_tags = {axis.axisTag for axis in font.axes}
     
-    # Only include coordinates for axes that exist in Glyphs file
+    # Only include coordinates for axes that exist in Glyphs file (exclude SPAC)
     glyphs_coordinates = {
         tag: value for tag, value in coordinates.items()
-        if tag in glyphs_axis_tags
+        if tag in glyphs_axis_tags and tag != 'SPAC'
     }
     
     # Remove from editing set since we're saving
     global EDITING_INSTANCES
     EDITING_INSTANCES.discard(instance_name)
     
-    success = update_instance_in_glyphs(GLYPHS_PATH, instance_name, glyphs_coordinates)
+    # Update Glyphs file only if there are parametric coordinates to update
+    glyphs_updated = False
+    if glyphs_coordinates:
+        glyphs_updated = update_instance_in_glyphs(GLYPHS_PATH, instance_name, glyphs_coordinates)
+        if not glyphs_updated:
+            return jsonify({"error": f"Failed to update instance '{instance_name}' in Glyphs file"}), 500
     
-    if success:
-        # Sync CSV to update with new Glyphs coordinates (but skip this instance if still editing)
-        csv_path = _get_avar2_csv_path()
+    # Save SPAC value to CSV if provided
+    if spac_value is not None:
+        csv_path = _get_preview_csv_path()
         if csv_path and csv_path.exists():
             try:
-                import subprocess
-                result = subprocess.run(
-                    [
-                        sys.executable,
-                        str(Path(__file__).parent / "sync-glyphs-to-avar2.py"),
-                        "--glyphs", str(GLYPHS_PATH),
-                        "--csv", str(csv_path),
-                        "--once"
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=10
-                )
-                if result.returncode == 0:
-                    print(f"CSV synced after instance update", file=sys.stderr)
+                import csv
+                # Read CSV
+                rows = []
+                with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+                    reader = csv.DictReader(f)
+                    fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+                    rows = list(reader)
+                
+                # Ensure SPAC column exists
+                if "SPAC" not in fieldnames:
+                    fieldnames.append("SPAC")
+                
+                # Update SPAC value for this instance
+                instance_updated = False
+                for row in rows:
+                    if row.get("Instance Name", "").strip() == instance_name:
+                        row["SPAC"] = str(spac_value)
+                        instance_updated = True
+                        break
+                
+                if instance_updated:
+                    # Write updated CSV
+                    with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                        writer = csv.DictWriter(f, fieldnames=fieldnames)
+                        writer.writeheader()
+                        writer.writerows(rows)
+                    _update_csv_modification_time(csv_path)
+                    print(f"Updated SPAC value for '{instance_name}' in CSV: {spac_value}", file=sys.stderr)
             except Exception as e:
-                print(f"Warning: Could not sync CSV after update: {e}", file=sys.stderr)
+                print(f"Warning: Could not update SPAC value in CSV: {e}", file=sys.stderr)
+    
+    # Sync CSV to update with new Glyphs coordinates (but skip this instance if still editing)
+    csv_path = _get_avar2_csv_path()
+    if csv_path and csv_path.exists():
+        try:
+            import subprocess
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).parent / "sync-glyphs-to-avar2.py"),
+                    "--glyphs", str(GLYPHS_PATH),
+                    "--csv", str(csv_path),
+                    "--once"
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            if result.returncode == 0:
+                print(f"CSV synced after instance update", file=sys.stderr)
+        except Exception as e:
+            print(f"Warning: Could not sync CSV after update: {e}", file=sys.stderr)
+    
+    # Trigger immediate rebuild after updating instance
+    # If SPAC font exists, regenerate it (designspace-based), otherwise rebuild regular font
+    # Run rebuild in background thread to avoid blocking the response and file locking issues
+    def rebuild_in_background():
+        global BUILDING
+        if BUILDING:
+            print("Build already in progress, skipping rebuild after instance update...", file=sys.stderr)
+            return
         
-        # Trigger immediate rebuild after updating instance
-        print(f"Instance updated, triggering immediate rebuild...", file=sys.stderr)
-        trigger_build()
-        
-        return jsonify({"success": True, "message": f"Updated instance '{instance_name}' in Glyphs file"})
-    else:
-        return jsonify({"error": f"Failed to update instance '{instance_name}'"}), 500
+        spac_font_dir = _get_spac_font_dir()
+        if spac_font_dir:
+            spac_font_path = spac_font_dir / "Crispy-SPAC-VF.ttf"
+            if spac_font_path.exists():
+                # SPAC font exists - regenerate it using add-spac-axis-ufo.py
+                print(f"Instance updated, regenerating SPAC font...", file=sys.stderr)
+                BUILDING = True
+                try:
+                    if not _regenerate_spac_font():
+                        # Fallback to regular build if regeneration fails
+                        print(f"SPAC regeneration failed, falling back to regular build...", file=sys.stderr)
+                        BUILDING = False  # Reset before trigger_build (which sets it)
+                        trigger_build()
+                except Exception as e:
+                    print(f"Error during SPAC font regeneration: {e}", file=sys.stderr)
+                    BUILDING = False
+            else:
+                # No SPAC font - rebuild regular font
+                print(f"Instance updated, triggering immediate rebuild...", file=sys.stderr)
+                trigger_build()
+        else:
+            # No SPAC font directory - rebuild regular font
+            print(f"Instance updated, triggering immediate rebuild...", file=sys.stderr)
+            trigger_build()
+    
+    # Start rebuild in background thread (small delay to ensure file save completes)
+    rebuild_thread = threading.Thread(target=rebuild_in_background, daemon=True)
+    rebuild_thread.start()
+    
+    message_parts = []
+    if glyphs_updated:
+        message_parts.append(f"Updated instance '{instance_name}' in Glyphs file")
+    if spac_value is not None:
+        message_parts.append(f"Updated SPAC value to {spac_value} in CSV")
+    
+    return jsonify({
+        "success": True,
+        "message": "; ".join(message_parts) if message_parts else f"Updated instance '{instance_name}'"
+    })
 
 
 @app.route('/api/instance/<instance_name>/rename', methods=['PUT'])
@@ -958,6 +1106,22 @@ def health():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/glyphs-file-status', methods=['GET'])
+def glyphs_file_status():
+    """Check if Glyphs file has unsaved changes."""
+    try:
+        has_unsaved = _check_glyphs_file_unsaved_changes(GLYPHS_PATH)
+        return jsonify({
+            "has_unsaved_changes": has_unsaved,
+            "file_path": str(GLYPHS_PATH)
+        })
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "has_unsaved_changes": False
+        }), 500
 
 
 # ============================================================================
@@ -1065,6 +1229,133 @@ def _get_preview_font_dir() -> Optional[Path]:
     return font_dir
 
 
+def _regenerate_spac_font() -> bool:
+    """
+    Regenerate SPAC font using add-spac-axis-ufo.py.
+    This is called after Glyphs file updates to refresh the SPAC font.
+    
+    Returns True if successful, False otherwise.
+    """
+    if not GLYPHS_PATH or not GLYPHS_PATH.exists():
+        return False
+    
+    spac_font_dir = _get_spac_font_dir()
+    if not spac_font_dir:
+        return False
+    
+    family_name = GLYPHS_PATH.stem
+    spac_font_path = spac_font_dir / "Crispy-SPAC-VF.ttf"
+    
+    add_spac_script = Path(__file__).parent / "add-spac-axis-ufo.py"
+    if not add_spac_script.exists():
+        print(f"Warning: add-spac-axis-ufo.py not found at {add_spac_script}", file=sys.stderr)
+        return False
+    
+    # Run add-spac-axis-ufo.py to regenerate SPAC font
+    cmd = [
+        sys.executable,
+        str(add_spac_script),
+        str(GLYPHS_PATH),
+        "--output-dir", str(spac_font_dir),
+        "--compile",
+        "--fontc-output", str(spac_font_path)
+    ]
+    
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    
+    if result.returncode == 0 and spac_font_path.exists():
+        print(f"✓ Regenerated SPAC font: {spac_font_path}", file=sys.stderr)
+        return True
+    else:
+        print(f"Warning: SPAC font regeneration failed:", file=sys.stderr)
+        print(f"  stdout: {result.stdout}", file=sys.stderr)
+        print(f"  stderr: {result.stderr}", file=sys.stderr)
+        return False
+
+
+def _get_spac_font_dir() -> Optional[Path]:
+    """Get SPAC font directory (preview-app/preview-fonts/spac/)."""
+    preview_font_dir = _get_preview_font_dir()
+    if not preview_font_dir:
+        return None
+    spac_dir = preview_font_dir / "spac"
+    spac_dir.mkdir(parents=True, exist_ok=True)
+    return spac_dir
+
+
+def _ensure_spac_font_exists() -> Optional[Path]:
+    """
+    Ensure designspace-generated SPAC font exists.
+    If not, run add-spac-axis-ufo.py to generate it.
+    
+    Returns path to SPAC font if successful, None otherwise.
+    """
+    if not GLYPHS_PATH or not GLYPHS_PATH.exists():
+        return None
+    
+    spac_font_dir = _get_spac_font_dir()
+    if not spac_font_dir:
+        return None
+    
+    family_name = GLYPHS_PATH.stem
+    spac_font_path = spac_font_dir / "Crispy-SPAC-VF.ttf"
+    
+    # Check if font already exists
+    if spac_font_path.exists():
+        return spac_font_path
+    
+    # Check if designspace exists (indicates partial generation)
+    designspace_files = list(spac_font_dir.glob("*.designspace"))
+    designspace_path = designspace_files[0] if designspace_files else None
+    
+    # If designspace exists but font doesn't, just compile it
+    if designspace_path and designspace_path.exists():
+        print(f"Designspace found but font missing, compiling with fontc...", file=sys.stderr)
+        # Compile designspace with fontc
+        fontc_cmd = shutil.which("fontc")
+        if fontc_cmd:
+            cmd = [
+                fontc_cmd,
+                "--output-file", str(spac_font_path),
+                str(designspace_path.resolve())
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            if result.returncode == 0 and spac_font_path.exists():
+                print(f"✓ Compiled SPAC font: {spac_font_path}", file=sys.stderr)
+                return spac_font_path
+            else:
+                print(f"Warning: fontc compilation failed: {result.stderr}", file=sys.stderr)
+    
+    # Generate SPAC font using add-spac-axis-ufo.py
+    print(f"Generating SPAC font...", file=sys.stderr)
+    add_spac_script = Path(__file__).parent / "add-spac-axis-ufo.py"
+    
+    if not add_spac_script.exists():
+        print(f"Warning: add-spac-axis-ufo.py not found at {add_spac_script}", file=sys.stderr)
+        return None
+    
+    # Run add-spac-axis-ufo.py
+    cmd = [
+        sys.executable,
+        str(add_spac_script),
+        str(GLYPHS_PATH),
+        "--output-dir", str(spac_font_dir),
+        "--compile",
+        "--fontc-output", str(spac_font_path)
+    ]
+    
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    
+    if result.returncode == 0 and spac_font_path.exists():
+        print(f"✓ Generated SPAC font: {spac_font_path}", file=sys.stderr)
+        return spac_font_path
+    else:
+        print(f"Warning: SPAC font generation failed:", file=sys.stderr)
+        print(f"  stdout: {result.stdout}", file=sys.stderr)
+        print(f"  stderr: {result.stderr}", file=sys.stderr)
+        return None
+
+
 def _get_avar2_font_dir() -> Optional[Path]:
     """Get avar2 font directory (preview-app/fonts-avar2/variable/)."""
     preview_dir = _get_preview_dir()
@@ -1162,18 +1453,59 @@ def _check_preview_csv_sync_status() -> Dict[str, any]:
         }
 
 
+def _ensure_spac_column_in_csv(csv_path: Path) -> bool:
+    """
+    Ensure SPAC column exists in CSV, adding it if missing (initialize to 0).
+    Returns True if column was added or already exists, False on error.
+    """
+    if not csv_path.exists():
+        return False
+    
+    try:
+        import csv
+        # Read CSV
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f)
+            fieldnames = list(reader.fieldnames or [])
+            rows = list(reader)
+        
+        # Check if SPAC column exists
+        if "SPAC" in fieldnames:
+            return True  # Already exists
+        
+        # Add SPAC column
+        fieldnames.append("SPAC")
+        for row in rows:
+            row["SPAC"] = "0"
+        
+        # Write updated CSV
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        _update_csv_modification_time(csv_path)
+        print(f"Added SPAC column to preview CSV: {csv_path}", file=sys.stderr)
+        return True
+    except Exception as e:
+        print(f"Warning: Could not add SPAC column to CSV: {e}", file=sys.stderr)
+        return False
+
+
 def _initialize_preview_csv_from_glyphs() -> Optional[Path]:
     """
     Initialize preview CSV from Glyphs file.
     Creates CSV with Instance Name and parametric axes (XTRA, XOPQ, YOPQ) from Glyphs instances.
     Only creates if CSV doesn't exist.
+    Also ensures SPAC column exists (initialized to 0).
     """
     csv_path = _get_preview_csv_path()
     if not csv_path:
         return None
     
-    # Don't overwrite existing CSV
+    # If CSV exists, ensure SPAC column is present
     if csv_path.exists():
+        _ensure_spac_column_in_csv(csv_path)
         return csv_path
     
     if not GLYPHS_PATH or not GLYPHS_PATH.exists():
@@ -1207,9 +1539,9 @@ def _initialize_preview_csv_from_glyphs() -> Optional[Path]:
             
             instances.append(row)
         
-        # Write CSV
+        # Write CSV (include SPAC column)
         if instances:
-            fieldnames = ["Instance Name"] + parametric_axes
+            fieldnames = ["Instance Name"] + parametric_axes + ["SPAC"]
             with csv_path.open("w", encoding="utf-8", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
@@ -1218,6 +1550,8 @@ def _initialize_preview_csv_from_glyphs() -> Optional[Path]:
                     for axis in parametric_axes:
                         if axis not in row:
                             row[axis] = 0
+                    # Initialize SPAC to 0
+                    row["SPAC"] = 0
                     writer.writerow(row)
             
             print(f"Initialized preview CSV: {csv_path}", file=sys.stderr)
@@ -2265,8 +2599,28 @@ def init_spac_axis():
 
 @app.route('/api/spacing/check', methods=['GET'])
 def check_spac_axis():
-    """Check if SPAC axis exists in preview font and return its range."""
+    """Check if SPAC axis exists in designspace font and return its range."""
     try:
+        # Check designspace-generated font first (correct range 0-100)
+        spac_font_dir = _get_spac_font_dir()
+        if spac_font_dir:
+            spac_font_path = spac_font_dir / "Crispy-SPAC-VF.ttf"
+            if spac_font_path.exists():
+                has_spac = _check_spac_axis_in_font(spac_font_path)
+                spac_range = None
+                if has_spac:
+                    spac_range = _get_spac_axis_range_from_font(spac_font_path)
+                
+                result = {
+                    "exists": has_spac,
+                    "font_path": str(spac_font_path)
+                }
+                if spac_range:
+                    result["range"] = spac_range
+                
+                return jsonify(result)
+        
+        # Fallback to preview font directory
         preview_font_dir = _get_preview_font_dir()
         if not preview_font_dir:
             return jsonify({"exists": False, "error": "Preview font directory not found"}), 404
@@ -2843,6 +3197,26 @@ def main():
     # Initialize preview tool files (CSV and config) if they don't exist
     _initialize_preview_csv_from_glyphs()
     _initialize_preview_config_from_glyphs()
+    
+    # Ensure SPAC font exists (generate if needed)
+    print(f"Checking for SPAC font...", file=sys.stderr)
+    spac_font_path = _ensure_spac_font_exists()
+    if spac_font_path:
+        print(f"SPAC font available: {spac_font_path}", file=sys.stderr)
+    else:
+        print(f"Warning: SPAC font not available, will use regular font", file=sys.stderr)
+    
+    # Auto-build font on server startup
+    print(f"Auto-building font on startup...", file=sys.stderr)
+    try:
+        trigger_build()
+        if VARIABLE_FONT_PATH and VARIABLE_FONT_PATH.exists():
+            print(f"✓ Font built successfully on startup: {VARIABLE_FONT_PATH}", file=sys.stderr)
+        else:
+            print(f"⚠ Font build completed but file not found", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠ Auto-build on startup failed: {e}", file=sys.stderr)
+        print(f"  Font can be built manually via /api/build endpoint", file=sys.stderr)
     
     print(f"Starting server on {args.host}:{args.port}", file=sys.stderr)
     print(f"Glyphs file: {GLYPHS_PATH}", file=sys.stderr)

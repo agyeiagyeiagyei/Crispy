@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './InstanceRow.css';
 
-function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, instanceEditingCoordinates, sampleText, fontLoaded, fontSize, onDelete, onMove, allInstances, spacMode, spacAxisExists, spacValue, syncStatus = 'green', onRename }) {
+function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, instanceEditingCoordinates, sampleText, fontLoaded, fontSize, onDelete, onMove, allInstances, spacMode, spacAxisExists, syncStatus = 'green', onRename }) {
   const [showMoveControls, setShowMoveControls] = useState(false);
   const [movePosition, setMovePosition] = useState('before');
   const [targetInstance, setTargetInstance] = useState(null);
@@ -15,21 +15,10 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
     : (instanceEditingCoordinates[instance.name] || instance.coordinates);
   
   // Build font-variation-settings string
+  // SPAC is now included in activeCoordinates if spacMode is enabled
   let fontVariationSettings = Object.entries(activeCoordinates)
     .map(([tag, value]) => `"${tag}" ${value}`)
     .join(', ');
-  
-  // Calculate CSS letter-spacing approximation for SPAC
-  // Only apply if spacMode is enabled
-  // SPAC ranges from -100 to +100
-  // Map to letter-spacing: SPAC 100 = 0.1em, SPAC -100 = -0.1em
-  // This is an approximation - actual font rebuild happens on "Apply"
-  // Changed: Removed spacAxisExists check so SPAC preview always uses letter-spacing
-  let letterSpacing = undefined;
-  if (spacMode && spacValue !== undefined && spacValue !== 0) {
-    // Convert SPAC value to em units (SPAC 100 = 0.1em)
-    letterSpacing = `${(spacValue / 1000)}em`;
-  }
 
   return (
     <div
@@ -130,9 +119,9 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
               </span>
             ))}
             {/* Show SPAC coordinate when SPAC mode is enabled */}
-            {spacMode && spacAxisExists && spacValue !== undefined && (
+            {spacMode && spacAxisExists && activeCoordinates.SPAC !== undefined && (
               <span className="coordinate">
-                SPAC: {spacValue.toFixed(1)}
+                SPAC: {activeCoordinates.SPAC.toFixed(1)}
               </span>
             )}
           </div>
@@ -208,7 +197,6 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
             fontVariationSettings: fontLoaded ? fontVariationSettings : undefined,
             fontFeatureSettings: 'normal',
             fontSize: `${fontSize}rem`,
-            letterSpacing: letterSpacing, // CSS approximation for SPAC
           }}
         >
           {sampleText}

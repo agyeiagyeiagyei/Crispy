@@ -26,8 +26,6 @@
   font-size: 0.6375rem;
   font-family: monospace;
   color: #666;
-  /* Align max value with slider end (not Apply button) */
-  padding-right: calc(60px + 0.5rem); /* Account for Apply button width + gap */
 }
 
 .spac-axis-values .axis-current {

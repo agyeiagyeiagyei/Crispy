@@ -25,14 +25,15 @@ function App() {
   const [fontSize, setFontSize] = useState(2); // Default 2rem
   const [familyName, setFamilyName] = useState(null);
   const [lastBuildTime, setLastBuildTime] = useState(null);
-  const [avar2Mode, setAvar2Mode] = useState(false);
+  // avar2Mode is now always true when avar2 data exists (no toggle needed)
+  const [avar2Mode] = useState(true);
   const [avar2Instances, setAvar2Instances] = useState([]);
   const [avar2Axes, setAvar2Axes] = useState(null);
   const [spacMode, setSpacMode] = useState(false);
   const [spacAxisExists, setSpacAxisExists] = useState(false);
-  const [spacValues, setSpacValues] = useState({}); // { instanceName: SPAC_value }
+  const [spacValues, setSpacValues] = useState({}); // { instanceName: SPAC_value } - kept for loading from CSV
   const [spacBuilding, setSpacBuilding] = useState(false);
-  const [spacError, setSpacError] = useState(null);
+  const [glyphsFileHasUnsavedChanges, setGlyphsFileHasUnsavedChanges] = useState(false);
   const [avar2PreviewMode, setAvar2PreviewMode] = useState(false); // New mode: Default vs Avar2 Preview
   const [syncStatus, setSyncStatus] = useState(null);
   const [showBuildAvar2Modal, setShowBuildAvar2Modal] = useState(false);
@@ -54,8 +55,8 @@ function App() {
         // SPAC axis exists - enable mode by default and load values
         setSpacMode(true);
         loadSpacValues();
-        // Switch to preview font URL when SPAC mode is enabled
-        setFontUrl(api.getPreviewFontUrl());
+        // Use main font URL (serves designspace font from preview-fonts/spac)
+        setFontUrl(api.getFontUrl());
         setFontLoaded(true);
       }
     }).catch(() => {
@@ -75,22 +76,17 @@ function App() {
     };
   }, [selectedInstance]);
 
-  // Load avar2 data when mode is enabled (if not already loaded)
+  // Load avar2 data on mount (always enabled now)
   useEffect(() => {
-    if (avar2Mode) {
-      // Only reload if we don't have data yet
-      if (avar2Instances.length === 0 && !avar2Axes) {
-        loadAvar2Data();
-      }
-    } else {
-      // Keep data in memory but don't display it
-      // This allows instant toggle back without reloading
+    // Load avar2 data if not already loaded
+    if (avar2Instances.length === 0 && !avar2Axes) {
+      loadAvar2Data();
     }
-  }, [avar2Mode, avar2Instances.length, avar2Axes]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [avar2Instances.length, avar2Axes]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Ensure selected instance is in CSV when avar2 mode is enabled
+  // Ensure selected instance is in CSV when avar2 data exists (avar2Mode always enabled now)
   useEffect(() => {
-    if (avar2Mode && selectedInstance && avar2Instances.length > 0) {
+    if (selectedInstance && avar2Instances.length > 0) {
       const mapping = avar2Instances.find(
         inst => inst.instance_name === selectedInstance.name
       );
@@ -101,14 +97,19 @@ function App() {
         loadAvar2Data();
       }
     }
-  }, [avar2Mode, selectedInstance, avar2Instances]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedInstance, avar2Instances]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Poll for font rebuilds (check every 2 seconds)
+  // Poll for font rebuilds and Glyphs file unsaved changes (check every 2 seconds)
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const health = await api.health();
+        const [health, glyphsStatus] = await Promise.all([
+          api.health(),
+          api.glyphsFileStatus().catch(() => ({ has_unsaved_changes: false }))
+        ]);
+        
         setBuilding(health.building || false);
+        setGlyphsFileHasUnsavedChanges(glyphsStatus.has_unsaved_changes || false);
         
         // If font was rebuilt (new build time), reload
         if (health.font_built && health.last_build_time && health.last_build_time !== lastBuildTime) {
@@ -139,7 +140,7 @@ function App() {
               axesList = [...axesList, {
                 tag: 'SPAC',
                 name: 'Spacing',
-                min: -100,
+                min: 0,
                 max: 100,
                 default: 0
               }];
@@ -177,6 +178,21 @@ function App() {
       // Check health and font status
       const health = await api.health();
       
+      // If font is not built, trigger auto-build on hard reset
+      if (!health.font_built && !health.building) {
+        console.log('Font not built, triggering auto-build...');
+        try {
+          await api.buildFont();
+          // Reload health to get updated status
+          const updatedHealth = await api.health();
+          setFontLoaded(updatedHealth.font_built);
+          setLastBuildTime(updatedHealth.last_build_time || null);
+        } catch (err) {
+          console.error('Auto-build on load failed:', err);
+          // Continue loading even if build fails
+        }
+      }
+      
       // Load instances and axes, and check SPAC status in parallel
       const [instancesData, axesData, spacExists] = await Promise.all([
         api.getInstances(),
@@ -193,19 +209,20 @@ function App() {
         setSpacMode(true);
         // Load SPAC values
         loadSpacValues();
-        // Switch to preview font URL when SPAC mode is enabled
-        setFontUrl(api.getPreviewFontUrl());
+        // Use main font URL (serves designspace font from preview-fonts/spac)
+        setFontUrl(api.getFontUrl());
         setFontLoaded(true);
         
         // SPAC axis will be added with correct range from checkSpacAxisStatus
-        // But ensure it's added here if not already present
+        // But ensure it's added here if not already present with correct range (0-100)
         const hasSpac = axesList.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
         if (!hasSpac) {
           // Add SPAC axis temporarily - checkSpacAxisStatus will update with correct range
+          // Use correct range (0-100) to match designspace, not -100 to 100
           axesList = [...axesList, {
             tag: 'SPAC',
             name: 'Spacing',
-            min: -100,
+            min: 0,
             max: 100,
             default: 0
           }];
@@ -248,12 +265,9 @@ function App() {
       });
       
       // Wait for both to complete (but state updates happen immediately)
-      const [, axesData] = await Promise.all([instancesPromise, axesPromise]);
+      await Promise.all([instancesPromise, axesPromise]);
       
-      // Auto-enable avar2 mode if traditional axes exist
-      if (axesData?.traditional_axes?.columns && axesData.traditional_axes.columns.length > 0) {
-        setAvar2Mode(true);
-      }
+      // avar2Mode is always enabled, no need to set it
     } catch (err) {
       console.error('Failed to load avar2 data:', err);
       // Don't show error to user - avar2 mode is optional
@@ -336,10 +350,11 @@ function App() {
           }
         } else if (spacMode && !hasSpac) {
           // Add SPAC axis with default range when spacMode is enabled but axis doesn't exist yet
+          // Default range matches designspace: 0-100 (not -100 to 100)
           return [...prev, {
             tag: 'SPAC',
             name: 'Spacing',
-            min: -100,
+            min: 0,
             max: 100,
             default: 0
           }];
@@ -359,7 +374,7 @@ function App() {
             return [...prev, {
               tag: 'SPAC',
               name: 'Spacing',
-              min: -100,
+              min: 0,
               max: 100,
               default: 0
             }];
@@ -382,20 +397,20 @@ function App() {
       }
       setSpacValues(valuesMap);
       
-      // Update original SPAC value if an instance is selected
-      if (selectedInstance) {
-        const currentSpacValue = valuesMap[selectedInstance.name] || 0;
-        setOriginalSpacValue(currentSpacValue);
+      // Add SPAC values to editingCoordinates if spacMode is enabled and instance is selected
+      if (spacMode && selectedInstance && valuesMap[selectedInstance.name] !== undefined) {
+        const spacValue = valuesMap[selectedInstance.name] || 0;
+        setEditingCoordinates(prev => ({ ...prev, SPAC: spacValue }));
+        setOriginalCoordinates(prev => ({ ...prev, SPAC: spacValue }));
       }
     } catch (err) {
-      console.error('Failed to load SPAC values:', err);
       console.error('Failed to load SPAC values:', err);
       // Don't show error - SPAC is optional
     }
   };
 
   const handleSpacModeChange = async (enabled) => {
-    setSpacError(null);
+    // Error handling now via setError
     
     if (enabled) {
       // If SPAC axis doesn't exist, initialize and rebuild
@@ -407,14 +422,14 @@ function App() {
           await handleSpacRebuild();
           await checkSpacAxisStatus();
           await loadSpacValues();
-          // Switch to preview font URL when SPAC mode is enabled
-          setFontUrl(api.getPreviewFontUrl());
+          // Use main font URL (serves designspace font from preview-fonts/spac)
+          setFontUrl(api.getFontUrl());
           setFontLoaded(true);
         // SPAC axis will be added with correct range from checkSpacAxisStatus
         // No need to add here with hardcoded values
         } catch (err) {
           console.error('Failed to initialize SPAC axis:', err);
-          setSpacError(err.message || 'Failed to initialize SPAC axis');
+          setError(err.message || 'Failed to initialize SPAC axis');
           setSpacMode(false); // Revert toggle on error
         } finally {
           setSpacBuilding(false);
@@ -423,14 +438,14 @@ function App() {
         // SPAC axis exists, enable mode and load values
         setSpacMode(true);
         await loadSpacValues();
-        // Switch to preview font URL when SPAC mode is enabled
-        setFontUrl(api.getPreviewFontUrl());
+        // Use main font URL (serves designspace font from preview-fonts/spac)
+        setFontUrl(api.getFontUrl());
         setFontLoaded(true);
         // Ensure SPAC axis is added to axes array
         await checkSpacAxisStatus();
       }
     } else {
-      // Disable SPAC mode - switch back to regular font
+      // Disable SPAC mode - still use main font URL (which serves designspace font)
       setSpacMode(false);
       setFontUrl(api.getFontUrl());
       setFontLoaded(true);
@@ -533,12 +548,8 @@ function App() {
       }
     } else {
       // Switch back to Default mode
-      // Use regular font URL
-      if (spacMode) {
-        setFontUrl(api.getPreviewFontUrl());
-      } else {
-        setFontUrl(api.getFontUrl());
-      }
+      // Use main font URL (serves designspace font from preview-fonts/spac)
+      setFontUrl(api.getFontUrl());
       setAvar2FontUrl(null);
       setAvar2FontLoaded(false);
     }
@@ -548,56 +559,24 @@ function App() {
     if (spacBuilding) return; // Prevent concurrent rebuilds
     
     setSpacBuilding(true);
-    setSpacError(null);
+    // Error handling now via setError
     try {
       await api.rebuildPreviewFont();
-      // Reload font URL to get updated preview font (with SPAC axis)
-      const newFontUrl = api.getPreviewFontUrl();
+      // Reload font URL to get updated designspace font (with SPAC axis)
+      const newFontUrl = api.getFontUrl();
       setFontUrl(newFontUrl);
       setFontLoaded(true);
       await checkSpacAxisStatus();
     } catch (err) {
       console.error('Failed to rebuild preview font:', err);
-      setSpacError(err.message || 'Failed to rebuild preview font');
+      setError(err.message || 'Failed to rebuild preview font');
       throw err; // Re-throw to allow retry
     } finally {
       setSpacBuilding(false);
     }
   };
 
-  const handleSpacChange = (value) => {
-    if (!selectedInstance) return;
-    
-    // Update local state immediately for responsive UI (CSS approximation)
-    // Don't rebuild font - use CSS letter-spacing for real-time preview
-    setSpacValues(prev => ({ ...prev, [selectedInstance.name]: value }));
-  };
-
-  const handleSpacApply = async () => {
-    if (!selectedInstance) return;
-    
-    try {
-      setSpacError(null);
-      setSpacBuilding(true);
-      
-      const newSpacValue = spacValues[selectedInstance.name] || 0;
-      // Update backend with current SPAC value
-      await api.updateSpacValue(selectedInstance.name, newSpacValue);
-      
-      // Update original SPAC value after successful apply
-      setOriginalSpacValue(newSpacValue);
-      
-      // Trigger rebuild for accurate preview (if SPAC axis exists)
-      if (spacAxisExists) {
-        await handleSpacRebuild();
-      }
-    } catch (err) {
-      console.error('Failed to apply SPAC value:', err);
-      setSpacError(err.message || 'Failed to apply spacing');
-    } finally {
-      setSpacBuilding(false);
-    }
-  };
+  // handleSpacChange and handleSpacApply removed - SPAC now handled via handleAxisChange
 
   const handleBuildFont = async () => {
     try {
@@ -618,9 +597,9 @@ function App() {
   };
 
   const [originalCoordinates, setOriginalCoordinates] = useState({});
-  const [originalSpacValue, setOriginalSpacValue] = useState(0); // Track original SPAC value for selected instance
 
   // Calculate sync status for an instance
+  // Checks both parametric axes (in editingCoordinates) and SPAC (if spacMode is enabled)
   const getInstanceSyncStatus = useCallback((instance) => {
     // For selected instance, compare editingCoordinates with originalCoordinates
     if (selectedInstance && selectedInstance.name === instance.name) {
@@ -628,9 +607,10 @@ function App() {
       if (!originalCoordinates || Object.keys(originalCoordinates).length === 0) {
         return 'green';
       }
+      // Compare all coordinates including SPAC if present
       const isSynced = JSON.stringify(editingCoordinates) === JSON.stringify(originalCoordinates);
       if (!isSynced) {
-        return 'orange'; // Edited but not saved
+        return 'orange'; // Edited but not saved (either parametric axes or SPAC changed)
       }
       return 'green'; // Synced
     }
@@ -638,13 +618,18 @@ function App() {
     // For other instances, compare instanceEditingCoordinates with instance.coordinates
     const savedCoordinates = instanceEditingCoordinates[instance.name];
     if (savedCoordinates && Object.keys(savedCoordinates).length > 0) {
-      const isSynced = JSON.stringify(savedCoordinates) === JSON.stringify(instance.coordinates);
+      // Build comparison object including SPAC if spacMode is enabled
+      const instanceCoords = { ...instance.coordinates };
+      if (spacMode && spacValues[instance.name] !== undefined) {
+        instanceCoords.SPAC = spacValues[instance.name];
+      }
+      const isSynced = JSON.stringify(savedCoordinates) === JSON.stringify(instanceCoords);
       if (!isSynced) {
         return 'orange'; // Edited but not saved
       }
     }
     return 'green'; // Synced (default: no edits)
-  }, [selectedInstance, editingCoordinates, originalCoordinates, instanceEditingCoordinates]);
+  }, [selectedInstance, editingCoordinates, originalCoordinates, instanceEditingCoordinates, spacMode, spacValues]);
 
   const handleSelectInstance = useCallback((instance) => {
     // If clicking the same instance, don't reset coordinates
@@ -667,16 +652,23 @@ function App() {
     if (savedCoordinates) {
       setEditingCoordinates({ ...savedCoordinates });
     } else {
-      setEditingCoordinates({ ...instance.coordinates });
+      // Include SPAC in editingCoordinates if spacMode is enabled
+      const coords = { ...instance.coordinates };
+      if (spacMode) {
+        const currentSpacValue = spacValues[instance.name] || 0;
+        coords.SPAC = currentSpacValue;
+      }
+      setEditingCoordinates(coords);
     }
     
-    // Store original coordinates for reset
-    setOriginalCoordinates({ ...instance.coordinates });
-    
-    // Set original SPAC value for the selected instance
-    const currentSpacValue = spacValues[instance.name] || 0;
-    setOriginalSpacValue(currentSpacValue);
-  }, [selectedInstance, editingCoordinates, instanceEditingCoordinates, spacValues]);
+    // Store original coordinates for reset (include SPAC if spacMode is enabled)
+    const originalCoords = { ...instance.coordinates };
+    if (spacMode) {
+      const spacValue = spacValues[instance.name] || 0;
+      originalCoords.SPAC = spacValue;
+    }
+    setOriginalCoordinates(originalCoords);
+  }, [selectedInstance, editingCoordinates, instanceEditingCoordinates, spacValues, spacMode]);
 
   const handleAxisChange = useCallback((tag, value) => {
     // Register instance as editing when first axis change happens
@@ -696,9 +688,13 @@ function App() {
           [selectedInstance.name]: updated
         }));
       }
+      // If SPAC changed, also update spacValues for real-time preview
+      if (tag === 'SPAC' && spacMode) {
+        setSpacValues(prev => ({ ...prev, [selectedInstance.name]: value }));
+      }
       return updated;
     });
-  }, [selectedInstance, editingCoordinates]);
+  }, [selectedInstance, editingCoordinates, spacMode]);
 
   // Helper function to wait for font to be loaded and ready
   const waitForFontReady = async (maxAttempts = 50, delayMs = 100) => {
@@ -717,30 +713,65 @@ function App() {
   const handleUpdateInstance = async () => {
     if (!selectedInstance) return;
 
+    // Check if anything changed
+    const hasChanges = JSON.stringify(editingCoordinates) !== JSON.stringify(originalCoordinates);
+    if (!hasChanges) {
+      return; // Nothing to update
+    }
+
+    // Extract SPAC from editingCoordinates (SPAC is CSV-only, not in Glyphs)
+    const spacValue = editingCoordinates.SPAC;
+    const parametricCoordinates = { ...editingCoordinates };
+    delete parametricCoordinates.SPAC; // Remove SPAC - backend handles it separately
+    
+    // Check if parametric axes changed (for Glyphs update)
+    const parametricChanged = Object.keys(parametricCoordinates).some(
+      key => Math.abs((parametricCoordinates[key] ?? 0) - (originalCoordinates[key] ?? 0)) > 0.01
+    );
+
     // Show confirmation dialog
     const confirmed = window.confirm(
-      `Update instance "${selectedInstance.name}" with new coordinates?\n\n` +
-      `This will modify the Glyphs file.`
+      `Update instance "${selectedInstance.name}"?\n\n` +
+      (parametricChanged ? `This will modify the Glyphs file.\n` : '') +
+      (spacMode && spacValue !== undefined ? `SPAC value will be saved to CSV.\n` : '')
     );
 
     if (!confirmed) return;
 
     try {
       setError(null);
+      
+      // Send all coordinates to backend - it will handle SPAC (CSV) and parametric axes (Glyphs) separately
       await api.updateInstance(selectedInstance.name, editingCoordinates);
       
-      // Reload instances to get updated data
-      const instancesData = await api.getInstances();
-      setInstances(instancesData.instances);
+      // Update spacValues state if SPAC was included
+      if (spacMode && spacValue !== undefined) {
+        setSpacValues(prev => ({ ...prev, [selectedInstance.name]: spacValue }));
+      }
       
-      // Update selected instance
-      const updated = instancesData.instances.find(
-        inst => inst.name === selectedInstance.name
-      );
-      if (updated) {
-        setSelectedInstance(updated);
-        setEditingCoordinates({ ...updated.coordinates });
-        setOriginalCoordinates({ ...updated.coordinates });
+      // Reload instances to get updated data (if Glyphs was updated)
+      if (parametricChanged) {
+        const instancesData = await api.getInstances();
+        setInstances(instancesData.instances);
+        
+        // Update selected instance
+        const updated = instancesData.instances.find(
+          inst => inst.name === selectedInstance.name
+        );
+        if (updated) {
+          setSelectedInstance(updated);
+          // Restore editing coordinates with updated values (including SPAC)
+          const updatedCoords = { ...updated.coordinates };
+          if (spacMode && spacValue !== undefined) {
+            updatedCoords.SPAC = spacValue;
+          }
+          setEditingCoordinates(updatedCoords);
+          setOriginalCoordinates(updatedCoords);
+        }
+      } else {
+        // No parametric changes, just update coordinates with SPAC
+        setEditingCoordinates({ ...editingCoordinates });
+        setOriginalCoordinates({ ...editingCoordinates });
       }
 
       // Unregister instance from editing (we're saving, so sync is OK now)
@@ -749,10 +780,37 @@ function App() {
       // Store instance name before rebuild (in case it changes)
       const instanceNameToScroll = selectedInstance.name;
       
-      // Auto-rebuild font after update
-      await handleBuildFont();
+      // Backend already rebuilds the font (regular or SPAC) after instance update
+      // Just wait for it to complete - no need to trigger another rebuild
+      // The backend will regenerate SPAC font if it exists, or rebuild regular font otherwise
       
-      // Wait for font to be rebuilt and loaded before scrolling
+      // Backend rebuilds automatically after instance update
+      // Wait for build to complete by polling health endpoint
+      let buildComplete = false;
+      let attempts = 0;
+      const maxAttempts = 60; // 60 seconds max wait
+      
+      while (!buildComplete && attempts < maxAttempts) {
+        try {
+          const health = await api.health();
+          if (!health.building) {
+            buildComplete = true;
+            break;
+          }
+        } catch (err) {
+          // Ignore polling errors, continue waiting
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+      }
+      
+      // Reload font URL to get updated font (with timestamp to force reload)
+      setFontUrl(api.getFontUrl());
+      setFontLoaded(false);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setFontLoaded(true);
+      
+      // Wait for font to be loaded before scrolling
       await waitForFontReady();
       
       // Additional small delay to ensure DOM is updated after font load
@@ -774,12 +832,13 @@ function App() {
 
   const handleResetCoordinates = useCallback(() => {
     if (!selectedInstance) return;
+    // Reset all coordinates including SPAC (SPAC is now in editingCoordinates)
     setEditingCoordinates({ ...originalCoordinates });
-    // Also reset SPAC value to original value for the selected instance if SPAC mode is enabled
-    if (spacMode) {
-      setSpacValues(prev => ({ ...prev, [selectedInstance.name]: originalSpacValue }));
+    // Also update spacValues for real-time preview if SPAC is in originalCoordinates
+    if (spacMode && originalCoordinates.SPAC !== undefined) {
+      setSpacValues(prev => ({ ...prev, [selectedInstance.name]: originalCoordinates.SPAC }));
     }
-  }, [selectedInstance, originalCoordinates, spacMode, originalSpacValue]);
+  }, [selectedInstance, originalCoordinates, spacMode]);
 
   const handleDuplicateInstance = async (newInstanceName) => {
     if (!selectedInstance) return;
@@ -936,12 +995,9 @@ function App() {
     <div className="App">
       <Header
         onBuildFont={handleBuildFont}
-        onRefresh={loadData}
         building={building}
         fontLoaded={fontLoaded}
         familyName={familyName}
-        avar2Mode={avar2Mode}
-        onAvar2ModeChange={setAvar2Mode}
         avar2PreviewMode={avar2PreviewMode}
         onAvar2PreviewModeChange={handleAvar2PreviewModeChange}
         onBuildAvar2Font={() => setShowBuildAvar2Modal(true)}
@@ -1002,13 +1058,7 @@ function App() {
                 onReloadAvar2Data={loadAvar2Data}
                 spacMode={spacMode}
                 spacAxisExists={spacAxisExists}
-                spacValue={selectedInstance ? (spacValues[selectedInstance.name] || 0) : 0}
-                originalSpacValue={originalSpacValue}
-                onSpacChange={handleSpacChange}
-                onSpacApply={handleSpacApply}
-                spacBuilding={spacBuilding}
-                spacError={spacError}
-                onSpacRetry={handleSpacRebuild}
+                glyphsFileHasUnsavedChanges={glyphsFileHasUnsavedChanges}
               />
               <InstanceRows
                 instances={instances}
@@ -1020,7 +1070,6 @@ function App() {
                 fontUrl={fontUrl}
                 spacMode={spacMode}
                 spacAxisExists={spacAxisExists}
-                spacValues={spacValues}
                 fontLoaded={fontLoaded}
                 onReorderInstances={setInstances}
                 fontSize={fontSize}

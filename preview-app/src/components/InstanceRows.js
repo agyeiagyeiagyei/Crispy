@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './InstanceRows.css';
 import InstanceRow from './InstanceRow';
 
-function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCoordinates, instanceEditingCoordinates, sampleText, fontUrl, fontLoaded, onReorderInstances, fontSize, onDeleteInstance, onMoveInstance, spacMode, spacAxisExists, spacValues, getInstanceSyncStatus, onRenameInstance }) {
+function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCoordinates, instanceEditingCoordinates, sampleText, fontUrl, fontLoaded, onReorderInstances, fontSize, onDeleteInstance, onMoveInstance, spacMode, spacAxisExists, getInstanceSyncStatus, onRenameInstance }) {
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [fontReady, setFontReady] = useState(false);
@@ -142,7 +142,6 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
             allInstances={instances}
             spacMode={spacMode}
             spacAxisExists={spacAxisExists}
-            spacValue={spacValues[instance.name] || 0}
             syncStatus={getInstanceSyncStatus ? getInstanceSyncStatus(instance) : 'green'}
             onRename={onRenameInstance}
           />

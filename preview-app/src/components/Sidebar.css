@@ -34,12 +34,14 @@
   border-bottom: none;
 }
 
-.font-size-label {
-  display: block;
+.font-size-control .axis-header {
+  margin-bottom: 0.5rem;
+}
+
+.font-size-control .axis-name {
   font-size: 0.6375rem;
   font-family: monospace;
   font-weight: 500;
-  margin-bottom: 0.5rem;
   color: #666;
 }
 
@@ -298,19 +300,27 @@
 }
 
 .btn-add-axis {
+  /* Use same styles as btn-update */
+  width: 100%;
+  padding: 0.75rem 1rem;
   background-color: #28a745;
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
   border-radius: 4px;
+  font-size: 0.6375rem;
+  font-family: monospace;
+  font-weight: 500;
   cursor: pointer;
-  font-size: 0.875rem;
-  width: 100%;
   transition: background-color 0.2s;
 }
 
-.btn-add-axis:hover {
+.btn-add-axis:hover:not(:disabled) {
   background-color: #218838;
+}
+
+.btn-add-axis:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .avar2-no-mapping {
