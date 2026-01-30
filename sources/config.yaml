@@ -1,10 +1,13 @@
 sources:
 - Crispy.glyphs
 familyName: Crispy
-buildStatic: true
+buildStatic: false
 spacingAxis:
   min: -20
   max: 40
+fontsetter:
+  Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
+    OS/2->usWeightClass: 100
 fvarInstances:
   Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
   - name: Thin
