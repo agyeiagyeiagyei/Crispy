@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import './Sidebar.css';
 import AxisControl from './AxisControl';
 import SpacAxisControl from './SpacAxisControl';
-import UpdateButton from './UpdateButton';
 import DuplicateModal from './DuplicateModal';
 import AddAxisModal from './AddAxisModal';
 import EditAxisModal from './EditAxisModal';
 
-function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance, avar2Mode, avar2Instances, avar2Axes, onAddAvar2Axis, onUpdateAvar2Axis, onUpdateAvar2Mapping, onReloadAvar2Data, spacMode, spacAxisExists, glyphsFileHasUnsavedChanges }) {
+function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSampleTextChange, selectedInstance, onUpdateInstance, onUpdateAllInstances, onResetCoordinates, originalCoordinates, fontSize, onFontSizeChange, onDuplicateInstance, avar2Mode, avar2Instances, avar2Axes, onAddAvar2Axis, onUpdateAvar2Axis, onUpdateAvar2Mapping, onReloadAvar2Data, spacMode, spacAxisExists, glyphsFileHasUnsavedChanges, getInstanceSyncStatus, instances, building = false }) {
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showAddAxisModal, setShowAddAxisModal] = useState(false);
   const [showEditAxisModal, setShowEditAxisModal] = useState(false);
@@ -339,16 +338,33 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
         );
       })()}
       
-      {selectedInstance && (
-        <div className="update-button-section">
-          <UpdateButton
-            onClick={onUpdateInstance}
-            instanceName={selectedInstance.name}
-            disabled={glyphsFileHasUnsavedChanges}
-            title={glyphsFileHasUnsavedChanges ? "Save Glyphs file before updating instance" : undefined}
-          />
-        </div>
-      )}
+      {onUpdateAllInstances && (() => {
+        // Check if any instances have unsaved changes
+        const hasUnsavedChanges = instances && getInstanceSyncStatus
+          ? instances.some(instance => getInstanceSyncStatus(instance) === 'orange')
+          : false;
+        
+        return (
+          <div className="update-button-section">
+            <button
+              onClick={onUpdateAllInstances}
+              className="btn btn-update"
+              disabled={glyphsFileHasUnsavedChanges || !hasUnsavedChanges || building}
+              title={
+                glyphsFileHasUnsavedChanges
+                  ? "Save Glyphs file before updating instances"
+                  : !hasUnsavedChanges
+                  ? "No instances have unsaved changes"
+                  : building
+                  ? "Updating instances..."
+                  : "Update all instances with unsaved changes"
+              }
+            >
+              {building ? "Updating..." : "Update All Instances"}
+            </button>
+          </div>
+        );
+      })()}
       
       {!disabled && (
         <div className="reset-button-section">

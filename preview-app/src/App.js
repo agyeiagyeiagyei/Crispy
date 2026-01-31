@@ -16,6 +16,8 @@ function App() {
   const [editingCoordinates, setEditingCoordinates] = useState({});
   // Store editing coordinates per instance to persist when deselected
   const [instanceEditingCoordinates, setInstanceEditingCoordinates] = useState({});
+  // Store original coordinates per instance for sync status comparison
+  const [instanceOriginalCoordinates, setInstanceOriginalCoordinates] = useState({});
   const [fontLoaded, setFontLoaded] = useState(false);
   const [fontUrl, setFontUrl] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,7 @@ function App() {
       if (exists) {
         // SPAC axis exists - enable mode by default and load values
         setSpacMode(true);
+        // checkSpacAxisStatus already adds the axis to the axes array
         loadSpacValues();
         // Use main font URL (serves designspace font from preview-fonts/spac)
         setFontUrl(api.getFontUrl());
@@ -324,8 +327,8 @@ function App() {
       const exists = result.exists || false;
       setSpacAxisExists(exists);
       
-      // Always add/update SPAC axis in axes array when spacMode is enabled
-      // This ensures the slider appears even if the axis doesn't exist in the font yet
+      // Always add/update SPAC axis in axes array when axis exists OR when spacMode is enabled
+      // This ensures the slider appears when the axis exists or when mode is enabled
       setAxes(prev => {
         const hasSpac = prev.some(axis => axis.tag === 'SPAC' || axis.tag === 'spac');
         if (exists && result.range) {
@@ -345,12 +348,22 @@ function App() {
               name: 'Spacing',
               min: spacRange.min,
               max: spacRange.max,
-              default: spacRange.default
+              default: spacRange.default || 0
+            }];
+          }
+        } else if (exists) {
+          // Axis exists but no range info - use default range (0-100)
+          if (!hasSpac) {
+            return [...prev, {
+              tag: 'SPAC',
+              name: 'Spacing',
+              min: 0,
+              max: 100,
+              default: 0
             }];
           }
         } else if (spacMode && !hasSpac) {
-          // Add SPAC axis with default range when spacMode is enabled but axis doesn't exist yet
-          // Default range matches designspace: 0-100 (not -100 to 100)
+          // spacMode is enabled but axis doesn't exist yet - add placeholder
           return [...prev, {
             tag: 'SPAC',
             name: 'Spacing',
@@ -615,21 +628,29 @@ function App() {
       return 'green'; // Synced
     }
     
-    // For other instances, compare instanceEditingCoordinates with instance.coordinates
+    // For other instances, compare instanceEditingCoordinates with saved originalCoordinates
     const savedCoordinates = instanceEditingCoordinates[instance.name];
+    const savedOriginalCoords = instanceOriginalCoordinates[instance.name];
+    
     if (savedCoordinates && Object.keys(savedCoordinates).length > 0) {
-      // Build comparison object including SPAC if spacMode is enabled
-      const instanceCoords = { ...instance.coordinates };
-      if (spacMode && spacValues[instance.name] !== undefined) {
-        instanceCoords.SPAC = spacValues[instance.name];
+      // Use saved originalCoordinates if available, otherwise build from instance.coordinates
+      let comparisonCoords;
+      if (savedOriginalCoords && Object.keys(savedOriginalCoords).length > 0) {
+        comparisonCoords = savedOriginalCoords;
+      } else {
+        // Build comparison object including SPAC if spacMode is enabled
+        comparisonCoords = { ...instance.coordinates };
+        if (spacMode && spacValues[instance.name] !== undefined) {
+          comparisonCoords.SPAC = spacValues[instance.name];
+        }
       }
-      const isSynced = JSON.stringify(savedCoordinates) === JSON.stringify(instanceCoords);
+      const isSynced = JSON.stringify(savedCoordinates) === JSON.stringify(comparisonCoords);
       if (!isSynced) {
         return 'orange'; // Edited but not saved
       }
     }
     return 'green'; // Synced (default: no edits)
-  }, [selectedInstance, editingCoordinates, originalCoordinates, instanceEditingCoordinates, spacMode, spacValues]);
+  }, [selectedInstance, editingCoordinates, originalCoordinates, instanceEditingCoordinates, instanceOriginalCoordinates, spacMode, spacValues]);
 
   const handleSelectInstance = useCallback((instance) => {
     // If clicking the same instance, don't reset coordinates
@@ -638,10 +659,17 @@ function App() {
     }
     
     // Save current editing coordinates for the previously selected instance
-    if (selectedInstance) {
+    // Also save the originalCoordinates so getInstanceSyncStatus can compare correctly
+    if (selectedInstance && Object.keys(editingCoordinates).length > 0) {
       setInstanceEditingCoordinates(prev => ({
         ...prev,
         [selectedInstance.name]: { ...editingCoordinates }
+      }));
+      // Also save originalCoordinates for this instance so sync status works correctly
+      // We need to store this per-instance so getInstanceSyncStatus can compare
+      setInstanceOriginalCoordinates(prev => ({
+        ...prev,
+        [selectedInstance.name]: { ...originalCoordinates }
       }));
     }
     
@@ -662,13 +690,19 @@ function App() {
     }
     
     // Store original coordinates for reset (include SPAC if spacMode is enabled)
-    const originalCoords = { ...instance.coordinates };
-    if (spacMode) {
-      const spacValue = spacValues[instance.name] || 0;
-      originalCoords.SPAC = spacValue;
+    // Check if we have saved originalCoordinates for this instance first
+    const savedOriginalCoords = instanceOriginalCoordinates[instance.name];
+    if (savedOriginalCoords) {
+      setOriginalCoordinates(savedOriginalCoords);
+    } else {
+      const originalCoords = { ...instance.coordinates };
+      if (spacMode) {
+        const spacValue = spacValues[instance.name] || 0;
+        originalCoords.SPAC = spacValue;
+      }
+      setOriginalCoordinates(originalCoords);
     }
-    setOriginalCoordinates(originalCoords);
-  }, [selectedInstance, editingCoordinates, instanceEditingCoordinates, spacValues, spacMode]);
+  }, [selectedInstance, editingCoordinates, instanceEditingCoordinates, instanceOriginalCoordinates, originalCoordinates, spacValues, spacMode]);
 
   const handleAxisChange = useCallback((tag, value) => {
     // Register instance as editing when first axis change happens
@@ -710,53 +744,47 @@ function App() {
     return false; // Timeout - font might not be ready, but proceed anyway
   };
 
-  const handleUpdateInstance = async () => {
-    if (!selectedInstance) return;
-
-    // Check if anything changed
-    const hasChanges = JSON.stringify(editingCoordinates) !== JSON.stringify(originalCoordinates);
-    if (!hasChanges) {
-      return; // Nothing to update
-    }
-
-    // Extract SPAC from editingCoordinates (SPAC is CSV-only, not in Glyphs)
-    const spacValue = editingCoordinates.SPAC;
-    const parametricCoordinates = { ...editingCoordinates };
+  // Helper function to update a specific instance by name
+  const updateInstanceByName = async (instanceName, coordinatesToUse) => {
+    // Extract SPAC from coordinates (SPAC is CSV-only, not in Glyphs)
+    const spacValue = coordinatesToUse.SPAC;
+    const parametricCoordinates = { ...coordinatesToUse };
     delete parametricCoordinates.SPAC; // Remove SPAC - backend handles it separately
+    
+    // Get the instance to check original coordinates
+    const instance = instances.find(inst => inst.name === instanceName);
+    if (!instance) {
+      throw new Error(`Instance "${instanceName}" not found`);
+    }
+    
+    // Build original coordinates for comparison (including SPAC if in spacValues)
+    const originalCoords = { ...instance.coordinates };
+    if (spacMode && spacValues[instanceName] !== undefined) {
+      originalCoords.SPAC = spacValues[instanceName];
+    }
     
     // Check if parametric axes changed (for Glyphs update)
     const parametricChanged = Object.keys(parametricCoordinates).some(
-      key => Math.abs((parametricCoordinates[key] ?? 0) - (originalCoordinates[key] ?? 0)) > 0.01
+      key => Math.abs((parametricCoordinates[key] ?? 0) - (originalCoords[key] ?? 0)) > 0.01
     );
-
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Update instance "${selectedInstance.name}"?\n\n` +
-      (parametricChanged ? `This will modify the Glyphs file.\n` : '') +
-      (spacMode && spacValue !== undefined ? `SPAC value will be saved to CSV.\n` : '')
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setError(null);
+    
+    // Send all coordinates to backend - it will handle SPAC (CSV) and parametric axes (Glyphs) separately
+    await api.updateInstance(instanceName, coordinatesToUse);
+    
+    // Update spacValues state if SPAC was included
+    if (spacMode && spacValue !== undefined) {
+      setSpacValues(prev => ({ ...prev, [instanceName]: spacValue }));
+    }
+    
+    // Reload instances to get updated data (if Glyphs was updated)
+    if (parametricChanged) {
+      const instancesData = await api.getInstances();
+      setInstances(instancesData.instances);
       
-      // Send all coordinates to backend - it will handle SPAC (CSV) and parametric axes (Glyphs) separately
-      await api.updateInstance(selectedInstance.name, editingCoordinates);
-      
-      // Update spacValues state if SPAC was included
-      if (spacMode && spacValue !== undefined) {
-        setSpacValues(prev => ({ ...prev, [selectedInstance.name]: spacValue }));
-      }
-      
-      // Reload instances to get updated data (if Glyphs was updated)
-      if (parametricChanged) {
-        const instancesData = await api.getInstances();
-        setInstances(instancesData.instances);
-        
-        // Update selected instance
+      // Update selected instance if this was the selected one
+      if (selectedInstance && selectedInstance.name === instanceName) {
         const updated = instancesData.instances.find(
-          inst => inst.name === selectedInstance.name
+          inst => inst.name === instanceName
         );
         if (updated) {
           setSelectedInstance(updated);
@@ -768,17 +796,88 @@ function App() {
           setEditingCoordinates(updatedCoords);
           setOriginalCoordinates(updatedCoords);
         }
-      } else {
-        // No parametric changes, just update coordinates with SPAC
-        setEditingCoordinates({ ...editingCoordinates });
-        setOriginalCoordinates({ ...editingCoordinates });
       }
+    } else {
+      // No parametric changes, update instanceEditingCoordinates
+      setInstanceEditingCoordinates(prev => ({
+        ...prev,
+        [instanceName]: { ...coordinatesToUse }
+      }));
+    }
+    
+    // Unregister instance from editing (we're saving, so sync is OK now)
+    await api.unregisterEditingInstance(instanceName).catch(() => {});
+  };
 
-      // Unregister instance from editing (we're saving, so sync is OK now)
-      await api.unregisterEditingInstance(selectedInstance.name).catch(() => {});
+  const handleUpdateInstance = async (instanceName) => {
+    // If instanceName is provided, update that specific instance (for flyout)
+    // Otherwise, update the selected instance (for button)
+    const targetInstanceName = instanceName || (selectedInstance?.name);
+    if (!targetInstanceName) return;
+
+    let coordinatesToUse;
+    
+    if (instanceName && instanceName !== selectedInstance?.name) {
+      // Updating a different instance - use its saved editing coordinates
+      coordinatesToUse = instanceEditingCoordinates[instanceName];
+      if (!coordinatesToUse) {
+        // No edits for this instance, nothing to update
+        return;
+      }
+    } else {
+      // Updating selected instance - use current editingCoordinates
+      if (!selectedInstance) return;
+      
+      // Check if anything changed
+      const hasChanges = JSON.stringify(editingCoordinates) !== JSON.stringify(originalCoordinates);
+      if (!hasChanges) {
+        return; // Nothing to update
+      }
+      
+      coordinatesToUse = editingCoordinates;
+    }
+
+    // Extract SPAC from coordinates (SPAC is CSV-only, not in Glyphs)
+    const spacValue = coordinatesToUse.SPAC;
+    const parametricCoordinates = { ...coordinatesToUse };
+    delete parametricCoordinates.SPAC; // Remove SPAC - backend handles it separately
+    
+    // Get the instance to check original coordinates
+    const instance = instances.find(inst => inst.name === targetInstanceName);
+    if (!instance) {
+      setError(`Instance "${targetInstanceName}" not found`);
+      return;
+    }
+    
+    // Build original coordinates for comparison (including SPAC if in spacValues)
+    const originalCoords = { ...instance.coordinates };
+    if (spacMode && spacValues[targetInstanceName] !== undefined) {
+      originalCoords.SPAC = spacValues[targetInstanceName];
+    }
+    
+    // Check if parametric axes changed (for Glyphs update)
+    const parametricChanged = Object.keys(parametricCoordinates).some(
+      key => Math.abs((parametricCoordinates[key] ?? 0) - (originalCoords[key] ?? 0)) > 0.01
+    );
+
+    // Show confirmation dialog only for selected instance updates
+    if (!instanceName || instanceName === selectedInstance?.name) {
+      const confirmed = window.confirm(
+        `Update instance "${targetInstanceName}"?\n\n` +
+        (parametricChanged ? `This will modify the Glyphs file.\n` : '') +
+        (spacMode && spacValue !== undefined ? `SPAC value will be saved to CSV.\n` : '')
+      );
+
+      if (!confirmed) return;
+    }
+
+    try {
+      setError(null);
+      
+      await updateInstanceByName(targetInstanceName, coordinatesToUse);
       
       // Store instance name before rebuild (in case it changes)
-      const instanceNameToScroll = selectedInstance.name;
+      const instanceNameToScroll = targetInstanceName;
       
       // Backend already rebuilds the font (regular or SPAC) after instance update
       // Just wait for it to complete - no need to trigger another rebuild
@@ -827,6 +926,111 @@ function App() {
     } catch (err) {
       setError(err.message);
       console.error('Update failed:', err);
+      throw err; // Re-throw for error handling in batch update
+    }
+  };
+
+  const handleUpdateAllInstances = async () => {
+    // Find all instances with unsaved changes (orange status)
+    const instancesToUpdate = instances.filter(instance => {
+      const status = getInstanceSyncStatus(instance);
+      return status === 'orange';
+    });
+
+    if (instancesToUpdate.length === 0) {
+      return; // Nothing to update
+    }
+
+    // Show confirmation
+    const confirmed = window.confirm(
+      `Update ${instancesToUpdate.length} instance${instancesToUpdate.length > 1 ? 's' : ''}?\n\n` +
+      `This will save all unsaved changes and rebuild the font.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setError(null);
+      setBuilding(true); // Show loading state
+      
+      // Store original state for revert
+      const originalInstances = [...instances];
+      const originalInstanceEditingCoordinates = { ...instanceEditingCoordinates };
+      const originalEditingCoordinates = { ...editingCoordinates };
+      const originalOriginalCoordinates = { ...originalCoordinates };
+      const originalSpacValues = { ...spacValues };
+      const originalSelectedInstance = selectedInstance;
+      
+      const successfulUpdates = [];
+      
+      // Update each instance sequentially
+      for (const instance of instancesToUpdate) {
+        try {
+          let coordinatesToUse;
+          
+          if (instance.name === selectedInstance?.name) {
+            // Use current editingCoordinates for selected instance
+            coordinatesToUse = editingCoordinates;
+          } else {
+            // Use saved editing coordinates for other instances
+            coordinatesToUse = instanceEditingCoordinates[instance.name];
+          }
+          
+          if (!coordinatesToUse) {
+            continue; // Skip if no edits
+          }
+          
+          await updateInstanceByName(instance.name, coordinatesToUse);
+          successfulUpdates.push(instance.name);
+        } catch (err) {
+          // Revert all successful updates
+          setInstances(originalInstances);
+          setInstanceEditingCoordinates(originalInstanceEditingCoordinates);
+          setEditingCoordinates(originalEditingCoordinates);
+          setOriginalCoordinates(originalOriginalCoordinates);
+          setSpacValues(originalSpacValues);
+          setSelectedInstance(originalSelectedInstance);
+          
+          setError(`Failed to update instance "${instance.name}": ${err.message}. All changes have been reverted.`);
+          console.error('Batch update failed:', err);
+          setBuilding(false);
+          return; // Stop on first error
+        }
+      }
+      
+      // All updates successful - wait for build to complete
+      let buildComplete = false;
+      let attempts = 0;
+      const maxAttempts = 60; // 60 seconds max wait
+      
+      while (!buildComplete && attempts < maxAttempts) {
+        try {
+          const health = await api.health();
+          if (!health.building) {
+            buildComplete = true;
+            break;
+          }
+        } catch (err) {
+          // Ignore polling errors, continue waiting
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+      }
+      
+      // Reload font URL to get updated font (with timestamp to force reload)
+      setFontUrl(api.getFontUrl());
+      setFontLoaded(false);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setFontLoaded(true);
+      
+      // Wait for font to be loaded
+      await waitForFontReady();
+      
+      setBuilding(false);
+    } catch (err) {
+      setError(err.message);
+      console.error('Batch update failed:', err);
+      setBuilding(false);
     }
   };
 
@@ -864,22 +1068,65 @@ function App() {
         inst => inst.name === newInstanceName
       );
       
-      if (newInstance) {
-        setSelectedInstance(newInstance);
-        setEditingCoordinates({ ...newInstance.coordinates });
-        setOriginalCoordinates({ ...newInstance.coordinates });
-        
-        // Scroll to new instance after a brief delay (it should be right below the selected one)
-        setTimeout(() => {
-          const element = document.querySelector(`[data-instance-name="${newInstanceName}"]`);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
-        }, 100);
+      if (!newInstance) {
+        throw new Error(`Failed to find newly created instance "${newInstanceName}"`);
       }
       
-      // Auto-rebuild font after creation
-      await handleBuildFont();
+      // Store instance name before rebuild (in case it changes)
+      const instanceNameToScroll = newInstanceName;
+      
+      // Set up coordinates for the new instance (including SPAC if spacMode is enabled)
+      const newCoords = { ...newInstance.coordinates };
+      if (spacMode && coordinatesToUse.SPAC !== undefined) {
+        newCoords.SPAC = coordinatesToUse.SPAC;
+        // Update spacValues state
+        setSpacValues(prev => ({ ...prev, [newInstanceName]: coordinatesToUse.SPAC }));
+      }
+      
+      setSelectedInstance(newInstance);
+      setEditingCoordinates(newCoords);
+      setOriginalCoordinates(newCoords);
+      
+      // Backend rebuilds the font after instance creation
+      // Wait for build to complete by polling health endpoint (same as update instance)
+      let buildComplete = false;
+      let attempts = 0;
+      const maxAttempts = 60; // 60 seconds max wait
+      
+      while (!buildComplete && attempts < maxAttempts) {
+        try {
+          const health = await api.health();
+          if (!health.building) {
+            buildComplete = true;
+            break;
+          }
+        } catch (err) {
+          // Ignore polling errors, continue waiting
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+      }
+      
+      // Reload font URL to get updated font (with timestamp to force reload)
+      setFontUrl(api.getFontUrl());
+      setFontLoaded(false);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setFontLoaded(true);
+      
+      // Wait for font to be loaded before scrolling
+      await waitForFontReady();
+      
+      // Additional small delay to ensure DOM is updated after font load
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Scroll to new instance after font is ready
+      const element = document.querySelector(`[data-instance-name="${instanceNameToScroll}"]`);
+      if (element) {
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
     } catch (err) {
       setError(err.message);
       console.error('Duplicate failed:', err);
@@ -1044,6 +1291,7 @@ function App() {
                 onSampleTextChange={setSampleText}
                 selectedInstance={selectedInstance}
                 onUpdateInstance={handleUpdateInstance}
+                onUpdateAllInstances={handleUpdateAllInstances}
                 onResetCoordinates={handleResetCoordinates}
                 originalCoordinates={originalCoordinates}
                 fontSize={fontSize}
@@ -1059,6 +1307,9 @@ function App() {
                 spacMode={spacMode}
                 spacAxisExists={spacAxisExists}
                 glyphsFileHasUnsavedChanges={glyphsFileHasUnsavedChanges}
+                getInstanceSyncStatus={getInstanceSyncStatus}
+                instances={instances}
+                building={building}
               />
               <InstanceRows
                 instances={instances}
@@ -1077,6 +1328,7 @@ function App() {
                 getInstanceSyncStatus={getInstanceSyncStatus}
                 onMoveInstance={handleMoveInstance}
                 onRenameInstance={handleRenameInstance}
+                onUpdateInstance={handleUpdateInstance}
               />
             </>
           )}

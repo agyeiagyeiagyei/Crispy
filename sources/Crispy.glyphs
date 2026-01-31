@@ -78333,6 +78333,14 @@ name = "Thin Condensed SmallOpsz";
 },
 {
 axesValues = (
+194.1,
+60.2,
+40.8
+);
+name = "Thin Condensed SmallOpsz Copy";
+},
+{
+axesValues = (
 248,
 78,
 85
