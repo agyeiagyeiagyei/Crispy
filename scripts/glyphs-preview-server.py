@@ -845,10 +845,45 @@ def create_instance():
                     import traceback
                     traceback.print_exc()
             
-            # Trigger immediate rebuild after creating instance
-            # This ensures font is rebuilt right away, not waiting for periodic check
-            print(f"Instance created, triggering immediate rebuild...", file=sys.stderr)
-            trigger_build()
+            # Trigger rebuild in background thread (same pattern as update_instance and rename_instance)
+            # This avoids blocking the response and file locking issues
+            def rebuild_in_background():
+                global BUILDING
+                if BUILDING:
+                    print("Build already in progress, skipping rebuild after instance creation...", file=sys.stderr)
+                    return
+                
+                spac_font_dir = _get_spac_font_dir()
+                if spac_font_dir:
+                    spac_font_path = spac_font_dir / "Crispy-SPAC-VF.ttf"
+                    if spac_font_path.exists():
+                        # SPAC font exists - regenerate it using add-spac-axis-ufo.py
+                        print(f"Instance created, regenerating SPAC font...", file=sys.stderr)
+                        BUILDING = True
+                        try:
+                            if _regenerate_spac_font():
+                                # SPAC regeneration succeeded
+                                BUILDING = False
+                            else:
+                                # Fallback to regular build if regeneration fails
+                                print(f"SPAC regeneration failed, falling back to regular build...", file=sys.stderr)
+                                BUILDING = False  # Reset before trigger_build (which sets it)
+                                trigger_build()
+                        except Exception as e:
+                            print(f"Error during SPAC font regeneration: {e}", file=sys.stderr)
+                            BUILDING = False
+                    else:
+                        # No SPAC font - rebuild regular font
+                        print(f"Instance created, triggering immediate rebuild...", file=sys.stderr)
+                        trigger_build()
+                else:
+                    # No SPAC font directory - rebuild regular font
+                    print(f"Instance created, triggering immediate rebuild...", file=sys.stderr)
+                    trigger_build()
+            
+            # Start rebuild in background thread (small delay to ensure file save completes)
+            rebuild_thread = threading.Thread(target=rebuild_in_background, daemon=True)
+            rebuild_thread.start()
             
             return jsonify({"success": True, "message": f"Created instance '{instance_name}' in Glyphs file"})
         else:
@@ -1069,9 +1104,45 @@ def rename_instance(instance_name: str):
                     import traceback
                     traceback.print_exc()
             
-            # Trigger immediate rebuild after renaming instance
-            print(f"Instance renamed, triggering immediate rebuild...", file=sys.stderr)
-            trigger_build()
+            # Trigger rebuild in background thread (same pattern as update_instance)
+            # This avoids blocking the response and file locking issues
+            def rebuild_in_background():
+                global BUILDING
+                if BUILDING:
+                    print("Build already in progress, skipping rebuild after rename...", file=sys.stderr)
+                    return
+                
+                spac_font_dir = _get_spac_font_dir()
+                if spac_font_dir:
+                    spac_font_path = spac_font_dir / "Crispy-SPAC-VF.ttf"
+                    if spac_font_path.exists():
+                        # SPAC font exists - regenerate it using add-spac-axis-ufo.py
+                        print(f"Instance renamed, regenerating SPAC font...", file=sys.stderr)
+                        BUILDING = True
+                        try:
+                            if _regenerate_spac_font():
+                                # SPAC regeneration succeeded
+                                BUILDING = False
+                            else:
+                                # Fallback to regular build if regeneration fails
+                                print(f"SPAC regeneration failed, falling back to regular build...", file=sys.stderr)
+                                BUILDING = False  # Reset before trigger_build (which sets it)
+                                trigger_build()
+                        except Exception as e:
+                            print(f"Error during SPAC font regeneration: {e}", file=sys.stderr)
+                            BUILDING = False
+                    else:
+                        # No SPAC font - rebuild regular font
+                        print(f"Instance renamed, triggering immediate rebuild...", file=sys.stderr)
+                        trigger_build()
+                else:
+                    # No SPAC font directory - rebuild regular font
+                    print(f"Instance renamed, triggering immediate rebuild...", file=sys.stderr)
+                    trigger_build()
+            
+            # Start rebuild in background thread (small delay to ensure file save completes)
+            rebuild_thread = threading.Thread(target=rebuild_in_background, daemon=True)
+            rebuild_thread.start()
             
             return jsonify({"success": True, "message": f"Renamed instance '{instance_name}' to '{new_name}'"})
         else:

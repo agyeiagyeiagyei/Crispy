@@ -1213,6 +1213,8 @@ function App() {
       
       // Backend rebuilds the font after instance creation
       // Wait for build to complete by polling health endpoint (same as update instance)
+      setBuilding(true); // Set building state immediately to show UI feedback
+      
       let buildComplete = false;
       let attempts = 0;
       const maxAttempts = 60; // 60 seconds max wait
@@ -1243,6 +1245,33 @@ function App() {
       // Additional small delay to ensure DOM is updated after font load
       await new Promise(resolve => setTimeout(resolve, 200));
       
+      // Reload SPAC values if spacMode is enabled
+      if (spacMode) {
+        try {
+          const spacResult = await api.getSpacValues();
+          const spacValuesMap = {};
+          if (spacResult.values) {
+            spacResult.values.forEach(v => {
+              spacValuesMap[v.instance_name] = v.spac || 0;
+            });
+          }
+          setSpacValues(spacValuesMap);
+          
+          // Update coordinates with latest SPAC value for new instance
+          const latestSpacValue = spacValuesMap[newInstanceName];
+          if (latestSpacValue !== undefined) {
+            const coordsWithSpac = { ...newInstance.coordinates, SPAC: latestSpacValue };
+            setEditingCoordinates(coordsWithSpac);
+            setOriginalCoordinates(coordsWithSpac);
+          }
+        } catch (err) {
+          // Silently fail - SPAC is optional
+        }
+      }
+      
+      // Reset building state after font is fully loaded and ready
+      setBuilding(false);
+      
       // Scroll to new instance after font is ready
       const element = document.querySelector(`[data-instance-name="${instanceNameToScroll}"]`);
       if (element) {
@@ -1254,6 +1283,7 @@ function App() {
     } catch (err) {
       setError(err.message);
       console.error('Duplicate failed:', err);
+      setBuilding(false); // Reset building state on error
     }
   };
 
@@ -1264,11 +1294,52 @@ function App() {
 
     try {
       setError(null);
+      setBuilding(true); // Set building state immediately to show UI feedback
+      
       await api.renameInstance(oldName, newName);
       
-      // Reload instances to get updated data
+      // Store new name for scrolling after rebuild
+      const instanceNameToScroll = newName;
+      
+      // Backend already rebuilds the font (regular or SPAC) after rename
+      // Just wait for it to complete - no need to trigger another rebuild
+      // The backend will regenerate SPAC font if it exists, or rebuild regular font otherwise
+      
+      // Backend rebuilds automatically after rename
+      // Wait for build to complete by polling health endpoint
+      let buildComplete = false;
+      let attempts = 0;
+      const maxAttempts = 60; // 60 seconds max wait
+      
+      while (!buildComplete && attempts < maxAttempts) {
+        try {
+          const health = await api.health();
+          if (!health.building) {
+            buildComplete = true;
+            break;
+          }
+        } catch (err) {
+          // Ignore polling errors, continue waiting
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+      }
+      
+      // Reload instances to get updated data (with new name)
       const instancesData = await api.getInstances();
       setInstances(instancesData.instances);
+      
+      // Reload font URL to get updated font (with timestamp to force reload)
+      setFontUrl(api.getFontUrl());
+      setFontLoaded(false);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setFontLoaded(true);
+      
+      // Wait for font to be loaded before updating state
+      await waitForFontReady();
+      
+      // Additional small delay to ensure DOM is updated after font load
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Update selected instance if it was renamed
       if (selectedInstance && selectedInstance.name === oldName) {
@@ -1277,24 +1348,79 @@ function App() {
         );
         if (renamed) {
           setSelectedInstance(renamed);
-          setEditingCoordinates({ ...renamed.coordinates });
-          setOriginalCoordinates({ ...renamed.coordinates });
           
-          // Scroll to renamed instance
-          setTimeout(() => {
-            const element = document.querySelector(`[data-instance-name="${newName}"]`);
-            if (element) {
-              element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          // Update coordinates with SPAC if spacMode is enabled
+          const updatedCoords = { ...renamed.coordinates };
+          if (spacMode) {
+            const spacValue = spacValues[newName];
+            if (spacValue !== undefined) {
+              updatedCoords.SPAC = spacValue;
             }
-          }, 100);
+          }
+          
+          setEditingCoordinates(updatedCoords);
+          setOriginalCoordinates(updatedCoords);
+          
+          // Update instanceEditingCoordinates and instanceOriginalCoordinates
+          // Remove old name, add new name
+          setInstanceEditingCoordinates(prev => {
+            const newState = { ...prev };
+            if (prev[oldName]) {
+              newState[newName] = prev[oldName];
+              delete newState[oldName];
+            }
+            return newState;
+          });
+          setInstanceOriginalCoordinates(prev => {
+            const newState = { ...prev };
+            if (prev[oldName]) {
+              newState[newName] = prev[oldName];
+              delete newState[oldName];
+            }
+            return newState;
+          });
+          
+          // Reload SPAC values if spacMode is enabled
+          if (spacMode) {
+            try {
+              const spacResult = await api.getSpacValues();
+              const spacValuesMap = {};
+              if (spacResult.values) {
+                spacResult.values.forEach(v => {
+                  spacValuesMap[v.instance_name] = v.spac || 0;
+                });
+              }
+              setSpacValues(spacValuesMap);
+              
+              // Update coordinates with latest SPAC value
+              const latestSpacValue = spacValuesMap[newName];
+              if (latestSpacValue !== undefined) {
+                const coordsWithSpac = { ...renamed.coordinates, SPAC: latestSpacValue };
+                setEditingCoordinates(coordsWithSpac);
+                setOriginalCoordinates(coordsWithSpac);
+              }
+            } catch (err) {
+              // Silently fail - SPAC is optional
+            }
+          }
         }
       }
       
-      // Auto-rebuild font after rename
-      await handleBuildFont();
+      // Reset building state after font is fully loaded and ready
+      setBuilding(false);
+      
+      // Scroll to renamed instance after font is ready
+      const element = document.querySelector(`[data-instance-name="${instanceNameToScroll}"]`);
+      if (element) {
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
     } catch (err) {
       setError(err.message);
       console.error('Rename failed:', err);
+      setBuilding(false); // Reset building state on error
       throw err; // Re-throw to let component handle error display
     }
   };
