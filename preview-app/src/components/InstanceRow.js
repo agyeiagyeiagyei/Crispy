@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import './InstanceRow.css';
 import InstanceFlyout from './InstanceFlyout';
 
-function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, instanceEditingCoordinates, sampleText, fontLoaded, fontSize, onDelete, onMove, allInstances, spacMode, spacAxisExists, syncStatus = 'green', onRename, onUpdateInstance }) {
+function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, instanceEditingCoordinates, sampleText, fontLoaded, fontSize, onDelete, onMove, allInstances, spacMode, spacAxisExists, syncStatus = 'green', onRename, onUpdateInstance, calculateAdvanceWidth, spacValues, advanceWidthLoading, currentAdvanceWidth }) {
   const [showMoveControls, setShowMoveControls] = useState(false);
   const [movePosition, setMovePosition] = useState('before');
   const [targetInstance, setTargetInstance] = useState(null);
@@ -18,6 +18,34 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
   const activeCoordinates = isSelected && Object.keys(editingCoordinates).length > 0
     ? editingCoordinates
     : (instanceEditingCoordinates[instance.name] || instance.coordinates);
+  
+  // Add SPAC to coordinates if spacMode is enabled
+  const coordinatesForWidth = { ...activeCoordinates };
+  if (spacMode && spacValues && spacValues[instance.name] !== undefined) {
+    coordinatesForWidth.SPAC = spacValues[instance.name];
+  } else if (spacMode && activeCoordinates.SPAC === undefined) {
+    coordinatesForWidth.SPAC = 0;
+  }
+  
+  // Calculate advance width for this instance
+  // If this is the selected instance and we have an exact API value, use it
+  // Otherwise, use cache/interpolation
+  const advanceWidth = React.useMemo(() => {
+    // Use exact API value for selected instance if available
+    if (isSelected && currentAdvanceWidth !== null && currentAdvanceWidth !== undefined) {
+      return currentAdvanceWidth;
+    }
+    
+    if (!calculateAdvanceWidth || !fontLoaded) {
+      return null;
+    }
+    try {
+      const width = calculateAdvanceWidth(coordinatesForWidth, sampleText);
+      return width;
+    } catch (err) {
+      return null;
+    }
+  }, [calculateAdvanceWidth, fontLoaded, coordinatesForWidth, sampleText, instance.name, isSelected, currentAdvanceWidth]);
   
   // Build font-variation-settings string
   // SPAC is now included in activeCoordinates if spacMode is enabled
@@ -125,7 +153,7 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
             </button>
           )}
           <div className="instance-coordinates">
-            {Object.entries(instance.coordinates).map(([tag, value]) => (
+            {Object.entries(activeCoordinates).map(([tag, value]) => (
               <span key={tag} className="coordinate">
                 {tag}: {value.toFixed(1)}
               </span>
@@ -136,6 +164,17 @@ function InstanceRow({ instance, isSelected, onSelect, editingCoordinates, insta
                 SPAC: {activeCoordinates.SPAC.toFixed(1)}
               </span>
             )}
+            {/* Show advance width */}
+            {advanceWidthLoading ? (
+              <span className="coordinate advance-width-coordinate advance-width-loading">
+                <span className="advance-width-spinner"></span>
+                Calculating...
+              </span>
+            ) : advanceWidth !== null && advanceWidth !== undefined ? (
+              <span className="coordinate advance-width-coordinate">
+                Width: {typeof advanceWidth === 'number' ? Math.round(advanceWidth) : advanceWidth} units
+              </span>
+            ) : null}
           </div>
           <div 
             className="sync-status-dot-wrapper"

@@ -323,4 +323,25 @@ export const api = {
     }
     return parseJSON(response);
   },
+
+  async getTextWidth(text, coordinates, fontSizeRem = 2.0) {
+    const params = new URLSearchParams({
+      text: text,
+      coordinates: JSON.stringify(coordinates),
+      font_size_rem: fontSizeRem.toString(),
+    });
+    const response = await fetch(`${API_BASE}/text-width?${params}`);
+    if (!response.ok) {
+      try {
+        const error = await parseJSON(response);
+        throw new Error(error.error || `Failed to measure text width: ${response.status} ${response.statusText}`);
+      } catch (e) {
+        if (e instanceof Error && e.message.includes('error')) {
+          throw e;
+        }
+        throw new Error(`Failed to measure text width: ${response.status} ${response.statusText}`);
+      }
+    }
+    return parseJSON(response);
+  },
 };

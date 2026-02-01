@@ -33,6 +33,7 @@ except ImportError:
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from fontTools.ttLib import TTFont
+from fontTools.varLib import instancer
 
 try:
     from watchdog.observers import Observer
@@ -755,6 +756,169 @@ def get_font():
     mtime = font_path.stat().st_mtime
     response.headers['ETag'] = f'"{int(mtime)}"'
     return response
+
+
+@app.route('/api/text-width', methods=['GET'])
+def get_text_width():
+    """
+    Measure advance width of text at specific variable font coordinates.
+    
+    Query parameters:
+    - text: Text string to measure (default: sample text)
+    - coordinates: JSON object with axis coordinates (e.g., {"XTRA": 627.0, "XOPQ": 187.672})
+    - font_size_rem: Font size in rem units (default: 2.0)
+    
+    Returns:
+    - width_pixels: Total advance width in pixels
+    - width_font_units: Total advance width in font units
+    - width_em: Total advance width in em units
+    - upm: Units per em from font
+    """
+    try:
+        import tempfile
+        import os
+        
+        # Get parameters
+        text = request.args.get('text', 'The Quick Brown Fox Jumps Over The Lazy Dog 0123456789 &!')
+        font_size_rem = float(request.args.get('font_size_rem', 2.0))
+        
+        # Parse coordinates from JSON string
+        coordinates_json = request.args.get('coordinates', '{}')
+        try:
+            coordinates = json.loads(coordinates_json)
+        except json.JSONDecodeError:
+            return jsonify({"error": "Invalid coordinates JSON"}), 400
+        
+        # Get font path (prefer SPAC font if available)
+        spac_font_path = _ensure_spac_font_exists()
+        if spac_font_path and spac_font_path.exists():
+            font_path = spac_font_path
+        elif VARIABLE_FONT_PATH and VARIABLE_FONT_PATH.exists():
+            font_path = VARIABLE_FONT_PATH
+        else:
+            return jsonify({"error": "Variable font not built yet."}), 404
+        
+        # Load font
+        font = TTFont(str(font_path))
+        
+        # Get UPM (units per em)
+        upm = font['head'].unitsPerEm
+        
+        # Check if font has fvar table (variable font)
+        if 'fvar' not in font:
+            # Use font as-is for non-variable fonts
+            instance_font = font
+        else:
+            # Get axis tags from fvar table
+            fvar = font['fvar']
+            # Map lowercase input tags to original fvar axis tags
+            axis_tag_map = {axis.axisTag.lower(): axis.axisTag for axis in fvar.axes}
+            
+            # Build location dictionary for instancer
+            # Use original axis tag case from fvar table
+            location = {}
+            for tag, value in coordinates.items():
+                tag_lower = tag.lower()
+                if tag_lower in axis_tag_map:
+                    # Use original case from fvar table
+                    original_tag = axis_tag_map[tag_lower]
+                    location[original_tag] = float(value)
+            
+            # Set other axes to their defaults from fvar table
+            for axis in fvar.axes:
+                if axis.axisTag not in location:
+                    location[axis.axisTag] = axis.defaultValue
+            
+            # Create a temporary instance font
+            with tempfile.NamedTemporaryFile(suffix='.ttf', delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+            
+            try:
+                # Instantiate the font at the specified location
+                instance_font = instancer.instantiateVariableFont(font, location)
+                instance_font.save(tmp_path)
+            except Exception as e:
+                print(f"Error during instantiation: {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc()
+                return jsonify({"error": f"Font instantiation failed: {e}"}), 500
+            finally:
+                # Clean up temporary file
+                if os.path.exists(tmp_path):
+                    try:
+                        os.unlink(tmp_path)
+                    except:
+                        pass
+        
+        # Get cmap to map Unicode to glyph names
+        cmap = instance_font.getBestCmap()
+        if not cmap:
+            return jsonify({"error": "No cmap found in font"}), 500
+        
+        # Get hmtx table for advance widths
+        if 'hmtx' not in instance_font:
+            return jsonify({"error": "No hmtx table in font"}), 500
+        
+        hmtx = instance_font['hmtx']
+        glyph_order = instance_font.getGlyphOrder()
+        
+        # Measure each character in the text
+        total_width_font_units = 0.0
+        
+        for char in text:
+            unicode_code = ord(char)
+            
+            # Get glyph name from cmap
+            if unicode_code not in cmap:
+                continue
+            
+            glyph_name = cmap[unicode_code]
+            
+            # Get advance width from hmtx
+            if isinstance(hmtx.metrics, dict):
+                if glyph_name not in hmtx.metrics:
+                    continue
+                metric = hmtx.metrics[glyph_name]
+            else:
+                # It's a list, need glyph ID
+                try:
+                    glyph_id = glyph_order.index(glyph_name)
+                except ValueError:
+                    continue
+                if glyph_id >= len(hmtx.metrics):
+                    continue
+                metric = hmtx.metrics[glyph_id]
+            
+            # Handle both tuple and single value cases
+            if isinstance(metric, tuple):
+                advance_width, lsb = metric
+            else:
+                advance_width = metric
+                lsb = 0
+            
+            advance_width = float(advance_width)
+            total_width_font_units += advance_width
+        
+        # Convert to pixels (assuming 16px = 1rem, which is browser default)
+        pixels_per_rem = 16.0
+        font_size_pixels = font_size_rem * pixels_per_rem
+        width_pixels = (total_width_font_units / upm) * font_size_pixels
+        width_em = total_width_font_units / upm
+        
+        return jsonify({
+            "width_pixels": width_pixels,
+            "width_font_units": total_width_font_units,
+            "width_em": width_em,
+            "upm": upm,
+            "font_size_rem": font_size_rem,
+            "font_size_pixels": font_size_pixels
+        })
+    
+    except Exception as e:
+        print(f"Error measuring text width: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/preview-font', methods=['GET'])

@@ -44,6 +44,14 @@ function App() {
   const [instanceToDelete, setInstanceToDelete] = useState(null);
   const [avar2FontUrl, setAvar2FontUrl] = useState(null);
   const [avar2FontLoaded, setAvar2FontLoaded] = useState(false);
+  // Advance width cache: { coordinatesKey: width_pixels }
+  // coordinatesKey is a normalized string representation of coordinates
+  const [advanceWidthCache, setAdvanceWidthCache] = useState({});
+  // Current advance width for display (calculated from current coordinates)
+  const [currentAdvanceWidth, setCurrentAdvanceWidth] = useState(null); // in font units
+  const [currentAdvanceWidthPixels, setCurrentAdvanceWidthPixels] = useState(null); // in pixels (for reference)
+  // Loading state for advance width recalculation
+  const [advanceWidthLoading, setAdvanceWidthLoading] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -283,11 +291,17 @@ function App() {
       
       // Check if SPAC axis exists and add it to axes if present
       let axesList = axesData.axes || [];
+      let spacValuesMap = {};
       if (spacExists) {
         // Enable SPAC mode by default when axis exists
         setSpacMode(true);
         // Load SPAC values
-        loadSpacValues();
+        const spacResult = await loadSpacValues();
+        if (spacResult && spacResult.values) {
+          spacResult.values.forEach(v => {
+            spacValuesMap[v.instance_name] = v.spac || 0;
+          });
+        }
         // Use main font URL (serves designspace font from preview-fonts/spac)
         setFontUrl(api.getFontUrl());
         setFontLoaded(true);
@@ -313,6 +327,14 @@ function App() {
       setFamilyName(health.family_name || null);
       setLastBuildTime(health.last_build_time || null);
       setBuilding(health.building || false);
+      
+      // Cache advance widths for all instances after font is loaded
+      if (health.font_built || spacExists) {
+        // Wait a bit for font to be ready, then cache
+        setTimeout(() => {
+          cacheInstanceAdvanceWidths(instancesData.instances, spacValuesMap);
+        }, 1000);
+      }
 
       // If font was rebuilt (new build time), reload the font
       if (health.font_built && health.last_build_time && health.last_build_time !== lastBuildTime) {
@@ -490,9 +512,12 @@ function App() {
         setEditingCoordinates(prev => ({ ...prev, SPAC: spacValue }));
         setOriginalCoordinates(prev => ({ ...prev, SPAC: spacValue }));
       }
+      
+      return result; // Return result for caching
     } catch (err) {
       console.error('Failed to load SPAC values:', err);
       // Don't show error - SPAC is optional
+      return null;
     }
   };
 
@@ -725,6 +750,178 @@ function App() {
     return 'green'; // Synced (default: no edits)
   }, [selectedInstance, editingCoordinates, originalCoordinates, instanceEditingCoordinates, instanceOriginalCoordinates, spacMode, spacValues]);
 
+  // Helper: Create normalized key from coordinates and text for caching
+  const getCoordinatesKey = useCallback((coordinates, text = sampleText) => {
+    // Sort keys and round values for consistent keys
+    const coordsKey = Object.keys(coordinates)
+      .sort()
+      .map(key => `${key}:${coordinates[key].toFixed(2)}`)
+      .join('|');
+    // Include text in key so cache updates when text changes
+    return `${text}|${coordsKey}`;
+  }, [sampleText]);
+
+  // Helper: Interpolate advance width between cached points
+  const interpolateAdvanceWidth = useCallback((targetCoords, cache) => {
+    // Find nearest cached points
+    const cachedPoints = Object.entries(cache).map(([key, width]) => {
+      // Parse coordinates from key (key format: "TAG1:value1|TAG2:value2" - text already filtered out)
+      const coords = {};
+      const parts = key.split('|');
+      parts.forEach(part => {
+        if (part.includes(':')) {
+          const [tag, value] = part.split(':');
+          coords[tag] = parseFloat(value);
+        }
+      });
+      return { coords, width };
+    });
+
+    if (cachedPoints.length === 0) return null;
+
+    // Find nearest point(s) for interpolation
+    // For simplicity, use weighted average of all cached points based on distance
+    // More sophisticated: find points that differ in only one axis and interpolate along that axis
+    
+    // Calculate distance to each cached point
+    const distances = cachedPoints.map(point => {
+      let distance = 0;
+      let axisCount = 0;
+      Object.keys(targetCoords).forEach(tag => {
+        const targetVal = targetCoords[tag] || 0;
+        const pointVal = point.coords[tag] || 0;
+        const diff = Math.abs(targetVal - pointVal);
+        distance += diff * diff; // Squared distance
+        axisCount++;
+      });
+      return { point, distance: Math.sqrt(distance), axisCount };
+    });
+
+    // Sort by distance
+    distances.sort((a, b) => a.distance - b.distance);
+
+    // If we have a very close point (distance < 1), use it directly
+    if (distances[0].distance < 1) {
+      return distances[0].point.width;
+    }
+
+    // Use weighted average of nearest 3 points (inverse distance weighting)
+    const nearest = distances.slice(0, Math.min(3, distances.length));
+    let totalWeight = 0;
+    let weightedSum = 0;
+
+    nearest.forEach(({ point, distance }) => {
+      // Avoid division by zero
+      const weight = distance > 0 ? 1 / (distance + 0.1) : 1000;
+      totalWeight += weight;
+      weightedSum += weight * point.width;
+    });
+
+    return totalWeight > 0 ? weightedSum / totalWeight : null;
+  }, [getCoordinatesKey]);
+
+  // Cache advance widths for all instances
+  const cacheInstanceAdvanceWidths = useCallback(async (instancesList, spacValuesMap = {}, showLoading = false) => {
+    if (instancesList.length === 0) {
+      return;
+    }
+    
+    if (showLoading) {
+      setAdvanceWidthLoading(true);
+    }
+    
+
+    try {
+      const cachePromises = instancesList.map(async (instance) => {
+        const coords = { ...instance.coordinates };
+        // Add SPAC value if available
+        if (spacMode && spacValuesMap[instance.name] !== undefined) {
+          coords.SPAC = spacValuesMap[instance.name];
+        } else if (spacMode) {
+          coords.SPAC = 0;
+        }
+        
+        const key = getCoordinatesKey(coords, sampleText);
+        
+        try {
+          const result = await api.getTextWidth(sampleText, coords, fontSize);
+          // Store font units instead of pixels
+          return { key, width: result.width_font_units };
+        } catch (err) {
+          console.error(`Failed to cache advance width for ${instance.name}:`, err);
+          return null;
+        }
+      });
+
+      const results = await Promise.all(cachePromises);
+      let cachedCount = 0;
+      
+      // Use functional update to ensure we're updating the latest cache state
+      setAdvanceWidthCache(currentCache => {
+        const newCache = { ...currentCache };
+        results.forEach(result => {
+          if (result) {
+            newCache[result.key] = result.width;
+            cachedCount++;
+          }
+        });
+        return newCache;
+      });
+    } catch (err) {
+      console.error('Failed to cache advance widths:', err);
+    } finally {
+      if (showLoading) {
+        setAdvanceWidthLoading(false);
+      }
+    }
+  }, [sampleText, fontSize, spacMode, getCoordinatesKey]);
+
+  // Calculate advance width for current coordinates (with interpolation)
+  // Returns width in font units
+  const calculateAdvanceWidth = useCallback((coordinates, text = sampleText) => {
+    if (!coordinates || Object.keys(coordinates).length === 0) {
+      return null;
+    }
+    
+    const key = getCoordinatesKey(coordinates, text);
+    
+    // Check cache first (cache now stores font units)
+    if (advanceWidthCache[key] !== undefined) {
+      return advanceWidthCache[key];
+    }
+
+    // Try interpolation (need to filter cache by same text)
+    const textFilteredCache = {};
+    Object.keys(advanceWidthCache).forEach(cacheKey => {
+      if (cacheKey.startsWith(text + '|')) {
+        // Extract coordinates part (everything after text|)
+        const coordsPart = cacheKey.substring(text.length + 1);
+        textFilteredCache[coordsPart] = advanceWidthCache[cacheKey];
+      }
+    });
+    
+    const interpolated = interpolateAdvanceWidth(coordinates, textFilteredCache);
+    if (interpolated !== null && interpolated !== undefined) {
+      return interpolated;
+    }
+
+    return null;
+  }, [advanceWidthCache, getCoordinatesKey, interpolateAdvanceWidth, sampleText]);
+
+
+  // Recache advance widths when sample text changes
+  useEffect(() => {
+    if (instances.length > 0 && fontLoaded) {
+      // Clear cache entries for old text and recache with new text
+      setAdvanceWidthCache({});
+      // Get current SPAC values
+      const spacValuesMap = { ...spacValues };
+      setTimeout(() => {
+        cacheInstanceAdvanceWidths(instances, spacValuesMap, true); // Show loading indicator
+      }, 500);
+    }
+  }, [sampleText]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSelectInstance = useCallback((instance) => {
     // If clicking the same instance, don't reset coordinates
     if (selectedInstance && selectedInstance.name === instance.name) {
@@ -788,6 +985,7 @@ function App() {
         ...prev,
         [tag]: value,
       };
+      
       // Also update the stored coordinates for the current instance
       if (selectedInstance) {
         setInstanceEditingCoordinates(prevStored => ({
@@ -802,6 +1000,61 @@ function App() {
       return updated;
     });
   }, [selectedInstance, editingCoordinates, spacMode]);
+
+  // Calculate advance width in real-time when coordinates change
+  useEffect(() => {
+    if (!fontLoaded || !selectedInstance) {
+      setCurrentAdvanceWidth(null);
+      setCurrentAdvanceWidthPixels(null);
+      return;
+    }
+
+    // Build current coordinates
+    // Start with instance coordinates as base, then overlay editingCoordinates
+    // This ensures all axes are present, not just the ones being edited
+    const baseCoords = { ...selectedInstance.coordinates };
+    const currentCoords = { ...baseCoords, ...editingCoordinates };
+    
+    // Add SPAC if spacMode is enabled
+    if (spacMode) {
+      const spacValue = editingCoordinates.SPAC !== undefined 
+        ? editingCoordinates.SPAC 
+        : (spacValues[selectedInstance.name] || 0);
+      currentCoords.SPAC = spacValue;
+    }
+
+    // For selected instance, always use API call for accuracy (skip cache to avoid interpolation errors)
+    // Debounce to avoid too many API calls while dragging slider
+    const timeoutId = setTimeout(async () => {
+      try {
+        const widthResult = await api.getTextWidth(sampleText, currentCoords, fontSize);
+        
+        if (widthResult && widthResult.width_font_units !== undefined) {
+          const widthFontUnits = widthResult.width_font_units;
+          const widthPixels = widthResult.width_pixels;
+          
+          // Update cache with font units (for consistency)
+          const cacheKey = getCoordinatesKey(currentCoords, sampleText);
+          setAdvanceWidthCache(currentCache => ({
+            ...currentCache,
+            [cacheKey]: widthFontUnits // Store in font units
+          }));
+          
+          setCurrentAdvanceWidth(widthFontUnits);
+          setCurrentAdvanceWidthPixels(widthPixels);
+        } else {
+          setCurrentAdvanceWidth(null);
+          setCurrentAdvanceWidthPixels(null);
+        }
+      } catch (err) {
+        // Don't fallback to interpolation - it's inaccurate
+        setCurrentAdvanceWidth(null);
+        setCurrentAdvanceWidthPixels(null);
+      }
+    }, 200); // 200ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [editingCoordinates, selectedInstance, fontLoaded, spacMode, spacValues, calculateAdvanceWidth, sampleText, fontSize, advanceWidthCache, getCoordinatesKey]);
 
   // Helper function to wait for font to be loaded and ready
   const waitForFontReady = async (maxAttempts = 50, delayMs = 100) => {
@@ -1681,6 +1934,10 @@ function App() {
                 onMoveInstance={handleMoveInstance}
                 onRenameInstance={handleRenameInstance}
                 onUpdateInstance={handleUpdateInstance}
+                calculateAdvanceWidth={calculateAdvanceWidth}
+                spacValues={spacValues}
+                advanceWidthLoading={advanceWidthLoading}
+                currentAdvanceWidth={currentAdvanceWidth}
               />
             </>
           )}

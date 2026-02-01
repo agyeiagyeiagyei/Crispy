@@ -78316,6 +78316,14 @@ name = "Thin Condensed";
 },
 {
 axesValues = (
+181.2,
+40.3,
+41.3
+);
+name = "Thin Condensed MaxGrade";
+},
+{
+axesValues = (
 194.1,
 60.2,
 40.8
@@ -78330,14 +78338,6 @@ instanceInterpolations = {
 "8462F42F-4EB1-4423-BAD0-833446464E27" = 0.83642;
 };
 name = "Thin Condensed SmallOpsz";
-},
-{
-axesValues = (
-194.1,
-60.2,
-40.8
-);
-name = "Thin Condensed SmallOpsz GradeMax";
 },
 {
 axesValues = (
