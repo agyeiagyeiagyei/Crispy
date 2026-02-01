@@ -2,7 +2,7 @@
 .appVersion = "3406";
 .formatVersion = 3;
 DisplayStrings = (
-"/nbspace  "
+"/nbspace/nbspace.001  "
 );
 axes = (
 {
@@ -27,6 +27,10 @@ value = (
 {
 name = "Use Typo Metrics";
 value = 1;
+},
+{
+name = "Variable Font Origin";
+value = "8462F42F-4EB1-4423-BAD0-833446464E27";
 }
 );
 date = "2018-06-13 01:37:59 +0000";
@@ -100,7 +104,7 @@ pos = -300;
 {
 }
 );
-name = "XTRA94-XOPQ2-YOPQ2";
+name = "UltraCondensed Thin";
 userData = {
 GSCornerRadius = 10;
 };
@@ -60791,6 +60795,45 @@ unicode = 160;
 },
 {
 color = 11;
+glyphname = nbspace.001;
+lastChange = "2026-01-22 13:51:43 +0000";
+layers = (
+{
+layerId = "6803808E-8576-48E9-AEA7-EE0D171F6F70";
+width = 980;
+},
+{
+layerId = "1E1683DE-29BB-491B-BAA6-759729746529";
+width = 72;
+},
+{
+layerId = "8462F42F-4EB1-4423-BAD0-833446464E27";
+width = 72;
+},
+{
+layerId = "1BCFA072-F94F-498F-956F-3AA5D600A933";
+width = 463;
+},
+{
+layerId = "0457B203-0D8E-47C5-900E-12B2256A2F18";
+width = 463;
+},
+{
+layerId = "1577B97C-DCC5-4AA4-842F-E9BB22E99E3C";
+width = 1390;
+},
+{
+layerId = "80FDAF56-89B9-483B-B264-E4AEDBEEB158";
+width = 980;
+},
+{
+layerId = "986EB9B7-B65B-4446-9CAC-0D719242B857";
+width = 1390;
+}
+);
+},
+{
+color = 11;
 glyphname = period;
 lastChange = "2026-01-17 12:53:50 +0000";
 layers = (
@@ -76242,6 +76285,19 @@ unicode = 37;
 instances = (
 {
 axesValues = (
+94,
+2,
+2
+);
+instanceInterpolations = {
+"8462F42F-4EB1-4423-BAD0-833446464E27" = 1;
+};
+name = "UltraCondensed Thin";
+weightClass = 100;
+widthClass = 1;
+},
+{
+axesValues = (
 181.2,
 40.3,
 41.3
@@ -76774,7 +76830,16 @@ key = copyrights;
 values = (
 {
 language = dflt;
-value = "Copyright 2025 Agyei Archer (https://github.com/agyeiagyeiagyei/Crispy)";
+value = "Copyright 2025 The Crispy Project Authors (https://github.com/agyeiagyeiagyei/Crispy)";
+}
+);
+},
+{
+key = designers;
+values = (
+{
+language = dflt;
+value = "Agyei Archer";
 }
 );
 },
