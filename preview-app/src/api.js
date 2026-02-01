@@ -173,6 +173,21 @@ export const api = {
     return parseJSON(response);
   },
 
+  async deleteInstance(instanceName) {
+    const response = await fetch(`${API_BASE}/instance/${encodeURIComponent(instanceName)}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      try {
+        const error = await parseJSON(response);
+        throw new Error(error.error || 'Delete failed');
+      } catch (e) {
+        throw new Error(`Delete failed: ${response.status} ${response.statusText}`);
+      }
+    }
+    return parseJSON(response);
+  },
+
   async getAvar2Instances() {
     const response = await fetch(`${API_BASE}/avar2/instances`);
     if (!response.ok) {

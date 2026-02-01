@@ -117,14 +117,18 @@ echo "Backend server started (PID: $SERVER_PID)"
 echo "Starting React frontend on port 3000..."
 cd preview-app
 
-# Check if production build exists, if not build it
-if [ ! -d "build" ]; then
-    echo "Building production version..."
-    CI=false npm run build > /tmp/preview-build.log 2>&1
-    if [ $? -ne 0 ]; then
-        echo "Error: Production build failed. Check /tmp/preview-build.log"
-        exit 1
-    fi
+# Delete existing build folder to ensure fresh build
+if [ -d "build" ]; then
+    echo "Removing existing build folder..."
+    rm -rf build
+fi
+
+# Build production version
+echo "Building production version..."
+CI=false npm run build > /tmp/preview-build.log 2>&1
+if [ $? -ne 0 ]; then
+    echo "Error: Production build failed. Check /tmp/preview-build.log"
+    exit 1
 fi
 
 # Use production build with serve (works reliably in background)

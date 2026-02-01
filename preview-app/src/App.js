@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import InstanceRows from './components/InstanceRows';
 import BuildAvar2Modal from './components/BuildAvar2Modal';
 import Avar2Preview from './components/Avar2Preview';
+import DeleteInstanceModal from './components/DeleteInstanceModal';
 
 const DEFAULT_SAMPLE_TEXT = "The Quick Brown Fox Jumps Over The Lazy Dog 0123456789 &!";
 
@@ -39,6 +40,8 @@ function App() {
   const [avar2PreviewMode, setAvar2PreviewMode] = useState(false); // New mode: Default vs Avar2 Preview
   const [syncStatus, setSyncStatus] = useState(null);
   const [showBuildAvar2Modal, setShowBuildAvar2Modal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [instanceToDelete, setInstanceToDelete] = useState(null);
   const [avar2FontUrl, setAvar2FontUrl] = useState(null);
   const [avar2FontLoaded, setAvar2FontLoaded] = useState(false);
 
@@ -1425,25 +1428,113 @@ function App() {
     }
   };
 
-  const handleDeleteInstance = useCallback((instanceToDelete) => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Remove instance "${instanceToDelete.name}" from preview?\n\n` +
-      `This will only remove it from the preview. Refresh the page to restore it.`
-    );
+  const handleDeleteInstance = useCallback((instance) => {
+    setInstanceToDelete(instance);
+    setShowDeleteModal(true);
+  }, []);
 
-    if (!confirmed) return;
+  const handleConfirmDelete = useCallback(async (deleteFromGlyphs) => {
+    if (!instanceToDelete) return;
 
-    // Remove from instances list
-    setInstances(prev => prev.filter(inst => inst.name !== instanceToDelete.name));
-    
-    // Clear selection if the deleted instance was selected
-    if (selectedInstance && selectedInstance.name === instanceToDelete.name) {
-      setSelectedInstance(null);
-      setEditingCoordinates({});
-      setOriginalCoordinates({});
+    const instanceName = instanceToDelete.name;
+
+    try {
+      setError(null);
+
+      if (deleteFromGlyphs) {
+        // Full deletion: delete from Glyphs file and CSV, then rebuild
+        setBuilding(true); // Set building state immediately to show UI feedback
+
+        await api.deleteInstance(instanceName);
+
+        // Backend already rebuilds the font after deletion
+        // Wait for build to complete by polling health endpoint
+        let buildComplete = false;
+        let attempts = 0;
+        const maxAttempts = 60; // 60 seconds max wait
+
+        while (!buildComplete && attempts < maxAttempts) {
+          try {
+            const health = await api.health();
+            if (!health.building) {
+              buildComplete = true;
+              break;
+            }
+          } catch (err) {
+            // Ignore polling errors, continue waiting
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          attempts++;
+        }
+
+        // Reload instances to get updated list (without deleted instance)
+        const instancesData = await api.getInstances();
+        setInstances(instancesData.instances);
+
+        // Reload font URL to get updated font (with timestamp to force reload)
+        setFontUrl(api.getFontUrl());
+        setFontLoaded(false);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setFontLoaded(true);
+
+        // Wait for font to be loaded
+        await waitForFontReady();
+
+        // Additional small delay to ensure DOM is updated after font load
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Reload SPAC values if spacMode is enabled (to remove deleted instance)
+        if (spacMode) {
+          try {
+            const spacResult = await api.getSpacValues();
+            const spacValuesMap = {};
+            if (spacResult.values) {
+              spacResult.values.forEach(v => {
+                spacValuesMap[v.instance_name] = v.spac || 0;
+              });
+            }
+            setSpacValues(spacValuesMap);
+          } catch (err) {
+            // Silently fail - SPAC is optional
+          }
+        }
+
+        // Reset building state after font is fully loaded and ready
+        setBuilding(false);
+      } else {
+        // Preview-only deletion: just remove from frontend state
+        setInstances(prev => prev.filter(inst => inst.name !== instanceName));
+      }
+
+      // Clear selection if the deleted instance was selected
+      if (selectedInstance && selectedInstance.name === instanceName) {
+        setSelectedInstance(null);
+        setEditingCoordinates({});
+        setOriginalCoordinates({});
+      }
+
+      // Clean up instance-specific state
+      setInstanceEditingCoordinates(prev => {
+        const newState = { ...prev };
+        delete newState[instanceName];
+        return newState;
+      });
+      setInstanceOriginalCoordinates(prev => {
+        const newState = { ...prev };
+        delete newState[instanceName];
+        return newState;
+      });
+
+      // Close modal
+      setShowDeleteModal(false);
+      setInstanceToDelete(null);
+    } catch (err) {
+      setError(err.message);
+      console.error('Delete failed:', err);
+      setBuilding(false); // Reset building state on error
+      // Keep modal open so user can try again or cancel
     }
-  }, [selectedInstance]);
+  }, [instanceToDelete, selectedInstance, spacMode, waitForFontReady]);
 
   const handleMoveInstance = useCallback((instanceToMove, targetInstance, position) => {
     if (!instanceToMove || !targetInstance) return;
@@ -1509,6 +1600,17 @@ function App() {
         onBuild={handleBuildAvar2Font}
         syncStatus={syncStatus}
         avar2Axes={avar2Axes}
+      />
+
+      <DeleteInstanceModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setInstanceToDelete(null);
+        }}
+        instanceName={instanceToDelete?.name || ''}
+        onConfirm={handleConfirmDelete}
+        glyphsFileHasUnsavedChanges={glyphsFileHasUnsavedChanges}
       />
       
       {error && (

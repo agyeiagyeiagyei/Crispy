@@ -568,6 +568,44 @@ def rename_instance_in_glyphs(glyphs_path: Path, old_name: str, new_name: str) -
         return False
 
 
+def delete_instance_in_glyphs(glyphs_path: Path, instance_name: str) -> bool:
+    """
+    Delete an instance from Glyphs file.
+    
+    Returns True if deletion was successful, False otherwise.
+    """
+    try:
+        font = load(str(glyphs_path))
+        
+        # Find the instance by name
+        instance_to_delete = None
+        for inst in font.instances:
+            if inst.name == instance_name:
+                instance_to_delete = inst
+                break
+        
+        if not instance_to_delete:
+            return False
+        
+        # Remove the instance from the list
+        font.instances.remove(instance_to_delete)
+        
+        # Save the font
+        font.save(str(glyphs_path))
+        
+        # Force Glyphs.app to reload the document (save unsaved changes, close, reopen)
+        # Pass font object so we can re-save after Glyphs.app saves
+        _force_reload_glyphs_document(glyphs_path, font_object=font)
+        
+        return True
+    
+    except Exception as e:
+        print(f"Error deleting instance from Glyphs file: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def update_instance_in_glyphs(glyphs_path: Path, instance_name: str, coordinates: Dict[str, float]) -> bool:
     """
     Update instance coordinates in Glyphs file.
@@ -2218,6 +2256,103 @@ def register_editing_instance(instance_name: str):
     global EDITING_INSTANCES
     EDITING_INSTANCES.add(instance_name)
     return jsonify({"success": True, "message": f"Instance '{instance_name}' registered as editing"})
+
+@app.route('/api/instance/<instance_name>', methods=['DELETE'])
+def delete_instance(instance_name: str):
+    """Delete an instance from the Glyphs file and CSV.
+    
+    Deletes from Glyphs file first, then removes from CSV.
+    Triggers rebuild after deletion.
+    """
+    # Check if Glyphs file has unsaved changes
+    if _check_glyphs_file_unsaved_changes(GLYPHS_PATH):
+        return jsonify({"error": "Glyphs file has unsaved changes. Please save the file first."}), 409
+    
+    try:
+        # Delete from Glyphs file first
+        glyphs_deleted = delete_instance_in_glyphs(GLYPHS_PATH, instance_name)
+        if not glyphs_deleted:
+            return jsonify({"error": f"Failed to delete instance '{instance_name}' from Glyphs file"}), 500
+        
+        # Remove from editing set since we're deleting
+        global EDITING_INSTANCES
+        EDITING_INSTANCES.discard(instance_name)
+        
+        # Delete from preview CSV if it exists
+        csv_path = _get_preview_csv_path()
+        if csv_path and csv_path.exists():
+            try:
+                import csv
+                # Read CSV
+                rows = []
+                fieldnames = []
+                with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+                    reader = csv.DictReader(f)
+                    fieldnames = list(reader.fieldnames) if reader.fieldnames else []
+                    for row in reader:
+                        # Skip the instance being deleted
+                        if row.get("Instance Name", "").strip() != instance_name:
+                            rows.append(row)
+                
+                # Write updated CSV (without deleted instance)
+                with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(rows)
+                
+                # Update modification time cache
+                _update_csv_modification_time(csv_path)
+                print(f"Removed instance '{instance_name}' from preview CSV", file=sys.stderr)
+            except Exception as e:
+                print(f"Warning: Could not remove instance from preview CSV: {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc()
+        
+        # Trigger rebuild in background thread (same pattern as update_instance)
+        def rebuild_in_background():
+            global BUILDING
+            if BUILDING:
+                print("Build already in progress, skipping rebuild after instance deletion...", file=sys.stderr)
+                return
+            
+            spac_font_dir = _get_spac_font_dir()
+            if spac_font_dir:
+                spac_font_path = spac_font_dir / "Crispy-SPAC-VF.ttf"
+                if spac_font_path.exists():
+                    # SPAC font exists - regenerate it using add-spac-axis-ufo.py
+                    print(f"Instance deleted, regenerating SPAC font...", file=sys.stderr)
+                    BUILDING = True
+                    try:
+                        if _regenerate_spac_font():
+                            # SPAC regeneration succeeded
+                            BUILDING = False
+                        else:
+                            # Fallback to regular build if regeneration fails
+                            print(f"SPAC regeneration failed, falling back to regular build...", file=sys.stderr)
+                            BUILDING = False  # Reset before trigger_build (which sets it)
+                            trigger_build()
+                    except Exception as e:
+                        print(f"Error during SPAC font regeneration: {e}", file=sys.stderr)
+                        BUILDING = False
+                else:
+                    # No SPAC font - rebuild regular font
+                    print(f"Instance deleted, triggering immediate rebuild...", file=sys.stderr)
+                    trigger_build()
+            else:
+                # No SPAC font directory - rebuild regular font
+                print(f"Instance deleted, triggering immediate rebuild...", file=sys.stderr)
+                trigger_build()
+        
+        # Start rebuild in background thread (small delay to ensure file save completes)
+        rebuild_thread = threading.Thread(target=rebuild_in_background, daemon=True)
+        rebuild_thread.start()
+        
+        return jsonify({"success": True, "message": f"Deleted instance '{instance_name}' from Glyphs file and CSV"})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/instance/<instance_name>/editing', methods=['DELETE'])
 def unregister_editing_instance(instance_name: str):

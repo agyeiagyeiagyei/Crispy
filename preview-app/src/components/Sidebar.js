@@ -128,16 +128,19 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
             // If no traditional axes exist, show "Add Axis" button
             if (!hasTraditionalAxes) {
               return (
-                <div className="avar2-add-axis-section">
-                  <button
-                    className="btn btn-add-axis"
-                    onClick={() => {
-                      setShowAddAxisModal(true);
-                    }}
-                  >
-                    + Add Axis
-                  </button>
-                </div>
+                <>
+                  <hr className="sidebar-separator" />
+                  <div className="avar2-add-axis-section">
+                    <button
+                      className="btn btn-add-axis"
+                      onClick={() => {
+                        setShowAddAxisModal(true);
+                      }}
+                    >
+                      + Add Axis
+                    </button>
+                  </div>
+                </>
               );
             }
             
@@ -307,6 +310,7 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
                   {valueError && (
                     <div className="avar2-error-message">{valueError}</div>
                   )}
+                  <hr className="sidebar-separator" />
                   <div className="avar2-add-axis-section">
                     <button
                       className="btn btn-add-axis"
@@ -322,16 +326,19 @@ function Sidebar({ axes, coordinates, onAxisChange, disabled, sampleText, onSamp
             }
             // No mapping for this instance, but traditional axes exist - show "Add Axis" button
             return (
-              <div className="avar2-add-axis-section">
-                <button
-                  className="btn btn-add-axis"
-                  onClick={() => {
-                    setShowAddAxisModal(true);
-                  }}
-                >
-                  + Add Axis
-                </button>
-              </div>
+              <>
+                <hr className="sidebar-separator" />
+                <div className="avar2-add-axis-section">
+                  <button
+                    className="btn btn-add-axis"
+                    onClick={() => {
+                      setShowAddAxisModal(true);
+                    }}
+                  >
+                    + Add Axis
+                  </button>
+                </div>
+              </>
             );
           })()}
         </div>

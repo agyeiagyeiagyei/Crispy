@@ -1,0 +1,130 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.delete-instance-modal {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.delete-instance-modal h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.delete-instance-message {
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  color: #666;
+  line-height: 1.5;
+}
+
+.delete-instance-warning {
+  margin: 0 0 1rem 0;
+  padding: 0.75rem;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: #856404;
+  line-height: 1.5;
+}
+
+.delete-instance-error {
+  margin: 0 0 1rem 0;
+  padding: 0.75rem;
+  background: #f8d7da;
+  border: 1px solid #dc3545;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: #721c24;
+  line-height: 1.5;
+}
+
+.delete-instance-checkbox {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.delete-instance-checkbox label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #333;
+}
+
+.delete-instance-checkbox input[type="checkbox"] {
+  margin-right: 0.5rem;
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.delete-instance-checkbox input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.delete-instance-checkbox span {
+  user-select: none;
+}
+
+.delete-instance-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.delete-instance-cancel,
+.delete-instance-confirm {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.delete-instance-cancel {
+  background: #f8f9fa;
+  color: #333;
+}
+
+.delete-instance-cancel:hover {
+  background: #e9ecef;
+}
+
+.delete-instance-confirm {
+  background: #dc3545;
+  color: white;
+}
+
+.delete-instance-confirm:hover:not(:disabled) {
+  background: #c82333;
+}
+
+.delete-instance-confirm:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
