@@ -10,13 +10,10 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
   // Load font when available
   useEffect(() => {
     if (fontUrl && fontLoaded && typeof fontUrl === 'string') {
-      console.log('Loading font from:', fontUrl);
-      
       // Remove old font if it exists to force reload
       const oldFont = Array.from(document.fonts).find(f => f.family === 'Crispy-VF');
       if (oldFont) {
         document.fonts.delete(oldFont);
-        console.log('Removed old font to force reload');
       }
       
       // Load font using FontFace API
@@ -28,13 +25,10 @@ function InstanceRows({ instances, selectedInstance, onSelectInstance, editingCo
           // Wait for font to be ready
           return document.fonts.ready.then(() => {
             setFontReady(true);
-            console.log('Font loaded and ready. Registered as:', loadedFont.family);
-            console.log('Font check:', document.fonts.check('12px "Crispy-VF"'));
           });
         })
         .catch(err => {
           console.error('Failed to load font:', err);
-          console.error('Font URL:', fontUrl);
           setFontReady(false);
         });
     } else {

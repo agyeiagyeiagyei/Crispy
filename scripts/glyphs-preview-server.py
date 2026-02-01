@@ -920,14 +920,19 @@ def update_instance(instance_name: str):
                     fieldnames.append("SPAC")
                 
                 # Update SPAC value for this instance
+                # Handle duplicates by updating ALL matching rows
                 instance_updated = False
+                updated_count = 0
                 for row in rows:
                     if row.get("Instance Name", "").strip() == instance_name:
                         row["SPAC"] = str(spac_value)
                         instance_updated = True
-                        break
+                        updated_count += 1
+                        # Don't break - update all duplicates
                 
                 if instance_updated:
+                    if updated_count > 1:
+                        print(f"Warning: Found {updated_count} duplicate rows for '{instance_name}', updated all", file=sys.stderr)
                     # Write updated CSV
                     with csv_path.open("w", encoding="utf-8-sig", newline="") as f:
                         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -935,8 +940,12 @@ def update_instance(instance_name: str):
                         writer.writerows(rows)
                     _update_csv_modification_time(csv_path)
                     print(f"Updated SPAC value for '{instance_name}' in CSV: {spac_value}", file=sys.stderr)
+                else:
+                    print(f"Error: Instance '{instance_name}' not found in CSV", file=sys.stderr)
             except Exception as e:
                 print(f"Warning: Could not update SPAC value in CSV: {e}", file=sys.stderr)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
     
     # Sync CSV to update with new Glyphs coordinates (but skip this instance if still editing)
     csv_path = _get_avar2_csv_path()
@@ -977,7 +986,10 @@ def update_instance(instance_name: str):
                 print(f"Instance updated, regenerating SPAC font...", file=sys.stderr)
                 BUILDING = True
                 try:
-                    if not _regenerate_spac_font():
+                    if _regenerate_spac_font():
+                        # SPAC regeneration succeeded
+                        BUILDING = False
+                    else:
                         # Fallback to regular build if regeneration fails
                         print(f"SPAC regeneration failed, falling back to regular build...", file=sys.stderr)
                         BUILDING = False  # Reset before trigger_build (which sets it)
@@ -2661,13 +2673,19 @@ def check_spac_axis():
 
 @app.route('/api/spacing/values', methods=['GET'])
 def get_spac_values():
-    """Get SPAC values for all instances from preview CSV."""
+    """Get SPAC values for all instances from preview CSV.
+    
+    Handles duplicates by keeping the last value for each instance name.
+    """
     try:
         csv_path = _get_preview_csv_path()
         if not csv_path or not csv_path.exists():
             return jsonify({"error": "Preview CSV not found"}), 404
         
-        rows = []
+        # Use dict to handle duplicates - last value wins
+        instance_spac_map = {}
+        duplicate_instances = set()
+        
         with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
             reader = csv.DictReader(f)
             for row in reader:
@@ -2677,10 +2695,23 @@ def get_spac_values():
                     spac_float = float(spac_value) if spac_value else 0.0
                 except ValueError:
                     spac_float = 0.0
-                rows.append({
-                    "instance_name": instance_name,
-                    "spac": spac_float
-                })
+                
+                # Track duplicates
+                if instance_name in instance_spac_map:
+                    duplicate_instances.add(instance_name)
+                
+                # Last value wins (overwrites previous)
+                instance_spac_map[instance_name] = spac_float
+        
+        # Warn about duplicates (only if significant)
+        if duplicate_instances and len(duplicate_instances) > 0:
+            print(f"Warning: Found duplicate rows in CSV for {len(duplicate_instances)} instance(s)", file=sys.stderr)
+        
+        # Convert to list format
+        rows = [
+            {"instance_name": name, "spac": value}
+            for name, value in instance_spac_map.items()
+        ]
         
         return jsonify({"values": rows})
     except Exception as e:

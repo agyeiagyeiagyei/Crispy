@@ -133,6 +133,24 @@ function App() {
             api.getAxes(),
             checkSpacAxisStatus().catch(() => false),
           ]);
+          
+          // Reload SPAC values if spacMode is enabled (to preserve saved values after rebuild)
+          let spacValuesMap = {};
+          if (spacMode) {
+            try {
+              const spacResult = await api.getSpacValues();
+              if (spacResult.values) {
+                spacResult.values.forEach(v => {
+                  spacValuesMap[v.instance_name] = v.spac || 0;
+                });
+              }
+              setSpacValues(spacValuesMap);
+            } catch (err) {
+              // Silently fail - SPAC is optional
+              console.debug('Failed to reload SPAC values:', err);
+            }
+          }
+          
           setInstances(instancesData.instances);
           
           // Add SPAC to axes if it exists and spacMode is enabled
@@ -150,6 +168,62 @@ function App() {
             }
           }
           setAxes(axesList);
+          
+          // After reloading instances, update instanceOriginalCoordinates and instanceEditingCoordinates
+          // to preserve SPAC values that were saved (so they don't reset to 0)
+          if (spacMode && Object.keys(spacValuesMap).length > 0) {
+            instancesData.instances.forEach(instance => {
+              const spacValue = spacValuesMap[instance.name];
+              if (spacValue !== undefined) {
+                // Update instanceOriginalCoordinates with SPAC value
+                setInstanceOriginalCoordinates(prev => {
+                  const existing = prev[instance.name] || { ...instance.coordinates };
+                  return {
+                    ...prev,
+                    [instance.name]: { ...existing, SPAC: spacValue }
+                  };
+                });
+                // Update instanceEditingCoordinates with SPAC value if it exists
+                // This preserves the saved SPAC value so it doesn't reset to 0
+                setInstanceEditingCoordinates(prev => {
+                  const existing = prev[instance.name];
+                  if (existing) {
+                    return {
+                      ...prev,
+                      [instance.name]: { ...existing, SPAC: spacValue }
+                    };
+                  }
+                  // If no editing coordinates exist, create them with SPAC value
+                  return {
+                    ...prev,
+                    [instance.name]: { ...instance.coordinates, SPAC: spacValue }
+                  };
+                });
+              }
+            });
+            
+            // Update originalCoordinates and editingCoordinates for selected instance
+            if (selectedInstance) {
+              const updatedInstance = instancesData.instances.find(
+                inst => inst.name === selectedInstance.name
+              );
+              if (updatedInstance) {
+                const spacValue = spacValuesMap[updatedInstance.name];
+                if (spacValue !== undefined) {
+                  const updatedCoords = { ...updatedInstance.coordinates, SPAC: spacValue };
+                  setOriginalCoordinates(updatedCoords);
+                  // Update editingCoordinates to match saved SPAC value
+                  setEditingCoordinates(prev => {
+                    // Preserve any other coordinates but update SPAC
+                    if (Object.keys(prev).length > 0) {
+                      return { ...prev, SPAC: spacValue };
+                    }
+                    return updatedCoords;
+                  });
+                }
+              }
+            }
+          }
           
           // Restore scroll position after a brief delay
           if (selectedInstanceName) {
@@ -183,7 +257,6 @@ function App() {
       
       // If font is not built, trigger auto-build on hard reset
       if (!health.font_built && !health.building) {
-        console.log('Font not built, triggering auto-build...');
         try {
           await api.buildFont();
           // Reload health to get updated status
@@ -282,12 +355,10 @@ function App() {
   const handleAddAvar2Axis = async (axisData) => {
     try {
       const result = await api.addAvar2Axis(axisData);
-      console.log('Axis added successfully:', result);
       // Reload avar2 data to get updated axes and instances
       // Add a small delay to ensure backend has written files
       await new Promise(resolve => setTimeout(resolve, 300));
       await loadAvar2Data();
-      console.log('Avar2 data reloaded after adding axis');
     } catch (err) {
       console.error('Failed to add axis:', err);
       throw err; // Re-throw to let modal handle error display
@@ -516,7 +587,6 @@ function App() {
       }
       
       // Show success message (could be a toast notification)
-      console.log('Avar2 font built successfully:', result.font_path);
       
       return result;
     } catch (err) {
@@ -873,6 +943,7 @@ function App() {
 
     try {
       setError(null);
+      setBuilding(true); // Set building state immediately to show UI feedback
       
       await updateInstanceByName(targetInstanceName, coordinatesToUse);
       
@@ -904,6 +975,7 @@ function App() {
       }
       
       // Reload font URL to get updated font (with timestamp to force reload)
+      // This ensures we get the newly built font, not a cached/partial version
       setFontUrl(api.getFontUrl());
       setFontLoaded(false);
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -914,6 +986,57 @@ function App() {
       
       // Additional small delay to ensure DOM is updated after font load
       await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Reload SPAC values from CSV to get the saved values
+      // This ensures originalCoordinates and instanceOriginalCoordinates are updated
+      if (spacMode) {
+        // Get SPAC values directly from API to avoid state timing issues
+        const spacResult = await api.getSpacValues();
+        const spacValuesMap = {};
+        if (spacResult.values) {
+          spacResult.values.forEach(v => {
+            spacValuesMap[v.instance_name] = v.spac || 0;
+          });
+        }
+        // Update spacValues state
+        setSpacValues(spacValuesMap);
+        
+        // Get the saved SPAC value for this instance
+        const savedSpacValue = spacValuesMap[targetInstanceName];
+        
+        // Update originalCoordinates for selected instance if this was the selected one
+        if (selectedInstance && selectedInstance.name === targetInstanceName) {
+          const updatedCoords = { ...selectedInstance.coordinates };
+          if (savedSpacValue !== undefined) {
+            updatedCoords.SPAC = savedSpacValue;
+          }
+          setOriginalCoordinates(updatedCoords);
+          // Also update editingCoordinates to match (so sync status turns green)
+          setEditingCoordinates(updatedCoords);
+        }
+        
+        // Update instanceOriginalCoordinates for this instance
+        const instance = instances.find(inst => inst.name === targetInstanceName);
+        if (instance) {
+          const updatedCoords = { ...instance.coordinates };
+          if (savedSpacValue !== undefined) {
+            updatedCoords.SPAC = savedSpacValue;
+          }
+          setInstanceOriginalCoordinates(prev => ({
+            ...prev,
+            [targetInstanceName]: updatedCoords
+          }));
+          // Also update instanceEditingCoordinates to match saved value (so sync status turns green)
+          // This ensures the instance shows as synced after update
+          setInstanceEditingCoordinates(prev => ({
+            ...prev,
+            [targetInstanceName]: updatedCoords
+          }));
+        }
+      }
+      
+      // Reset building state after font is fully loaded and ready
+      setBuilding(false);
       
       // Scroll to updated instance after font is ready
       const element = document.querySelector(`[data-instance-name="${instanceNameToScroll}"]`);
@@ -926,6 +1049,7 @@ function App() {
     } catch (err) {
       setError(err.message);
       console.error('Update failed:', err);
+      setBuilding(false); // Reset building state on error
       throw err; // Re-throw for error handling in batch update
     }
   };
