@@ -2,7 +2,7 @@
 .appVersion = "3406";
 .formatVersion = 3;
 DisplayStrings = (
-"/nbspace/nbspace.001  "
+"B:"
 );
 axes = (
 {
@@ -61055,7 +61055,7 @@ unicode = 44;
 {
 color = 11;
 glyphname = colon;
-lastChange = "2026-01-17 12:53:50 +0000";
+lastChange = "2026-02-05 15:10:51 +0000";
 layers = (
 {
 layerId = "6803808E-8576-48E9-AEA7-EE0D171F6F70";
@@ -61141,10 +61141,10 @@ width = 1216;
 layerId = "80FDAF56-89B9-483B-B264-E4AEDBEEB158";
 shapes = (
 {
-pos = (0,634);
 ref = period;
 },
 {
+pos = (0,634);
 ref = period;
 }
 );
@@ -61154,10 +61154,10 @@ width = 202;
 layerId = "986EB9B7-B65B-4446-9CAC-0D719242B857";
 shapes = (
 {
-pos = (0,654);
 ref = period;
 },
 {
+pos = (0,654);
 ref = period;
 }
 );
