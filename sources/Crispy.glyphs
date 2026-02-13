@@ -30,7 +30,7 @@ value = 1;
 },
 {
 name = "Variable Font Origin";
-value = "8462F42F-4EB1-4423-BAD0-833446464E27";
+value = "1BCFA072-F94F-498F-956F-3AA5D600A933";
 }
 );
 date = "2018-06-13 01:37:59 +0000";
@@ -104,7 +104,7 @@ pos = -300;
 {
 }
 );
-name = "UltraCondensed Thin";
+name = "XTRA94-XOPQ2-YOPQ2";
 userData = {
 GSCornerRadius = 10;
 };
