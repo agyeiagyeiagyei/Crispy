@@ -16,36 +16,57 @@ fvarInstances:
       opsz: 48
       wdth: 100
       wght: 100
+      XTRA: 94
+      XOPQ: 2
+      YOPQ: 2
   - name: ExtraLight
     coordinates:
       opsz: 48
       wdth: 100
       wght: 200
+      XTRA: 94
+      XOPQ: 2
+      YOPQ: 2
   - name: Light
     coordinates:
       opsz: 48
       wdth: 100
       wght: 300
+      XTRA: 94
+      XOPQ: 2
+      YOPQ: 2
   - name: Regular
     coordinates:
       opsz: 48
       wdth: 100
       wght: 400
+      XTRA: 94
+      XOPQ: 2
+      YOPQ: 2
   - name: Medium
     coordinates:
       opsz: 48
       wdth: 100
       wght: 500
+      XTRA: 94
+      XOPQ: 2
+      YOPQ: 2
   - name: SemiBold
     coordinates:
       opsz: 48
       wdth: 100
       wght: 600
+      XTRA: 94
+      XOPQ: 2
+      YOPQ: 2
   - name: Bold
     coordinates:
       opsz: 48
       wdth: 100
       wght: 700
+      XTRA: 94
+      XOPQ: 2
+      YOPQ: 2
 
 stat:
   Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf:
