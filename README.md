@@ -32,14 +32,10 @@ The font uses an avar2 table to map traditional axis combinations to parametric 
 
 For example, when a user sets Weight=400, Width=100, Optical Size=72, the avar2 table maps this to XTRA=627.0, XOPQ=187.672, YOPQ=160.0, SPAC=25. This mapping is defined in `sources/Crispy-avar.csv` and built into the font during compilation.
 
-**Preview / authoring tool:**
+**Editing the avar2 mappings:**
 
-The interactive avar2 preview and authoring tool that used to live in
-this repo has been extracted to a standalone project,
-[avar2-studio](https://github.com/agyeiagyeiagyei/avar2-studio), so
-any parametric-font designer can use it on their own `.glyphs` file.
-
-To launch it on Crispy:
+Crispy's avar2 mappings are authored with
+[avar2-studio](https://github.com/agyeiagyeiagyei/avar2-studio):
 
 ```bash
 brew install fontc    # or: cargo install fontc
@@ -47,9 +43,10 @@ pipx install https://github.com/agyeiagyeiagyei/avar2-studio/releases/latest/dow
 avar2-studio sources/Crispy.glyphs
 ```
 
-avar2-studio finds the sibling `sources/Crispy-avar.csv` automatically
-and writes its working state into a sibling `.avar2-studio/`
-directory (gitignored). Open the printed URL in a browser.
+avar2-studio picks up the sibling `sources/Crispy-avar.csv`
+automatically and writes its working state into a sibling
+`.avar2-studio/` directory (gitignored). Open the printed URL in a
+browser.
 
 ___
 **For the purposes of this project, I describe *axes* as visual paradigms that we use to describe one or more features in a variable font.**
