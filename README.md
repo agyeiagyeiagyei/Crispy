@@ -30,7 +30,7 @@ These are the fundamental building blocks that control specific structural compo
 **Avar2 Mapping:**
 The font uses an avar2 table to map traditional axis combinations to parametric axis values. This allows users to work with familiar axes (Weight, Width, Optical Size) while the font internally uses parametric axes (XOPQ, YOPQ, XTRA, SPAC). The avar2 table contains mappings for all combinations of traditional axes, automatically translating user input to the appropriate parametric values.
 
-For example, when a user sets Weight=400, Width=100, Optical Size=72, the avar2 table maps this to XTRA=627.0, XOPQ=187.672, YOPQ=160.0, SPAC=25. This mapping is defined in `sources/avar2-mappings.csv` and built into the font during compilation.
+For example, when a user sets Weight=400, Width=100, Optical Size=72, the avar2 table maps this to XTRA=627.0, XOPQ=187.672, YOPQ=160.0, SPAC=25. This mapping is defined in `sources/Crispy-avar.csv` and built into the font during compilation.
 
 **Preview Tool:**
 A web-based preview tool is available (on the `glyphs-preview-tool` branch) for fine-tuning traditional axis outcomes. The tool allows you to:

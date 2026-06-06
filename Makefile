@@ -21,11 +21,11 @@ venv: venv/touchfile
 customize: venv
 	. venv/bin/activate; python3 scripts/customize.py
 
-# Step 0: Sync avar2-mappings.csv from Glyphs file (updates XTRA, XOPQ, YOPQ)
+# Step 0: Sync Crispy-avar.csv from Glyphs file (updates XTRA, XOPQ, YOPQ)
 # Step 1: Update config.yaml with STAT and avar2 sections from CSV
 # Steps 2-7: Build fonts (gftools builder generates build.ninja with 6 steps: buildVariable, fix, BuildSTAT, AddSpacingAxis, BuildAvar2, BuildFvarInstances)
 # Step 8: Convert avar2 to avar1
-build.stamp: venv sources/config.yaml sources/avar2-mappings.csv sources/Crispy.glyphs $(SOURCES)
+build.stamp: venv sources/config.yaml sources/Crispy-avar.csv sources/Crispy.glyphs $(SOURCES)
 	rm -rf fonts;
 	. venv/bin/activate && \
 	(for config in sources/config*.yaml; do gftools builder --experimental-fontc $$(which fontc) $$config; done) && \

@@ -139,7 +139,7 @@ def main():
         "--csv",
         type=Path,
         required=True,
-        help="Path to avar2-mappings.csv file"
+        help="Path to avar2 CSV file"
     )
     parser.add_argument(
         "--min-wdth",
