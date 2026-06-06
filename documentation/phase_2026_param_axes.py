@@ -39,7 +39,7 @@ from drawbot_skia.drawbot import (
 from PIL import Image, ImageChops
 
 
-FONT_PATH = "preview-app/fonts-avar2/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf"
+FONT_PATH = "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ,opsz,wdth,wght].ttf"
 
 # Axis ranges, in order they appear in DESIGNSPACE.md.
 # Values are taken from the *fvar* table of the shipped font, not the

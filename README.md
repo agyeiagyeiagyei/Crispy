@@ -32,35 +32,24 @@ The font uses an avar2 table to map traditional axis combinations to parametric 
 
 For example, when a user sets Weight=400, Width=100, Optical Size=72, the avar2 table maps this to XTRA=627.0, XOPQ=187.672, YOPQ=160.0, SPAC=25. This mapping is defined in `sources/Crispy-avar.csv` and built into the font during compilation.
 
-**Preview Tool:**
-A web-based preview tool is available (on the `glyphs-preview-tool` branch) for fine-tuning traditional axis outcomes. The tool allows you to:
-- Preview all instances in real-time
-- Adjust parametric axes (XOPQ, YOPQ, XTRA) with sliders
-- See how traditional axis combinations map to parametric values via avar2
-- Edit instance coordinates and update the Glyphs file
-- Build fonts on-the-fly for instant preview
+**Preview / authoring tool:**
 
-This tool is particularly useful for understanding how traditional axis combinations translate to parametric values and for fine-tuning the avar2 mappings.
+The interactive avar2 preview and authoring tool that used to live in
+this repo has been extracted to a standalone project,
+[avar2-studio](https://github.com/agyeiagyeiagyei/avar2-studio), so
+any parametric-font designer can use it on their own `.glyphs` file.
 
-**To launch the preview tool:**
+To launch it on Crispy:
 
 ```bash
-# Using the launch script (recommended)
-./scripts/launch-preview.sh
-
-# Or specify a custom Glyphs file
-./scripts/launch-preview.sh sources/Crispy.glyphs
-
-# Manual launch (two terminals)
-# Terminal 1: Backend server
-python3 scripts/glyphs-preview-server.py --glyphs sources/Crispy.glyphs
-
-# Terminal 2: Frontend
-cd preview-app
-npm start
+brew install fontc    # or: cargo install fontc
+pipx install https://github.com/agyeiagyeiagyei/avar2-studio/releases/latest/download/avar2_studio-0.1.0.dev1-py3-none-any.whl
+avar2-studio sources/Crispy.glyphs
 ```
 
-The tool will be available at http://localhost:3000.
+avar2-studio finds the sibling `sources/Crispy-avar.csv` automatically
+and writes its working state into a sibling `.avar2-studio/`
+directory (gitignored). Open the printed URL in a browser.
 
 ___
 **For the purposes of this project, I describe *axes* as visual paradigms that we use to describe one or more features in a variable font.**
