@@ -2,7 +2,7 @@
 """
 sync-glyphs-to-avar2.py
 
-Watch Glyphs file for changes and sync instance coordinates to avar2-mappings.csv.
+Watch Glyphs file for changes and sync instance coordinates to Crispy-avar.csv.
 
 When the Glyphs file is updated:
 1. Read instances from Glyphs file
@@ -269,7 +269,7 @@ class GlyphsFileHandler(FileSystemEventHandler):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Sync Glyphs file instances to avar2-mappings.csv"
+        description="Sync Glyphs file instances to Crispy-avar.csv"
     )
     parser.add_argument(
         "--glyphs",
@@ -280,8 +280,8 @@ def main():
     parser.add_argument(
         "--csv",
         type=Path,
-        default=Path("sources/avar2-mappings.csv"),
-        help="Path to avar2-mappings CSV file (default: sources/avar2-mappings.csv)"
+        default=Path("sources/Crispy-avar.csv"),
+        help="Path to avar2 CSV file (default: sources/Crispy-avar.csv)"
     )
     parser.add_argument(
         "--watch",

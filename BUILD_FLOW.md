@@ -11,7 +11,7 @@ The build process transforms source files (Glyphs file, CSV mappings) into final
 ### Step 1: Update config.yaml
 **Script:** `sources/update_config.py`
 
-- **Input:** `sources/avar2-mappings.csv`, `sources/config.yaml`
+- **Input:** `sources/Crispy-avar.csv`, `sources/config.yaml`
 - **Action:**
   - Expands CSV with contrast variations (`--add-contrast` flag)
   - Generates `stat` section (4 axes: opsz, wdth, wght, cntr)
@@ -111,7 +111,7 @@ The build process transforms source files (Glyphs file, CSV mappings) into final
 ## File Flow Diagram
 
 ```
-sources/avar2-mappings.csv
+sources/Crispy-avar.csv
          ↓
     [Step 1: update_config.py]
          ↓
@@ -139,7 +139,7 @@ Final fonts with correct axis defaults ✓
 - Contains: `fvarInstances`, `stat`, `avar2` sections
 - Updated automatically by `update_config.py`
 
-### `sources/avar2-mappings.csv`
+### `sources/Crispy-avar.csv`
 - Source data for STAT and avar2 generation
 - Columns: Instance Name, XTRA, XOPQ, YOPQ, SPAC, WGHT-e, WDTH-e, OPSZ-e
 - Expanded automatically with contrast variations
@@ -171,7 +171,7 @@ This runs all 9 steps in sequence, creating final fonts with:
 
 - `venv/` - Python virtual environment with required packages
 - `sources/config.yaml` - Main build configuration
-- `sources/avar2-mappings.csv` - Source mappings
+- `sources/Crispy-avar.csv` - Source mappings
 - `sources/Crispy.glyphs` - Source font file
 - `scripts/mapping.yaml` - Axis mappings for avar1 conversion
 - `sources/axis_defaults.yaml` - Axis default values

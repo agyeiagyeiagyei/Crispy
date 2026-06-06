@@ -1,0 +1,57 @@
+﻿Instance Name,XTRA,XOPQ,YOPQ,OPSZ,WGHT,WDTH,SPAC,CNTR
+Thin Condensed,181.2,40.3,41.3,72.0,100,52.0,0,0
+ExtraLight Condensed,248.0,78.0,85.0,72.0,200.0,52.0,0,0
+Light Condensed,280.0,95.0,90.0,72.0,300.0,52.0,0,0
+Regular Condensed,290.0,147.0,130.0,72.0,400.0,52.0,0,0
+Medium Condensed,345.0,240.0,240.0,72.0,500.0,52.0,0,0
+Semibold Condensed,354.0,322.0,268.0,72.0,600.0,52.0,0,0
+Bold Condensed,318.0,407.0,347.0,72.0,700.0,52.0,0,0
+Thin,461.8,46.9,44.0,72.0,100,100.0,0,0
+ExtraLight,580.0,78.575,78.59,72.0,200.0,100.0,0,0
+Light,603.55,133.124,124.253,72.0,300.0,100.0,0,0
+Regular,627.0,187.672,160.0,72.0,400.0,100.0,0,0
+Medium,650.5,242.221,216.1,72.0,500.0,100.0,0,0
+SemiBold,693.05,321.48,286.0,72.0,600.0,100.0,0,0
+Bold,735.6,400.738,324.7,72.0,700.0,100.0,0,0
+Thin Extended,1136.3,54.6,47.3,72.0,100.0,182.0,0,0
+ExtraLight Extended,1259.0,85.0,84.0,72.0,200.0,182.0,0,0
+Light Extended,1259.0,113.0,111.0,72.0,300.0,182.0,0,0
+Regular Extended,1252.1,220.4,197.1,72.0,400.0,182.0,0,0
+Medium Extended,1213.0,370.0,318.0,72.0,500.0,182.0,0,0
+Semibold Extended,1275.0,508.0,360.0,72.0,600.0,182.0,0,0
+Bold Extended,1350.0,579.8,391.4,72.0,700.0,182.0,0,0
+Thin Ultra Extended,2300.0,61.4,60.1,72.0,100,300.0,0,0
+ExtraLight Ultra Extended,2300.0,100.0,98.0,72.0,200.0,300.0,0,0
+Light Ultra Extended,2290.0,134.0,128.0,72.0,300.0,300.0,0,0
+Regular Ultra Extended,2210.6,235.2,199.5,72.0,400.0,300.0,0,0
+Medium Ultra Extended,2290.0,317.0,259.0,72.0,500.0,300.0,0,0
+Semibold Ultra Extended,2346.0,465.6,358.2,72.0,600.0,300.0,0,0
+Bold Ultra Extended,2369.9,619.7,362.0,72.0,700.0,300.0,0,0
+Regular Condensed SmallOpsz,613.9,139.5,130.0,12.0,400.0,52.0,0,0
+Thin Condensed SmallOpsz,194.1,60.2,40.8,12.0,100,52.0,0,0
+ExtraLight Condensed SmallOpsz,326.8,78.0,85.0,12.0,200.0,52.0,41.0,0
+Light Condensed SmallOpsz,368.5,95.0,90.0,12.0,300.0,52.0,0,0
+Medium Condensed SmallOpsz,642.4,266.1,240.0,12.0,500.0,52.0,0,0
+Semibold Condensed SmallOpsz,544.0,336.0,262.9,12.0,600.0,52.0,0,0
+Bold Condensed SmallOpsz,532.2,391.0,335.8,12.0,700.0,52.0,0,0
+Thin SmallOpsz,702.6,63.1,65.9,12.0,100.0,100.0,0,0
+ExtraLight SmallOpsz,741.1,87.9,78.8,12.0,200.0,100.0,0,0
+Light SmallOpsz,719.3,147.8,124.253,12.0,300.0,100.0,0,0
+Regular SmallOpsz,730.6,181.0,160.0,12.0,400.0,100.0,0,0
+Medium SmallOpsz,715.7,242.221,216.1,12.0,500.0,100.0,0,0
+SemiBold SmallOpsz,890.2,308.0,277.2,12.0,600.0,100.0,0,0
+Bold SmallOpsz,940.8,390.9,319.4,12.0,700.0,100.0,0,0
+Thin Extended SmallOpsz,1718.6,106.1,70.9,12.0,100.0,182.0,0,0
+ExtraLight Extended SmallOpsz,1473.2,98.2,88.1,12.0,200.0,182.0,0,0
+Light Extended SmallOpsz,1498.7,113.0,111.0,12.0,300.0,182.0,0,0
+Regular Extended SmallOpsz,1542.2,220.4,197.1,12.0,400.0,182.0,0,0
+Medium Extended SmallOpsz,1480.6,375.4,301.7,12.0,500.0,182.0,0,0
+Semibold Extended SmallOpsz,1535.5,508.0,360.0,12.0,600.0,182.0,0,0
+Bold Extended SmallOpsz,1642.9,579.8,391.4,12.0,700.0,182.0,0,0
+Thin Ultra Extended SmallOpsz,2654.2,79.7,69.5,12.0,100.0,300.0,0,0
+ExtraLight Ultra Extended SmallOpsz,2534.2,115.1,101.0,12.0,200.0,300.0,0,0
+Light Ultra Extended SmallOpsz,2679.6,134.0,128.0,12.0,300.0,300.0,0,0
+Regular Ultra Extended SmallOpsz,2528.2,244.9,199.5,12.0,400.0,300.0,0,0
+Medium Ultra Extended SmallOpsz,2502.3,323.2,273.5,12.0,500.0,300.0,0,0
+Semibold Ultra Extended SmallOpsz,2744.3,465.6,358.2,12.0,600.0,300.0,0,0
+Bold Ultra Extended SmallOpsz,2738.5,619.7,331.9,12.0,700.0,300.0,0,0
