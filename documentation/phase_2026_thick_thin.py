@@ -6,7 +6,7 @@ reader can see how the unintentional thick-thin moments in these
 glyphs evolve as weight increases.
 
 Parametric coordinates come from the existing avar2 mappings in
-``preview-app/Crispy-avar.csv``:
+``sources/Crispy-avar.csv``:
 
     Thin     (wght=100, wdth=100)  →  XTRA=461.8  XOPQ=46.9    YOPQ=44.0
     Regular  (wght=400, wdth=100)  →  XTRA=627.0  XOPQ=187.672 YOPQ=160.0
@@ -34,7 +34,7 @@ from drawbot_skia.drawbot import (
 )
 
 
-FONT_PATH = "preview-app/fonts-avar2/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf"
+FONT_PATH = "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ,opsz,wdth,wght].ttf"
 
 WIDTH = 1600
 HEIGHT = 520

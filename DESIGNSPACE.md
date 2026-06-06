@@ -34,9 +34,10 @@ traditional axes are the user-facing controls.
 ## Axes — current state
 
 Values are read from the **shipped font's fvar table** (the source of
-truth). Where the avar2-studio metadata in
-[`preview-app/avar2-axis-metadata.json`](preview-app/avar2-axis-metadata.json)
-disagrees with the fvar, the disagreement is flagged in the notes.
+truth). Where the avar2-studio metadata (carried inside the
+[avar2-studio](https://github.com/agyeiagyeiagyei/avar2-studio) tool
+that authors the avar2 mappings) disagrees with the fvar, the
+disagreement is flagged in the notes.
 
 | Tag    | Name          | Kind         | Min    | Default | Max    | User-facing? |
 |--------|---------------|--------------|--------|---------|--------|--------------|
@@ -191,9 +192,9 @@ and then corrected by hand.
 ## Avar2 mappings
 
 The mapping from traditional axes to parametric axes lives in
-[`preview-app/Crispy-avar.csv`](preview-app/Crispy-avar.csv) (the
-preview/authoring CSV) and is baked into the shipped font's `avar2`
-table at build time via
+[`sources/Crispy-avar.csv`](sources/Crispy-avar.csv) (authored
+through [avar2-studio](https://github.com/agyeiagyeiagyei/avar2-studio))
+and is baked into the shipped font's `avar2` table at build time via
 [`sources/update_config.py`](sources/update_config.py) +
 `gftools builder`.
 

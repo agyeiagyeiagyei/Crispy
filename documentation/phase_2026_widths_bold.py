@@ -3,7 +3,7 @@
 Renders the letter "a" at the three width extremes of Crispy's current
 designspace, all at the heaviest weight. The values are taken from the
 existing avar2 mappings — i.e. the corners as currently defined by
-the master coordinates in ``preview-app/Crispy-avar.csv``:
+the master coordinates in ``sources/Crispy-avar.csv``:
 
     Bold Condensed       (wght=700, wdth=52)   →  XTRA=318    XOPQ=407    YOPQ=347
     Bold                 (wght=700, wdth=100)  →  XTRA=735.6  XOPQ=400.74 YOPQ=324.7
@@ -34,7 +34,7 @@ from drawbot_skia.drawbot import (
 )
 
 
-FONT_PATH = "preview-app/fonts-avar2/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf"
+FONT_PATH = "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ,opsz,wdth,wght].ttf"
 
 # Canvas is sized for an "a" rendered at a realistic display size
 # (96pt) rather than at giant specimen scale, so the reader sees the
