@@ -38,7 +38,7 @@ Crispy's avar2 mappings are authored with
 [avar2-studio](https://github.com/agyeiagyeiagyei/avar2-studio):
 
 ```bash
-pipx install https://github.com/agyeiagyeiagyei/avar2-studio/releases/latest/download/avar2_studio-0.1.0.dev5-py3-none-any.whl
+pipx install https://github.com/agyeiagyeiagyei/avar2-studio/releases/latest/download/avar2_studio-0.1.0.dev6-py3-none-any.whl
 avar2-studio sources/Crispy.glyphs
 ```
 
