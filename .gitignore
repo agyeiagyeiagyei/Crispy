@@ -54,3 +54,12 @@ test-output/
 
 # Test build output (isolated from production fonts/)
 fonts-test/
+
+# Local agent tooling (Playwright harness, scratch files)
+.agent-tools/
+
+# Local agent instructions (not committed)
+/AGENTS.md
+
+# avar2 tooling archive — pending deletion review, excluded from git
+/archive/

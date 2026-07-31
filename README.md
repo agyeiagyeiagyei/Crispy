@@ -45,20 +45,25 @@ This tool is particularly useful for understanding how traditional axis combinat
 **To launch the preview tool:**
 
 ```bash
-# Using the launch script (recommended)
+# Using the launch script (recommended - handles both servers)
 ./scripts/launch-preview.sh
 
 # Or specify a custom Glyphs file
 ./scripts/launch-preview.sh sources/Crispy.glyphs
+```
 
-# Manual launch (two terminals)
+**Manual launch (if needed):**
+```bash
 # Terminal 1: Backend server
 python3 scripts/glyphs-preview-server.py --glyphs sources/Crispy.glyphs
 
-# Terminal 2: Frontend
+# Terminal 2: Frontend (production build)
 cd preview-app
-npm start
+npm run build
+npx serve -s build -l 3000
 ```
+
+**Note:** Use `npx serve -s build -l 3000` instead of `npm start` for reliable serving. The react dev server sometimes compiles but doesn't bind to the port.
 
 The tool will be available at http://localhost:3000.
 

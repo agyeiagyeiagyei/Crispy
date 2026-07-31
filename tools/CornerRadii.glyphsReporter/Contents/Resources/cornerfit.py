@@ -219,6 +219,7 @@ def find_corners(paths, baseline_y=0.0, baseline_tol=10.0):
 
       path_index   index into ``paths``
       node_indices indices of ALL round nodes (T1 .. T2 inclusive)
+      t1_index/t2_index   indices of the two tangent-point nodes
       t1, t2       tangent-point coordinates
       handles      off-curve coordinates between T1 and T2
       mids         on-curve coordinates between T1 and T2 (multi-curve rounds)
@@ -363,6 +364,8 @@ def find_corners(paths, baseline_y=0.0, baseline_tol=10.0):
                 {
                     "path_index": pi,
                     "node_indices": node_indices,
+                    "t1_index": t1i,
+                    "t2_index": t2i_mod,
                     "t1": t1_pt,
                     "t2": t2_pt,
                     "handles": handle_pts,
@@ -417,6 +420,29 @@ def factor_to_absolute(corner, factor):
     """The radius a factor would produce, for the panel readout."""
     base = corner.get("radius") or corner.get("handle_radius")
     return None if base is None else base * factor
+
+
+# --------------------------------------------------------------------------
+# sharpening (Glyphs' "Sharpen Corners": T1/T2 onto C, handles deleted)
+# --------------------------------------------------------------------------
+
+def sharpen_plan(corner):
+    """Plan for sharpening a round into a sharp corner: move T1 onto the
+    virtual corner C and delete every node after it up to and including
+    T2 (handles, any mid on-curve nodes, T2 itself), leaving a single
+    corner node. Returns None when the round has no virtual corner
+    (parallel straight segments).
+
+    ``{"corner": (x, y), "t1": idx, "delete": [idx, ...]}`` — indices
+    into the path's node list. Callers must resolve node objects before
+    deleting anything: deletions shift indices.
+    """
+    c = corner.get("corner")
+    if c is None:
+        return None
+    t1 = corner["t1_index"]
+    delete = sorted(i for i in corner["node_indices"] if i != t1)
+    return {"corner": c, "t1": t1, "delete": delete}
 
 
 # --------------------------------------------------------------------------

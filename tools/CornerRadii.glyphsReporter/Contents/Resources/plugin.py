@@ -11,8 +11,13 @@ the transformation on the corner, live, before anything is written.
 
 Outer corners (exterior contours) and inner corners (counters) get
 independent factors. Apply writes scaled node positions into the SAME
-node slots, so masters stay interpolation-compatible. Scope: current
-glyph or all glyphs, across any ticked masters.
+node slots, so masters stay interpolation-compatible. Sharpen removes
+each detected round instead: T1 moves onto the virtual corner as a plain
+line node and every node up to and including T2 is deleted (Glyphs'
+"Sharpen Corners", batched). Scope: current glyph, all glyphs, or all
+glyphs in just the active master, across any ticked masters — or the
+entire font (all masters, ticks ignored). Font-wide scopes also
+transform each glyph's brace/bracket layers.
 """
 
 from __future__ import division, print_function, unicode_literals
@@ -22,7 +27,7 @@ import sys
 import time
 
 import objc
-from AppKit import NSBezierPath, NSColor, NSTimer
+from AppKit import NSApp, NSBezierPath, NSColor, NSTimer
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 
@@ -142,6 +147,44 @@ class CornerRadii(ReporterPlugin):
             pass
 
     @objc.python_method
+    def _panelClosed(self, sender):
+        """Panel's red X clicked — toggle View → Corner Radii OFF by
+        sending the reporter's own menu-item action (the same thing the
+        View menu does). The window then closes normally; with the
+        reporter off, foreground() stops firing, so nothing re-shows it
+        until the user re-enables the view."""
+        def find_item(menu, depth=0):
+            for item in menu.itemArray():
+                # Glyphs prefixes reporter items with "Show "
+                if item.title() in (self.menuName, "Show " + self.menuName) \
+                        and item.action():
+                    return item
+                sub = item.submenu()
+                if sub is not None and depth < 3:
+                    found = find_item(sub, depth + 1)
+                    if found is not None:
+                        return found
+            return None
+
+        try:
+            main = NSApp.mainMenu()
+            main.update()  # force dynamic (reporter) items to populate
+            item = find_item(main)
+            if item is not None:
+                NSApp.sendAction_to_from_(item.action(), item.target(), item)
+                return
+            # evidence for the next attempt: dump the View menu's titles
+            for top in main.itemArray():
+                if top.title() == "View" and top.submenu() is not None:
+                    titles = [i.title() for i in top.submenu().itemArray()]
+                    _dbg("panelClosed: not found; View menu = %r" % titles)
+                    break
+            else:
+                _dbg("panelClosed: no View menu")
+        except Exception:
+            _dbg("EXCEPTION")
+
+    @objc.python_method
     def activate(self):
         """Reporter toggled ON (View menu) — show overlay AND panel."""
         _dbg("activate() called")
@@ -216,16 +259,116 @@ class CornerRadii(ReporterPlugin):
         return None
 
     @objc.python_method
+    def _activeMasterId(self, font):
+        """The master for 'this master' scope: the master of the layer ON
+        SCREEN first (selectedFontMaster proved unreliable — it returned
+        'New M8' while the user viewed another master), the UI selection
+        as fallback. Viewing a brace layer resolves to its master."""
+        try:
+            mids = set(m.id for m in font.masters)
+        except Exception:
+            mids = set()
+        if self._lastLayer is not None:
+            try:
+                # master layers: layerId IS the master id
+                if self._lastLayer.layerId in mids:
+                    return self._lastLayer.layerId
+            except Exception:
+                pass
+            try:
+                if self._lastLayer.associatedMasterId in mids:
+                    return self._lastLayer.associatedMasterId
+            except Exception:
+                pass
+        try:
+            m = font.selectedFontMaster
+            if m is not None:
+                return m.id
+        except Exception:
+            pass
+        return None
+
+    @objc.python_method
+    def _layersForMaster(self, glyph, mid, include_braces):
+        """The glyph's layer for master ``mid`` plus — when
+        ``include_braces`` — its brace/bracket layers belonging to that
+        master (associatedMasterId == mid, own layerId)."""
+        layers = []
+        try:
+            master = glyph.layers[mid]
+            if master is not None:
+                layers.append(master)
+        except Exception:
+            pass
+        if include_braces:
+            if not getattr(self, "_braceDiagLogged", False):
+                try:
+                    font = glyph.parent
+                    n_masters = len(font.masters)
+                except Exception:
+                    n_masters = 0
+                if n_masters and len(glyph.layers) > n_masters:
+                    self._braceDiagLogged = True
+                    info = []
+                    for layer in glyph.layers:
+                        try:
+                            amid = layer.associatedMasterId
+                            if callable(amid):
+                                amid = amid()
+                            amid = "%s(%s)" % (type(amid).__name__, amid)
+                        except Exception as e:
+                            amid = "ERR:%r" % e
+                        try:
+                            lid = layer.layerId
+                        except Exception as e:
+                            lid = "ERR:%r" % e
+                        info.append("%s/%s" % (lid, amid))
+                    _dbg("brace diag (%s) mid=%s(%s): %s"
+                         % (glyph.name, type(mid).__name__, mid, info))
+            for layer in glyph.layers:
+                try:
+                    amid = layer.associatedMasterId
+                    if callable(amid):  # runtime-bridge differences
+                        amid = amid()
+                    if layer.layerId != mid and amid == mid:
+                        layers.append(layer)
+                except Exception as e:
+                    # log the FIRST failure only — a per-layer flood would
+                    # bury it, silence would hide it (this exact bug)
+                    if not getattr(self, "_braceErrLogged", False):
+                        self._braceErrLogged = True
+                        _dbg("brace-loop error: %r (layer=%r)" % (e, layer))
+        return layers
+
+    @objc.python_method
     def _targets(self):
-        """[(glyph, layer)] to transform, from glyph scope + ticked masters."""
+        """[(glyph, layer)] to transform, from glyph scope + ticked masters.
+        Scope 'all_this_master' ignores the tick-boxes: every glyph, only
+        the master currently selected in the UI. Scope 'entire_font'
+        ignores them too: every glyph, every master. All font-wide scopes
+        ('all', 'all_this_master', 'entire_font') also include each
+        glyph's brace/bracket layers — 'current glyph' stays
+        master-layers-only."""
         font = self._currentFont()
         if font is None:
             _dbg("_targets: no font")
             return []
+        if self.glyphScope == "all_this_master":
+            mid = self._activeMasterId(font)
+            if mid is None:
+                _dbg("_targets: no active master (scope=all_this_master)")
+                return []
+            targets = []
+            for g in font.glyphs:
+                for layer in self._layersForMaster(g, mid, True):
+                    targets.append((g, layer))
+            return targets
         master_ids = [
-            m.id for m in font.masters if self.masterSelections.get(m.id, True)
+            m.id for m in font.masters
+            if self.glyphScope == "entire_font"
+            or self.masterSelections.get(m.id, True)
         ]
-        if self.glyphScope == "all":
+        if self.glyphScope in ("all", "entire_font"):
             glyphs = list(font.glyphs)
         else:
             glyph = self._currentGlyph()
@@ -233,13 +376,12 @@ class CornerRadii(ReporterPlugin):
                 _dbg("_targets: no current glyph (scope=current)")
                 return []
             glyphs = [glyph]
+        include_braces = self.glyphScope in ("all", "entire_font")
         targets = []
         for g in glyphs:
             for mid in master_ids:
-                try:
-                    targets.append((g, g.layers[mid]))
-                except Exception:
-                    pass
+                for layer in self._layersForMaster(g, mid, include_braces):
+                    targets.append((g, layer))
         return targets
 
     # ------------------------------------------------------------------
@@ -248,8 +390,12 @@ class CornerRadii(ReporterPlugin):
 
     @objc.python_method
     def _build_panel(self):
-        w = FloatingWindow((320, 400), "Corner Radii", closable=False)
+        w = FloatingWindow((320, 400), "Corner Radii", closable=True)
         self._panel = w
+        # The red X means "turn the reporter off", not "hide the panel" —
+        # while the reporter is on, foreground() would re-show the panel
+        # on the next draw, making a plain close look broken.
+        w.bind("close", self._panelClosed)
         y = 12
         w.outerLabel = TextBox((12, y, 70, 20), "Outer ×")
         w.outerField = EditText((82, y, 56, 22), "%.2f" % self.outerFactor,
@@ -283,10 +429,24 @@ class CornerRadii(ReporterPlugin):
                                  callback=self._baselineChanged)
         y += 28
         w.scopeLabel = TextBox((12, y, 70, 20), "Apply to")
-        w.scopePop = PopUpButton((82, y, 140, 22),
-                                 ["Current glyph", "All glyphs"],
+        self._scopeItems = ["Current glyph", "All glyphs",
+                            "All glyphs, this master", "Entire font"]
+        w.scopePop = PopUpButton((82, y, 200, 22),
+                                 self._scopeItems,
                                  callback=self._scopeChanged)
-        y += 28
+        y += 24
+        # Shows which master 'all_this_master' will actually target — the
+        # resolution (on-screen layer vs UI selection) is subtle, and a
+        # wrong guess once sharpened the wrong master font-wide.
+        w.masterHint = TextBox((82, y, 226, 16), "", sizeStyle="small")
+        y += 22
+        # Action row sits ABOVE the master list: with many masters the
+        # list grows long, and buttons placed below it would fall outside
+        # the window.
+        w.applyButton = Button((12, y, 96, 26), "Apply", callback=self._apply)
+        w.resetButton = Button((116, y, 96, 26), "Reset ×", callback=self._reset)
+        w.sharpenButton = Button((220, y, 88, 26), "Sharpen", callback=self._sharpen)
+        y += 34
         w.mastersLabel = TextBox((12, y, 200, 20), "Masters:")
         y += 22
         self._mastersY = y
@@ -319,12 +479,18 @@ class CornerRadii(ReporterPlugin):
         self._masterRows = {}
         if font is None:
             return
-        y = self._mastersBlockY
-        for m in font.masters:
+        masters = list(font.masters)
+        # Two columns when the list is long (this font has ~38 masters),
+        # so the panel stays on-screen.
+        cols = 2 if len(masters) > 8 else 1
+        rows = (len(masters) + cols - 1) // cols
+        col_w = 148
+        for i, m in enumerate(masters):
             selected = self.masterSelections.get(m.id, True)
             self.masterSelections[m.id] = selected
+            col, row = (i // rows, i % rows) if cols == 2 else (0, i)
             cb = CheckBox(
-                (24, y, 280, 20),
+                (24 + col * col_w, self._mastersBlockY + row * 22, col_w - 8, 20),
                 m.name,
                 value=selected,
                 callback=self._masterToggled,
@@ -332,18 +498,11 @@ class CornerRadii(ReporterPlugin):
             attr = "master_%s" % m.id.replace("-", "_")
             setattr(w, attr, cb)
             self._masterRows[m.id] = cb
-            y += 22
-        # (re)place the action row below the list
-        if not hasattr(w, "applyButton"):
-            w.applyButton = Button((12, y, 100, 26), "Apply", callback=self._apply)
-            w.resetButton = Button((122, y, 100, 26), "Reset ×", callback=self._reset)
-        else:
-            w.applyButton.setPosSize((12, y, 100, 26))
-            w.resetButton.setPosSize((122, y, 100, 26))
+        height = self._mastersBlockY + rows * 22 + 12
         try:
-            w.resize((320, y + 40))
+            w.resize(320, height)
         except Exception:
-            pass
+            _dbg("EXCEPTION")  # resize failing leaves controls unreachable
 
     # ------------------------------------------------------------------
     # panel callbacks
@@ -425,7 +584,20 @@ class CornerRadii(ReporterPlugin):
 
     @objc.python_method
     def _scopeChanged(self, sender):
-        self.glyphScope = "all" if sender.get() == "All glyphs" else "current"
+        scopes = ["current", "all", "all_this_master", "entire_font"]
+        sel = sender.get()
+        # vanilla's PopUpButton.get() is the title in some builds and the
+        # index in others — accept both instead of failing silently.
+        if isinstance(sel, (int, float)):
+            idx = int(sel)
+        else:
+            try:
+                idx = self._scopeItems.index(sel)
+            except ValueError:
+                idx = 0
+        self.glyphScope = scopes[idx] if 0 <= idx < len(scopes) else "current"
+        _dbg("scope -> %s (sender.get()=%r)" % (self.glyphScope, sel))
+        self._redraw()
 
     @objc.python_method
     def _masterToggled(self, sender):
@@ -443,6 +615,7 @@ class CornerRadii(ReporterPlugin):
     @objc.python_method
     def _redraw(self):
         self._refreshMasters()
+        self._updateMasterHint()
         try:
             self.controller.redraw()
         except Exception:
@@ -450,6 +623,26 @@ class CornerRadii(ReporterPlugin):
                 Glyphs.redraw()
             except Exception:
                 pass
+
+    @objc.python_method
+    def _updateMasterHint(self):
+        if self._panel is None or not hasattr(self._panel, "masterHint"):
+            return
+        try:
+            if self.glyphScope != "all_this_master":
+                self._panel.masterHint.set("")
+                return
+            font = self._currentFont()
+            mid = self._activeMasterId(font) if font is not None else None
+            name = None
+            if font is not None and mid is not None:
+                for m in font.masters:
+                    if m.id == mid:
+                        name = m.name
+                        break
+            self._panel.masterHint.set("→ %s" % (name or mid or "none resolved"))
+        except Exception:
+            _dbg("EXCEPTION")
 
     # ------------------------------------------------------------------
     # drawing
@@ -689,4 +882,79 @@ class CornerRadii(ReporterPlugin):
                     _dbg("EXCEPTION")
             layers_touched += 1 if changed else 0
         _dbg("apply: %d node writes across %d layers (targets=%d)" % (writes, layers_touched, len(targets)))
+        self._redraw()
+
+    @objc.python_method
+    def _sharpen(self, sender):
+        """Remove every detected round — Glyphs' 'Sharpen Corners',
+        batched: T1 moves onto the virtual corner C as a plain line node,
+        and every node after it up to and including T2 (handles, mid
+        on-curves, T2 itself) is deleted — one corner node per round, no
+        coincident pairs. Same scope + ticked masters as Apply."""
+        self._refreshMasters()
+        targets = self._targets()
+        if not targets:
+            _dbg("sharpen: no targets")
+            return
+        layers_touched = 0
+        rounds = 0
+        skipped = 0  # no virtual corner (parallel straight segments)
+        for glyph, layer in targets:
+            try:
+                corners = self._visible_corners(layer)
+            except Exception:
+                _dbg("EXCEPTION")
+                continue
+            if not corners:
+                continue
+            # Resolve node objects BEFORE any deletion — indices shift as
+            # nodes are removed, so later corners' indices would go stale.
+            ops = []
+            for corner in corners:
+                plan = cornerfit.sharpen_plan(corner)
+                if plan is None:
+                    skipped += 1
+                    continue
+                try:
+                    path = layer.paths[corner["path_index"]]
+                    nodes = list(path.nodes)
+                    ops.append((
+                        path,
+                        nodes[plan["t1"]],
+                        plan["corner"],
+                        [nodes[i] for i in plan["delete"]],
+                    ))
+                except Exception:
+                    _dbg("EXCEPTION")
+            if not ops:
+                continue
+            # one undo step per layer, same contract as _apply
+            try:
+                layer.beginChanges()
+            except Exception:
+                pass
+            try:
+                for _, t1, c, _ in ops:
+                    t1.position = c
+                    # GSNode.type's setter silently ignores the int enum
+                    # (verified: getter returns ints, int assignment was a
+                    # no-op) — use the string form, verify by reading back.
+                    t1.type = "line"
+                    if cornerfit._kind(t1) != "line":
+                        _dbg("sharpen: type set did not stick (node=%r)" % t1)
+                    t1.smooth = False
+                for path, _, _, dels in ops:
+                    for nd in dels:
+                        path.removeNode_(nd)
+                rounds += len(ops)
+                layers_touched += 1
+            except Exception:
+                _dbg("EXCEPTION")
+            finally:
+                try:
+                    layer.endChanges()
+                except Exception:
+                    _dbg("EXCEPTION")
+        _dbg("sharpen: %d rounds across %d layers (%d skipped, targets=%d)"
+             % (rounds, layers_touched, skipped, len(targets)))
         self._redraw()
