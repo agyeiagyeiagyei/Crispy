@@ -63,3 +63,6 @@ fonts-test/
 
 # avar2 tooling archive — pending deletion review, excluded from git
 /archive/
+
+# Avar2 Studio per-project workspace (config, backups, build output)
+.avar2-studio/
