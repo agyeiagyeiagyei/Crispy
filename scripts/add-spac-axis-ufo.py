@@ -6,14 +6,17 @@ UFO-based SPAC axis addition tool for Glyphs files.
 
 This script adds a SPAC (Spacing) axis to a variable font by:
 1. Using fontmake to generate UFO files + designspace from Glyphs file
-2. Duplicating all master UFOs to create SPAC=100 versions
+2. Duplicating all master UFOs to create SPAC=100 (more spacing) and
+   SPAC=-100 (reduced spacing) versions
 3. Modifying sidebearings in the duplicated UFOs using logarithmic scaling
 4. Scaling spacing based on master XTRA value (wider fonts get more spacing)
-5. Updating designspace to add SPAC axis and new sources
+5. Updating designspace to add SPAC axis (-100 to 100, default 0) and new sources
 6. Optionally compiling with fontc
 
 The spacing formula uses logarithmic scaling to provide balanced spacing
-across different glyph widths, with additional scaling for wider XTRA masters.
+across different glyph widths, with additional scaling for wider XTRA masters
+(up to 2.0x at max XTRA by default, in both the add and reduce directions).
+Reduced sidebearings are clamped at 0 (never negative).
 """
 
 from __future__ import annotations
@@ -77,7 +80,7 @@ def decompose_glyph_components(glyph, font):
     return True
 
 
-def modify_glyph_spacing(glyph, font, spac_value: float = 100.0, multiplier: float = 30.0, xtra_value: Optional[float] = None, xtra_scale_factor: float = 0.5):
+def modify_glyph_spacing(glyph, font, spac_value: float = 100.0, multiplier: float = 30.0, xtra_value: Optional[float] = None, xtra_scale_factor: float = 1.0):
     """
     Modify LSB and RSB for a glyph based on SPAC value using logarithmic scaling.
     
@@ -95,6 +98,8 @@ def modify_glyph_spacing(glyph, font, spac_value: float = 100.0, multiplier: flo
     
     At SPAC=100: adds calculated amount based on logarithmic scaling
     At SPAC=0: no changes (original spacing)
+    At SPAC=-100: subtracts the calculated amount (reduced spacing);
+                  sidebearings are clamped at 0, never negative
     
     Uses ufoLib2's setLeftMargin/setRightMargin methods.
     The glyph outline (bounds width) remains unchanged.
@@ -102,12 +107,12 @@ def modify_glyph_spacing(glyph, font, spac_value: float = 100.0, multiplier: flo
     Args:
         glyph: The glyph object to modify
         font: The font (layer) object, required for component glyphs
-        spac_value: SPAC axis value (default: 100.0)
+        spac_value: SPAC axis value (default: 100.0); negative values reduce spacing
         multiplier: Logarithmic scaling multiplier (default: 30.0)
                     Higher values = more space for all glyphs
                     Lower values = less space for all glyphs
         xtra_value: XTRA axis value for this master (optional, for scaling)
-        xtra_scale_factor: How much extra spacing for max XTRA (default: 0.5 = 1.5x at max)
+        xtra_scale_factor: How much extra spacing for max XTRA (default: 1.0 = 2.0x at max)
     """
     if glyph.width == 0:
         # Zero-width glyphs: no changes
@@ -141,8 +146,8 @@ def modify_glyph_spacing(glyph, font, spac_value: float = 100.0, multiplier: flo
         xtra_max = 3330.0
         xtra_range = xtra_max - xtra_min
         
-        # Linear scaling: higher XTRA = more spacing
-        # scale_factor=0.5 means max XTRA gets 1.5x spacing
+        # Linear scaling: higher XTRA = more spacing (and more reduction)
+        # scale_factor=1.0 means max XTRA gets 2.0x spacing change
         xtra_scale = 1.0 + ((xtra_value - xtra_min) / xtra_range) * xtra_scale_factor
     
     amount_to_add_total = log_amount * xtra_scale * (spac_value / 100.0)
@@ -236,9 +241,10 @@ def decompose_ufo_components(ufo_path: Path) -> int:
     return glyphs_decomposed
 
 
-def copy_and_modify_ufo_master(original_ufo_path: Path, new_ufo_name: str, spac_value: float = 100.0, multiplier: float = 30.0, xtra_value: Optional[float] = None, xtra_scale_factor: float = 0.5) -> Path:
+def copy_and_modify_ufo_master(original_ufo_path: Path, new_ufo_name: str, spac_value: float = 100.0, multiplier: float = 30.0, xtra_value: Optional[float] = None, xtra_scale_factor: float = 1.0) -> Path:
     """
-    Copy a UFO master and modify sidebearings for SPAC=100.
+    Copy a UFO master and modify sidebearings for the given SPAC value
+    (positive = more spacing, negative = reduced spacing).
     
     Returns path to the new UFO file.
     """
@@ -289,14 +295,21 @@ def copy_and_modify_ufo_master(original_ufo_path: Path, new_ufo_name: str, spac_
     return new_ufo_path
 
 
-def update_designspace_with_spac(designspace_path: Path, source_mappings: list[tuple[str, str]], spac_value: float = 100.0) -> None:
+def spac_suffix(spac_value: float) -> str:
+    """Name suffix for a SPAC master copy, e.g. 'SPAC100' or 'SPACn100'."""
+    if spac_value < 0:
+        return f"SPACn{abs(spac_value):g}"
+    return f"SPAC{spac_value:g}"
+
+
+def update_designspace_with_spac(designspace_path: Path, source_mappings: list[tuple[str, str, float]]) -> None:
     """
-    Update designspace to add SPAC axis and new sources for SPAC=100.
+    Update designspace to add SPAC axis and new sources for each SPAC extreme.
     
     Args:
         designspace_path: Path to designspace file
-        source_mappings: List of (original_source_name, new_source_name) tuples
-        spac_value: SPAC axis value for duplicated masters (default: 100.0)
+        source_mappings: List of (original_source_name, new_source_name, spac_value) tuples;
+                         spac_value may be positive (added spacing) or negative (reduced spacing)
     """
     print(f"\nStep 3: Updating designspace with SPAC axis...", file=sys.stderr)
     
@@ -312,19 +325,26 @@ def update_designspace_with_spac(designspace_path: Path, source_mappings: list[t
     for axis in doc.axes:
         new_doc.addAxis(axis)
     
+    # Derive SPAC axis bounds from the values actually generated
+    spac_values = [spac_value for _, _, spac_value in source_mappings]
+    spac_min = min(0.0, min(spac_values)) if spac_values else 0.0
+    spac_max = max(0.0, max(spac_values)) if spac_values else 0.0
+    
     # Add SPAC axis if it doesn't exist
     spac_axis = new_doc.getAxis("SPAC")
     if not spac_axis:
         spac_axis = AxisDescriptor()
         spac_axis.name = "Spacing"
         spac_axis.tag = "SPAC"
-        spac_axis.minimum = 0.0
+        spac_axis.minimum = spac_min
         spac_axis.default = 0.0
-        spac_axis.maximum = 100.0
+        spac_axis.maximum = spac_max
         new_doc.addAxis(spac_axis)
-        print(f"  ✓ Added SPAC axis (0-100, default 0)", file=sys.stderr)
+        print(f"  ✓ Added SPAC axis ({spac_min:g} to {spac_max:g}, default 0)", file=sys.stderr)
     else:
-        print(f"  ✓ SPAC axis already exists", file=sys.stderr)
+        spac_axis.minimum = min(spac_axis.minimum, spac_min)
+        spac_axis.maximum = max(spac_axis.maximum, spac_max)
+        print(f"  ✓ SPAC axis already exists, bounds now {spac_axis.minimum:g} to {spac_axis.maximum:g}", file=sys.stderr)
     
     # Get SPAC axis name (use name, not tag, for location dict)
     spac_axis_name = spac_axis.name  # "Spacing"
@@ -332,8 +352,9 @@ def update_designspace_with_spac(designspace_path: Path, source_mappings: list[t
     # Create a mapping of original source names to source objects
     source_map = {source.name: source for source in doc.sources}
     
-    # Add all original sources with SPAC=0
-    for original_source_name, new_source_name in source_mappings:
+    # Add all original sources with SPAC=0 (once each), plus a new source per SPAC extreme
+    originals_added = set()
+    for original_source_name, new_source_name, spac_value in source_mappings:
         if original_source_name not in source_map:
             print(f"  ⚠ Warning: Source '{original_source_name}' not found in designspace, skipping", file=sys.stderr)
             continue
@@ -341,17 +362,19 @@ def update_designspace_with_spac(designspace_path: Path, source_mappings: list[t
         original_source = source_map[original_source_name]
         
         # Add original source with SPAC=0
-        original_source_copy = SourceDescriptor()
-        original_source_copy.filename = original_source.filename
-        original_source_copy.name = original_source.name
-        original_source_copy.location = original_source.location.copy()
-        original_source_copy.location[spac_axis_name] = 0.0  # Use axis name, not tag
-        original_source_copy.familyName = original_source.familyName
-        original_source_copy.styleName = original_source.styleName
-        new_doc.addSource(original_source_copy)
-        print(f"  ✓ Added original source '{original_source_name}' at SPAC=0", file=sys.stderr)
+        if original_source_name not in originals_added:
+            original_source_copy = SourceDescriptor()
+            original_source_copy.filename = original_source.filename
+            original_source_copy.name = original_source.name
+            original_source_copy.location = original_source.location.copy()
+            original_source_copy.location[spac_axis_name] = 0.0  # Use axis name, not tag
+            original_source_copy.familyName = original_source.familyName
+            original_source_copy.styleName = original_source.styleName
+            new_doc.addSource(original_source_copy)
+            originals_added.add(original_source_name)
+            print(f"  ✓ Added original source '{original_source_name}' at SPAC=0", file=sys.stderr)
         
-        # Create new source for SPAC=100
+        # Create new source for this SPAC extreme
         new_ufo_filename = f"{new_source_name}.ufo"
         new_source = SourceDescriptor()
         new_source.filename = new_ufo_filename
@@ -359,9 +382,9 @@ def update_designspace_with_spac(designspace_path: Path, source_mappings: list[t
         new_source.location = original_source.location.copy()
         new_source.location[spac_axis_name] = spac_value  # Use axis name, not tag
         new_source.familyName = original_source.familyName
-        new_source.styleName = f"{original_source.styleName} SPAC" if original_source.styleName else "SPAC"
+        new_source.styleName = f"{original_source.styleName} {spac_suffix(spac_value)}" if original_source.styleName else spac_suffix(spac_value)
         new_doc.addSource(new_source)
-        print(f"  ✓ Added new source '{new_source_name}' at SPAC={spac_value}", file=sys.stderr)
+        print(f"  ✓ Added new source '{new_source_name}' at SPAC={spac_value:g}", file=sys.stderr)
     
     # Set default master using findDefault() which properly sets the default attribute
     new_doc.findDefault()
@@ -474,6 +497,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="SPAC value for duplicated master (default: 100.0)"
     )
     parser.add_argument(
+        "--spac-min-value",
+        type=float,
+        default=-100.0,
+        help="Negative SPAC value for reduction masters (default: -100.0; set to 0 to disable reduction)"
+    )
+    parser.add_argument(
         "--multiplier",
         type=float,
         default=30.0,
@@ -482,8 +511,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument(
         "--xtra-scale-factor",
         type=float,
-        default=0.5,
-        help="XTRA scaling factor (default: 0.5). Higher = more spacing for wide XTRA masters. 0.5 means max XTRA gets 1.5x spacing"
+        default=1.0,
+        help="XTRA scaling factor (default: 1.0). Higher = more spacing impact for wide XTRA masters. 1.0 means max XTRA gets 2.0x spacing change (add and reduce)"
     )
     parser.add_argument(
         "--compile",
@@ -538,8 +567,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         masters_to_process = actual_masters
         print(f"Processing all {len(actual_masters)} masters", file=sys.stderr)
     
-    # Step 2: Process each master
-    source_mappings = []  # List of (original_name, new_name) tuples
+    # Step 2: Process each master at each SPAC extreme
+    spac_values = [args.spac_value]
+    if args.spac_min_value < 0:
+        spac_values.append(args.spac_min_value)
+    
+    source_mappings = []  # List of (original_name, new_name, spac_value) tuples
     
     for master_idx, original_source in enumerate(masters_to_process):
         original_source_name = original_source.name
@@ -556,8 +589,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         if not original_ufo_path.exists():
             # Try alternative naming - match by source name pattern
             ufo_files = sorted(args.output_dir.glob("*.ufo"))
-            # Filter out already-processed SPAC100 UFOs
-            ufo_files = [f for f in ufo_files if "-SPAC100" not in f.name]
+            # Filter out already-processed SPAC UFO copies
+            ufo_files = [f for f in ufo_files if "-SPAC" not in f.name]
             # Try to find matching UFO by name pattern
             found = False
             for ufo_file in ufo_files:
@@ -577,9 +610,6 @@ def main(argv: Optional[list[str]] = None) -> int:
                     print(f"Error: Could not find UFO file for source '{original_source_name}'", file=sys.stderr)
                     return 1
         
-        # Create new source name
-        new_source_name = f"{original_ufo_name}-SPAC100"
-        
         # Extract XTRA value from source location
         xtra_value = None
         if original_source.location:
@@ -589,26 +619,27 @@ def main(argv: Optional[list[str]] = None) -> int:
                     xtra_value = float(original_source.location[axis_name])
                     break
         
-        # Copy and modify UFO
+        # Copy and modify UFO at each SPAC extreme
         print(f"\nProcessing master {master_idx + 1}/{len(masters_to_process)}: {original_source_name}", file=sys.stderr)
         if xtra_value is not None:
             print(f"  XTRA value: {xtra_value}", file=sys.stderr)
-        new_ufo_path = copy_and_modify_ufo_master(
-            original_ufo_path,
-            f"{new_source_name}.ufo",
-            args.spac_value,
-            args.multiplier,
-            xtra_value,
-            args.xtra_scale_factor
-        )
         
-        source_mappings.append((original_source_name, new_source_name))
+        for spac_value in spac_values:
+            new_source_name = f"{original_ufo_name}-{spac_suffix(spac_value)}"
+            new_ufo_path = copy_and_modify_ufo_master(
+                original_ufo_path,
+                f"{new_source_name}.ufo",
+                spac_value,
+                args.multiplier,
+                xtra_value,
+                args.xtra_scale_factor
+            )
+            source_mappings.append((original_source_name, new_source_name, spac_value))
     
     # Step 3: Update designspace with all sources
     update_designspace_with_spac(
         designspace_path,
-        source_mappings,
-        args.spac_value
+        source_mappings
     )
     
     # Step 4: Optionally compile with fontc
@@ -622,9 +653,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     
     print(f"\n✓ Complete!", file=sys.stderr)
     print(f"  Designspace: {designspace_path}", file=sys.stderr)
-    print(f"  Processed {len(source_mappings)} master(s)", file=sys.stderr)
-    for orig_name, new_name in source_mappings:
-        print(f"    {orig_name} → {new_name}", file=sys.stderr)
+    print(f"  Processed {len(masters_to_process)} master(s) at {len(spac_values)} SPAC extreme(s)", file=sys.stderr)
+    for orig_name, new_name, spac_value in source_mappings:
+        print(f"    {orig_name} → {new_name} (SPAC={spac_value:g})", file=sys.stderr)
     
     if args.compile:
         print(f"  Compiled font: {output_file}", file=sys.stderr)
