@@ -91,6 +91,12 @@ def main():
     ap.add_argument("--name", default="Lowercase adjust", help="axis display name")
     ap.add_argument("--lag", type=float, default=10.0,
                     help="weight units lowercase lags the ramp at wght 1000 (default 10)")
+    ap.add_argument("--target-xtra", type=float, default=None,
+                    help="override the lag: pin the correction's XTRA explicitly")
+    ap.add_argument("--target-xopq", type=float, default=None,
+                    help="override the lag: pin the correction's XOPQ explicitly. Narrowing "
+                         "lowercase at the ramp end is an XOPQ move — XTRA is already at its "
+                         "axis minimum there, so only thinner stems can still reduce the advance.")
     ap.add_argument("--workspace", default=None,
                     help="copy the source here first, so the original stays untouched")
     ap.add_argument("--glyphs", default=None,
@@ -125,14 +131,26 @@ def main():
 
     t_corr = 1.0 - args.lag / 100.0
     target = ramp_point(t_corr)
+    explicit = args.target_xtra is not None or args.target_xopq is not None
+    if explicit:
+        # Off-ramp target: keep whichever axis wasn't named at the corner's own
+        # value, so a lone --target-xopq is a pure narrowing move.
+        target = dict(RAMP_END)
+        if args.target_xtra is not None:
+            target["XTRA"] = args.target_xtra
+        if args.target_xopq is not None:
+            target["XOPQ"] = args.target_xopq
     corner = dict(RAMP_END)
     xtra_max = max(m.axes[0] for m in font.masters)
 
     print(f"axis '{args.tag}' 0..100, default 0")
     print(f"covered glyphs ({len(covered)}): {' '.join(covered)}")
     print(f"corner  (wght 1000): XTRA {corner['XTRA']:.0f} · XOPQ {corner['XOPQ']:.0f} · YOPQ {corner['YOPQ']:.0f}")
-    print(f"target  (wght {1000 - args.lag:.0f}): XTRA {target['XTRA']:.0f} · XOPQ {target['XOPQ']:.0f}"
-          f"   -> counter {2 * target['XTRA']:.0f} units (vs {2 * corner['XTRA']:.0f} uncorrected)")
+    if explicit:
+        print(f"target  (explicit):  XTRA {target['XTRA']:.0f} · XOPQ {target['XOPQ']:.0f}")
+    else:
+        print(f"target  (wght {1000 - args.lag:.0f}): XTRA {target['XTRA']:.0f} · XOPQ {target['XOPQ']:.0f}"
+              f"   -> counter {2 * target['XTRA']:.0f} units (vs {2 * corner['XTRA']:.0f} uncorrected)")
 
     try:
         control_axes.add_axis(src, args.tag, args.name, 0, 0, 100)
