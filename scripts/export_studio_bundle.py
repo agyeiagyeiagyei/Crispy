@@ -54,6 +54,10 @@ def main():
     ap.add_argument("--sidecar", required=True, help="the <basename>-control.json written by the setup script")
     ap.add_argument("--out", required=True)
     ap.add_argument("--family", default=None, help="family name (default: from the source)")
+    ap.add_argument("--secondary-manual", action="store_true",
+                    help="leave the secondary axis OUT of the mapping, so the font renders as "
+                         "baseline by default and the axis is dialled by hand. Without this the "
+                         "mapping drives it and the correction is always applied.")
     args = ap.parse_args()
 
     font = glyphsLib.GSFont(args.source)
@@ -85,11 +89,12 @@ def main():
             "has_master_coverage": False,
         })
 
-    out_cols = [a["tag"] for a in param] + secondary
+    mapped_secondary = [] if args.secondary_manual else secondary
+    out_cols = [a["tag"] for a in param] + mapped_secondary
     header = "Instance Name," + ",".join(out_cols) + ",WGHT,WDTH"
     rows = [header]
     for name, wg, wd, xtra, xopq, yopq, sec in MAPPING:
-        vals = [str(xtra), str(xopq), str(yopq)] + [str(sec)] * len(secondary)
+        vals = [str(xtra), str(xopq), str(yopq)] + [str(sec)] * len(mapped_secondary)
         rows.append(f"{name}," + ",".join(vals) + f",{wg},{wd}")
     csv = "\n".join(rows) + "\n"
 

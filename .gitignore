@@ -66,3 +66,6 @@ fonts-test/
 
 # Avar2 Studio per-project workspace (config, backups, build output)
 .avar2-studio/
+
+# avar2-studio secondary-axis sidecar (working file, regenerate with scripts/setup_lowercase_axis.py)
+*-control.json
