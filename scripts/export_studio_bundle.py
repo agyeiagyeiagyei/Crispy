@@ -24,10 +24,13 @@ Usage:
 """
 import argparse
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import glyphsLib
+
+STUDIO_SRC = Path("/Users/agyei/Documents/avar2-studio/src")
 
 # The mapping recipe: (WGHT, WDTH) -> parametric coords + the secondary axis.
 # Narrow tops out at the Black Narrow Max master; wide runs the ultra ramp from
@@ -54,11 +57,22 @@ def main():
     ap.add_argument("--sidecar", required=True, help="the <basename>-control.json written by the setup script")
     ap.add_argument("--out", required=True)
     ap.add_argument("--family", default=None, help="family name (default: from the source)")
+    ap.add_argument("--capture", action="store_true",
+                    help="first copy hand-drawn brace outlines out of the shadow and into the "
+                         "sidecar, so the exported bundle is a COMPLETE backup. Without this the "
+                         "bundle carries layer locations only and drawings live solely in "
+                         ".avar2-studio/shadow/, which is derived.")
     ap.add_argument("--secondary-manual", action="store_true",
                     help="leave the secondary axis OUT of the mapping, so the font renders as "
                          "baseline by default and the axis is dialled by hand. Without this the "
                          "mapping drives it and the correction is always applied.")
     args = ap.parse_args()
+
+    if args.capture:
+        sys.path.insert(0, str(STUDIO_SRC))
+        from avar2_studio import control_axes
+        n = control_axes.capture_outlines(Path(args.source).resolve())
+        print(f"captured {n} drawn outline(s) into the sidecar")
 
     font = glyphsLib.GSFont(args.source)
     sidecar = json.loads(Path(args.sidecar).read_text())
