@@ -186,19 +186,16 @@ class CornerRadii(ReporterPlugin):
 
     @objc.python_method
     def activate(self):
-        """Reporter toggled ON (View menu) — show overlay AND panel."""
+        """Reporter toggled ON (View menu) — set active state only.
+        Do NOT show the panel here: Glyphs calls activate() on ALL reporter
+        plugins at app launch, which would open every panel on startup.
+        foreground() shows the panel only when the View toggle is on."""
         _dbg("activate() called")
         self._active = True
         if FloatingWindow is None:
             return
         if self._panel is None:
             self._build_panel()
-        ns = self._nswindow()
-        if ns is not None:
-            try:
-                ns.makeKeyAndOrderFront_(None)
-            except Exception:
-                pass
         self._redraw()
 
     @objc.python_method

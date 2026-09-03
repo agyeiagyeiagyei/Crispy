@@ -34,7 +34,9 @@ trailing dirty state once the drag settles.
 
 from __future__ import division, print_function, unicode_literals
 
+import copy as _copy
 import time
+import traceback
 
 import objc
 from AppKit import NSApp, NSBezierPath, NSColor, NSImage, NSImageView, NSTimer
@@ -55,6 +57,20 @@ except ImportError:  # vanilla ships with Glyphs; guard for dev linting
     FloatingWindow = None
 
 
+# Spacing contracts for the saved master. Mode 0 is the original
+# behaviour; the rest pin the ADVANCE and let the sidebearings land
+# wherever the generated ink requires — same width, different spacing.
+SPACING_REF_SB = 0
+SPACING_ADV_PROPORTIONAL = 1
+SPACING_ADV_CENTRED = 2
+SPACING_ADV_KEEP_LSB = 3
+SPACING_MODES = [
+    "Reference sidebearings",
+    "Reference advance - proportional",
+    "Reference advance - centred",
+    "Reference advance - keep LSB",
+]
+
 REF_GRAY = (0.65, 0.65, 0.65)
 GEN_BLUE = (0.10, 0.45, 0.95)
 OK_GREEN = (0.15, 0.60, 0.25)
@@ -73,6 +89,18 @@ PREVIEW_W = 296
 PREVIEW_H = 220
 
 _DEBUG_LOG = "/tmp/widthmatcher-debug.log"
+
+
+def _dbgexc(prefix=""):
+    """Log the CURRENT exception with its traceback.
+
+    Bare ``_dbg("EXCEPTION")`` records that something failed but not what,
+    which is useless when the failure is a panel that silently never opens.
+    """
+    try:
+        _dbg("%s%s" % (prefix, traceback.format_exc()))
+    except Exception:
+        pass
 
 
 def _dbg(msg):
@@ -113,7 +141,10 @@ class WidthMatcher(ReporterPlugin):
         self._axisRows = []                # [(label, slider, field), ...]
         self._masterItems = []             # popup titles, index-aligned w/ masters
         self._masterName = None            # last used new-master name (persists)
+        self._spacingMode = SPACING_REF_SB  # how the saved master gets spaced
+        self._advOffset = 0.0              # units added to the target advance
         self._panelClosedByUser = False    # red X kills the vanilla window
+        self._loggedForeground = False      # one-shot foreground trace
 
     @objc.python_method
     def start(self):
@@ -189,18 +220,16 @@ class WidthMatcher(ReporterPlugin):
 
     @objc.python_method
     def activate(self):
+        """Reporter toggled ON (View menu) — set active state only.
+        Do NOT show the panel here: Glyphs calls activate() on ALL reporter
+        plugins at app launch, which would open every panel on startup.
+        foreground() shows the panel only when the View toggle is on."""
         _dbg("activate() called")
         self._active = True
         if FloatingWindow is None:
             return
         if self._panel is None:
             self._build_panel()
-        ns = self._nswindow()
-        if ns is not None:
-            try:
-                ns.makeKeyAndOrderFront_(None)
-            except Exception:
-                pass
         self._redraw()
 
     @objc.python_method
@@ -415,8 +444,16 @@ class WidthMatcher(ReporterPlugin):
                                callback=self._referenceChanged)
         y += 30
         self._axesY = y
-        self._syncPanelToFont(self._currentFont())
+        _dbg("panel: building rows")
+        try:
+            self._syncPanelToFont(self._currentFont())
+        except Exception:
+            # A failure building the rows must NOT stop w.open() — otherwise
+            # the reporter has no window at all and no way back, which reads
+            # to the user as "nothing happens when I turn it on".
+            _dbgexc("panel: row build FAILED: ")
         w.open()
+        _dbg("panel: opened")
         ns = self._nswindow()
         # Keep the window out of macOS session restoration.
         ns.setRestorable_(False)
@@ -453,7 +490,9 @@ class WidthMatcher(ReporterPlugin):
             except Exception:
                 pass
             self._previewView = None
-        for attr in ("previewBox", "readoutAdv", "readoutInk", "nameLabel",
+        for attr in ("previewBox", "readoutAdv", "readoutInk", "readoutPlan",
+                     "spacingLabel", "spacingPop", "offsetLabel", "offsetField",
+                     "offsetHint", "refEcho", "nameLabel",
                      "nameField", "saveButton", "statusLine"):
             if hasattr(w, attr):
                 try:
@@ -525,12 +564,39 @@ class WidthMatcher(ReporterPlugin):
         w.readoutAdv = TextBox((12, y, 296, 16), "", sizeStyle="small")
         y += 18
         w.readoutInk = TextBox((12, y, 296, 16), "", sizeStyle="small")
+        y += 18
+        # What the SAVED layer will actually carry — the live Adv readout
+        # above reports the interpolated instance's own spacing, which the
+        # save overwrites, so without this line the panel shows a number
+        # you never get.
+        w.readoutPlan = TextBox((12, y, 296, 16), "", sizeStyle="small")
         y += 22
+        w.spacingLabel = TextBox((12, y, 70, 20), "Spacing:")
+        w.spacingPop = PopUpButton((82, y, 226, 22), SPACING_MODES,
+                                   callback=self._spacingChanged)
+        try:
+            w.spacingPop.set(self._spacingMode)
+        except Exception:
+            _dbg("EXCEPTION")
+        y += 26
+        w.offsetLabel = TextBox((12, y, 70, 20), "Adv offset:")
+        w.offsetField = EditText((82, y, 70, 22), "%g" % self._advOffset,
+                                 callback=self._offsetChanged)
+        w.offsetHint = TextBox((160, y + 4, 148, 16), "units, advance modes",
+                               sizeStyle="small")
+        y += 30
         w.nameLabel = TextBox((12, y, 70, 20), "New name:")
         default_name = self._masterName or (
             "%s matched" % ref.name if ref is not None else "Matched")
         w.nameField = EditText((82, y, 226, 22), default_name)
         y += 30
+        # Spell out where the spacing comes from: the popup is scrolled out
+        # of sight by the time you press Save, and picking up the wrong
+        # master's sidebearings is invisible until you inspect the result.
+        w.refEcho = TextBox((12, y, 296, 16),
+                            "spacing from: %s" % (ref.name if ref is not None else "-"),
+                            sizeStyle="small")
+        y += 20
         w.saveButton = Button((12, y, 140, 26), "Save as Master",
                               callback=self._saveAsMaster)
         w.statusLine = TextBox((160, y + 5, 148, 16), "", sizeStyle="small")
@@ -563,6 +629,23 @@ class WidthMatcher(ReporterPlugin):
         if 0 <= idx < len(font.masters):
             self.referenceMasterId = font.masters[idx].id
         self._updatePreview()
+
+    @objc.python_method
+    def _spacingChanged(self, sender):
+        try:
+            self._spacingMode = int(sender.get())
+        except Exception:
+            self._spacingMode = SPACING_REF_SB
+        _dbg("spacing mode -> %d" % self._spacingMode)
+        self._redraw()
+
+    @objc.python_method
+    def _offsetChanged(self, sender):
+        try:
+            self._advOffset = float((sender.get() or "").strip() or 0)
+        except (TypeError, ValueError):
+            self._advOffset = 0.0   # keep typing usable; bad text reads as 0
+        self._redraw()
 
     @objc.python_method
     def _rowIndex(self, sender, column):
@@ -644,7 +727,28 @@ class WidthMatcher(ReporterPlugin):
             self._setStatus("no instance")
             return
         ref = self._referenceMaster(font)
+        # Cross-check against what the popup is actually showing. The id can
+        # point at a master the user never chose — _referenceMaster falls back
+        # to font.selectedFontMaster (whatever is active in the Edit view)
+        # whenever no explicit choice has been made.
+        try:
+            shown = self._panel.refPop.getItem() if hasattr(self._panel, "refPop") else None
+        except Exception:
+            shown = None
+        if shown and ref is not None and shown != ref.name:
+            live = [m for m in font.masters if m.name == shown]
+            _dbg("save: popup shows %r but reference resolved to %r — "
+                 "using the popup" % (shown, ref.name))
+            if live:
+                ref = live[0]
+                self.referenceMasterId = ref.id
+        _dbg("save: reference master %r (%s); axisValues=%r; spacing mode %d"
+             % (None if ref is None else ref.name,
+                None if ref is None else ref.id,
+                list(self.axisValues), self._spacingMode))
         self._applyAxisValues(inst)
+        savedMasterId = None
+        savedPlan = {}
         try:
             font.disableUpdateInterface()
         except Exception:
@@ -655,9 +759,11 @@ class WidthMatcher(ReporterPlugin):
                 self._setStatus("interpolation failed")
                 _dbg("save: interpolatedFont returned no masters")
                 return
-            interp.masters[0].name = name
-            font.masters.append(interp.masters[0])
+            newMaster = self._detach(interp.masters[0])
+            newMaster.name = name
+            font.masters.append(newMaster)
             newMaster = font.masters[-1]
+            savedMasterId = newMaster.id
             # The interpolated master does NOT reliably carry the
             # instance's axis coordinates — set them explicitly so the
             # new master sits where the sliders put it.
@@ -676,43 +782,71 @@ class WidthMatcher(ReporterPlugin):
                     ig = interp.glyphs[g.name]
                     if ig is None or not len(ig.layers):
                         continue
-                    g.layers[newMaster.id] = ig.layers[0]
+                    newLayer = self._detach(ig.layers[0])
+                    # Re-key: the copy still identifies as the interpolated
+                    # font's master, so Glyphs would file it under the wrong
+                    # id and the Edit view would show an empty master.
+                    try:
+                        newLayer.layerId = newMaster.id
+                        newLayer.associatedMasterId = newMaster.id
+                    except Exception:
+                        _dbg("EXCEPTION")
+                    g.layers[newMaster.id] = newLayer
                     copied += 1
-                    # The point of the tool: the new master carries the
-                    # REFERENCE master's sidebearings — the user matched
-                    # ink extents, spacing comes from the reference.
+                    # The point of the tool: the new master's spacing is
+                    # derived from the REFERENCE master, per the chosen
+                    # mode — either its sidebearings verbatim, or its
+                    # advance with the sidebearings recomputed to fit.
                     tgt = g.layers[newMaster.id]
                     refLayer = g.layers[ref.id] if ref is not None else None
                     if refLayer is None:
                         continue
-                    wantLSB = float(refLayer.LSB)
-                    wantRSB = float(refLayer.RSB)
-                    if self._inkRect(tgt) is None:
+                    inkRect = self._inkRect(tgt)
+                    if inkRect is None:
                         # empty glyph (space etc.): no ink to place,
                         # just take the reference advance
-                        tgt.width = float(refLayer.width)
-                    else:
-                        # LSB first, then RSB: whether the LSB setter
-                        # shifts outlines (RSB kept) or keeps outlines
-                        # (RSB floats), the final pair is correct.
-                        tgt.LSB = wantLSB
-                        tgt.RSB = wantRSB
-                        if abs(float(tgt.LSB) - wantLSB) > 0.01 \
-                                or abs(float(tgt.RSB) - wantRSB) > 0.01:
-                            sb_mismatch += 1
-                            if sb_mismatch == 1:
-                                _dbg("save: sidebearing readback drift, "
-                                     "first on %s (want %.1f/%.1f got %.1f/%.1f)"
-                                     % (g.name, wantLSB, wantRSB,
-                                        float(tgt.LSB), float(tgt.RSB)))
+                        tgt.width = self._emptyAdvance(refLayer)
+                        continue
+                    plan = self._targetSpacing(refLayer, inkRect[2] - inkRect[0])
+                    if plan is None:
+                        continue
+                    wantLSB, wantRSB, _wantAdv = plan
+                    # LSB first, then RSB: whether the LSB setter shifts
+                    # outlines (RSB kept) or keeps outlines (RSB floats),
+                    # the final pair is correct.
+                    tgt.LSB = wantLSB
+                    tgt.RSB = wantRSB
+                    savedPlan[g.name] = (wantLSB, wantRSB)
+                    if abs(float(tgt.LSB) - wantLSB) > 0.01 \
+                            or abs(float(tgt.RSB) - wantRSB) > 0.01:
+                        sb_mismatch += 1
+                        if sb_mismatch == 1:
+                            _dbg("save: sidebearing readback drift, "
+                                 "first on %s (want %.1f/%.1f got %.1f/%.1f)"
+                                 % (g.name, wantLSB, wantRSB,
+                                    float(tgt.LSB), float(tgt.RSB)))
                 except Exception:
                     _dbg("EXCEPTION")
+            # Prove the layers actually landed on THIS master rather than
+            # trusting the assignment — an empty master is the failure this
+            # tool must never report as success.
+            verified = 0
+            for g in font.glyphs:
+                try:
+                    L = g.layers[newMaster.id]
+                    if L is not None and str(getattr(L, "layerId", "")) == str(newMaster.id):
+                        verified += 1
+                except Exception:
+                    pass
             status = "saved (%d glyphs)" % copied
+            if verified != copied:
+                status += " — ONLY %d landed" % verified
             if sb_mismatch:
                 status += " — %d sb drift" % sb_mismatch
             self._setStatus(status)
-            _dbg("save: master %r (%s) with %d glyph layers, %d sb mismatches"
-                 % (name, newMaster.id, copied, sb_mismatch))
+            _dbg("save: master %r (%s) with %d glyph layers (%d verified), "
+                 "%d sb mismatches"
+                 % (name, newMaster.id, copied, verified, sb_mismatch))
         except Exception:
             _dbg("EXCEPTION")
             self._setStatus("error — see log")
@@ -721,8 +855,45 @@ class WidthMatcher(ReporterPlugin):
                 font.enableUpdateInterface()
             except Exception:
                 pass
+        # Re-read once the interface is live again. The in-loop check runs
+        # while updates are suppressed; Glyphs re-applies metrics keys when
+        # they resume, and most of this font's glyphs are keyed off another
+        # (=H, =O, =H*1.5), so a sidebearing that verified a moment ago can
+        # still be rewritten underneath us.
+        self._auditSavedSpacing(font, savedMasterId, savedPlan)
         self._syncPanelToFont(font)
         self._redraw()
+
+    @objc.python_method
+    def _auditSavedSpacing(self, font, masterId, plan):
+        """Log every glyph whose sidebearings no longer match what was set."""
+        if not masterId or not plan:
+            return
+        drifted = []
+        for name, (wantLSB, wantRSB) in plan.items():
+            try:
+                g = font.glyphs[name]
+                L = g.layers[masterId] if g is not None else None
+                if L is None:
+                    continue
+                gotLSB, gotRSB = float(L.LSB), float(L.RSB)
+                if abs(gotLSB - wantLSB) > 0.01 or abs(gotRSB - wantRSB) > 0.01:
+                    drifted.append((name, wantLSB, wantRSB, gotLSB, gotRSB,
+                                    getattr(g, "leftMetricsKey", None),
+                                    getattr(g, "rightMetricsKey", None)))
+            except Exception:
+                continue
+        if not drifted:
+            _dbg("audit: all %d glyphs held their spacing after update" % len(plan))
+            return
+        _dbg("audit: %d of %d glyphs DRIFTED after enableUpdateInterface"
+             % (len(drifted), len(plan)))
+        for row in drifted[:20]:
+            _dbg("   %-12s want %8.1f/%-8.1f got %8.1f/%-8.1f  keys=%s/%s" % row)
+        try:
+            self._setStatus("saved — %d drifted after update" % len(drifted))
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     # preview rendering
@@ -741,6 +912,67 @@ class WidthMatcher(ReporterPlugin):
                     b.origin.x + b.size.width, b.origin.y + b.size.height)
         except Exception:
             return None
+
+    @objc.python_method
+    def _detach(self, obj):
+        """A standalone copy of a master/layer from the interpolated font.
+
+        ``interpolatedFont``'s masters and layers belong to THAT font. Handing
+        them straight to the real font leaves it holding objects owned by a
+        temporary: the next regen replaces ``_interpFont``, the interpolated
+        font is released, and the saved master loses every layer — it appears
+        in the master list with no glyphs at all. Copying first makes the real
+        font the owner, so the master survives.
+        """
+        for attempt in (lambda: obj.copy(), lambda: _copy.copy(obj)):
+            try:
+                dup = attempt()
+            except Exception:
+                continue
+            if dup is not None:
+                return dup
+        _dbg("detach: could not copy %r — falling back to the original" % obj)
+        return obj
+
+    @objc.python_method
+    def _targetSpacing(self, refLayer, genInkW):
+        """(lsb, rsb, advance) the saved layer should end up with.
+
+        ``SPACING_REF_SB`` pastes the reference's sidebearings, so the
+        advance only matches when the ink does — that is the original
+        contract, and why the ink delta had to be driven to zero.
+
+        Every other mode pins the advance to the reference's (plus
+        ``_advOffset``) and derives the sidebearings from whatever ink the
+        generated layer actually has. The spacing values then differ from
+        the reference's by design: the slack left over after the ink is
+        distributed, either in the reference's own LSB:RSB proportion,
+        evenly, or entirely onto the right.
+        """
+        if refLayer is None:
+            return None
+        refLSB, refRSB = float(refLayer.LSB), float(refLayer.RSB)
+        refAdv = float(refLayer.width)
+        if self._spacingMode == SPACING_REF_SB:
+            return (refLSB, refRSB, refLSB + genInkW + refRSB)
+        targetAdv = refAdv + self._advOffset
+        slack = targetAdv - genInkW
+        if self._spacingMode == SPACING_ADV_PROPORTIONAL:
+            total = refLSB + refRSB
+            # A zero total (full-bleed glyph) has no ratio to preserve —
+            # fall back to an even split rather than dividing by zero.
+            lsb = slack * (refLSB / total) if abs(total) > 1e-6 else slack / 2.0
+        elif self._spacingMode == SPACING_ADV_CENTRED:
+            lsb = slack / 2.0
+        else:
+            lsb = refLSB
+        return (lsb, slack - lsb, targetAdv)
+
+    @objc.python_method
+    def _emptyAdvance(self, refLayer):
+        """Advance for a glyph with no ink (space etc.)."""
+        adv = float(refLayer.width)
+        return adv if self._spacingMode == SPACING_REF_SB else adv + self._advOffset
 
     @objc.python_method
     def _inkRect(self, layer):
@@ -781,7 +1013,7 @@ class WidthMatcher(ReporterPlugin):
         genW = self._widthCache.get(glyph.name)
         refInk = self._inkRect(refLayer)
         genInk = self._inkRect(genLayer)
-        self._updateReadout(glyph.name, refW, genW, refInk, genInk)
+        self._updateReadout(glyph.name, refW, genW, refInk, genInk, refLayer)
 
         W, H = PREVIEW_W, PREVIEW_H
         img = NSImage.alloc().initWithSize_((W, H))
@@ -897,7 +1129,8 @@ class WidthMatcher(ReporterPlugin):
             _dbg("EXCEPTION")
 
     @objc.python_method
-    def _updateReadout(self, glyphName, refW, genW, refInk, genInk):
+    def _updateReadout(self, glyphName, refW, genW, refInk, genInk,
+                       refLayer=None):
         if self._panel is None or not hasattr(self._panel, "readoutAdv"):
             return
         if refW is None:
@@ -914,9 +1147,27 @@ class WidthMatcher(ReporterPlugin):
             genInkW = genInk[2] - genInk[0]
             ink = "Ink Ref %.0f · Gen %.0f (Δ %+.0f)" % (
                 refInkW, genInkW, genInkW - refInkW)
+        # What Save as Master would actually produce. The Adv line above is
+        # the interpolated instance's OWN spacing, which the save discards;
+        # this is the number to trust.
+        plan = None
+        if refLayer is not None and genInk is not None:
+            try:
+                plan = self._targetSpacing(refLayer, genInk[2] - genInk[0])
+            except Exception:
+                _dbg("EXCEPTION")
+        if plan is None:
+            planTxt = ""
+        else:
+            lsb, rsb, advOut = plan
+            planTxt = "Saved: LSB %.0f - RSB %.0f - Adv %.0f" % (lsb, rsb, advOut)
+            if refW is not None:
+                planTxt += " (%s %+.0f)" % ("Adv", advOut - refW)
         try:
             self._panel.readoutAdv.set(adv)
             self._panel.readoutInk.set(ink)
+            if hasattr(self._panel, "readoutPlan"):
+                self._panel.readoutPlan.set(planTxt)
         except Exception:
             pass
 
@@ -937,6 +1188,13 @@ class WidthMatcher(ReporterPlugin):
         self._lastLayer = layer
         # The draw heartbeat IS the View-toggle signal (see CornerRadii).
         self._lastForegroundAt = time.time()
+        if not self._loggedForeground:
+            self._loggedForeground = True
+            _ns0 = self._nswindow()
+            _dbg("foreground: first call, panel=%s ns=%s visible=%s"
+                 % (self._panel is not None,
+                    _ns0 is not None,
+                    "n/a" if _ns0 is None else _ns0.isVisible()))
         if self._panelClosedByUser:
             # the red-X close disposed the vanilla window — rebuild
             self._panelClosedByUser = False
@@ -951,7 +1209,12 @@ class WidthMatcher(ReporterPlugin):
                 pass
 
         font = self._currentFont()
-        if font is not None and font is not self._panelFont:
+        # Rebuild on a master-count change too, not just a font change:
+        # _masterItems maps popup index -> font.masters[index], so adding or
+        # deleting a master while the panel is open silently shifts every
+        # selection after it and the reference resolves to the wrong master.
+        if font is not None and (font is not self._panelFont
+                                 or len(font.masters) != len(self._masterItems)):
             self._panelFont = font
             self._syncPanelToFont(font)
 
