@@ -251,16 +251,13 @@ the build pipeline (see the `make build` target in
 [`Makefile`](Makefile) and the
 [`scripts/add-spac-axis-ufo.py`](scripts/add-spac-axis-ufo.py)
 script). After `fontmake` generates UFOs from the Glyphs source, the
-build script duplicates every master twice — a `SPAC=100` variant
-with opened-up sidebearings and a `SPAC=-100` variant with tightened
-sidebearings — using a logarithmic scaling tied to each master's
-`XTRA` value (so wider masters get proportionally more spacing change
-in both directions, up to 2× at the widest master; tightened
-sidebearings are clamped at zero), and re-compiles. The shipped font
-carries a `SPAC` axis from `-100` (the tightened duplicate) through
-`0` (the source's actual sidebearings) up to `100` (the loosened
-duplicate), and any value in between is interpolated by the variation
-engine.
+build script duplicates every master to create a `SPAC=100` variant,
+opens up the sidebearings on the duplicate using a logarithmic
+scaling tied to each master's `XTRA` value (so wider masters get
+proportionally more extra space), and re-compiles. The shipped font
+carries a `SPAC` axis from `0` (the source's actual sidebearings) up
+to `100` (the loosened duplicate), and any value in between is
+interpolated by the variation engine.
 
 The net effect: end users get a tracking-style slider for optional
 breathing room without anyone re-editing the source. **None of the

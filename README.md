@@ -30,42 +30,22 @@ These are the fundamental building blocks that control specific structural compo
 **Avar2 Mapping:**
 The font uses an avar2 table to map traditional axis combinations to parametric axis values. This allows users to work with familiar axes (Weight, Width, Optical Size) while the font internally uses parametric axes (XOPQ, YOPQ, XTRA, SPAC). The avar2 table contains mappings for all combinations of traditional axes, automatically translating user input to the appropriate parametric values.
 
-For example, when a user sets Weight=400, Width=100, Optical Size=72, the avar2 table maps this to XTRA=627.0, XOPQ=187.672, YOPQ=160.0, SPAC=25. This mapping is defined in `sources/avar2-mappings.csv` and built into the font during compilation.
+For example, when a user sets Weight=400, Width=100, Optical Size=72, the avar2 table maps this to XTRA=627.0, XOPQ=187.672, YOPQ=160.0, SPAC=25. This mapping is defined in `sources/Crispy-avar.csv` and built into the font during compilation.
 
-**Preview Tool:**
-A web-based preview tool is available (on the `glyphs-preview-tool` branch) for fine-tuning traditional axis outcomes. The tool allows you to:
-- Preview all instances in real-time
-- Adjust parametric axes (XOPQ, YOPQ, XTRA) with sliders
-- See how traditional axis combinations map to parametric values via avar2
-- Edit instance coordinates and update the Glyphs file
-- Build fonts on-the-fly for instant preview
+**Editing the avar2 mappings:**
 
-This tool is particularly useful for understanding how traditional axis combinations translate to parametric values and for fine-tuning the avar2 mappings.
-
-**To launch the preview tool:**
+Crispy's avar2 mappings are authored with
+[avar2-studio](https://github.com/agyeiagyeiagyei/avar2-studio):
 
 ```bash
-# Using the launch script (recommended - handles both servers)
-./scripts/launch-preview.sh
-
-# Or specify a custom Glyphs file
-./scripts/launch-preview.sh sources/Crispy.glyphs
+pipx install https://github.com/agyeiagyeiagyei/avar2-studio/releases/latest/download/avar2_studio-0.1.0.dev5-py3-none-any.whl
+avar2-studio sources/Crispy.glyphs
 ```
 
-**Manual launch (if needed):**
-```bash
-# Terminal 1: Backend server
-python3 scripts/glyphs-preview-server.py --glyphs sources/Crispy.glyphs
-
-# Terminal 2: Frontend (production build)
-cd preview-app
-npm run build
-npx serve -s build -l 3000
-```
-
-**Note:** Use `npx serve -s build -l 3000` instead of `npm start` for reliable serving. The react dev server sometimes compiles but doesn't bind to the port.
-
-The tool will be available at http://localhost:3000.
+avar2-studio picks up the sibling `sources/Crispy-avar.csv`
+automatically and writes its working state into a sibling
+`.avar2-studio/` directory (gitignored). Open the printed URL in a
+browser.
 
 ___
 **For the purposes of this project, I describe *axes* as visual paradigms that we use to describe one or more features in a variable font.**

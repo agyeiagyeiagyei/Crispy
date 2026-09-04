@@ -6,7 +6,7 @@ same nominal weight (Regular, wght=400) and point size — so the
 reader sees the current tracking honestly at each extreme.
 
 Parametric values are taken from the existing avar2 mappings in
-``preview-app/Crispy-avar.csv``:
+``sources/Crispy-avar.csv``:
 
     Regular Condensed       (wght=400, wdth=52)   →  XTRA=290     XOPQ=147   YOPQ=130
     Regular Ultra Extended  (wght=400, wdth=300)  →  XTRA=2210.6  XOPQ=235.2 YOPQ=199.5
@@ -37,7 +37,7 @@ from drawbot_skia.drawbot import (
 )
 
 
-FONT_PATH = "preview-app/fonts-avar2/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ].ttf"
+FONT_PATH = "fonts/variable/Crispy[SPAC,XOPQ,XTRA,YOPQ,opsz,wdth,wght].ttf"
 
 WORD = "ADHESION"
 GLYPH_SIZE = 96
