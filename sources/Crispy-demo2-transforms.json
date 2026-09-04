@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "transforms": [
+    {
+      "type": "fix_instances",
+      "enabled": false,
+      "params": {}
+    },
+    {
+      "type": "fix_unhinted",
+      "enabled": false,
+      "params": {}
+    },
+    {
+      "type": "gen_stat",
+      "enabled": false,
+      "params": {}
+    },
+    {
+      "type": "spac",
+      "enabled": false,
+      "params": {
+        "min": -20,
+        "max": 40
+      }
+    },
+    {
+      "type": "spac_widthaware",
+      "enabled": true,
+      "params": {
+        "min": -40,
+        "max": 40,
+        "bias": 1.0,
+        "scale": 1.25
+      }
+    }
+  ]
+}

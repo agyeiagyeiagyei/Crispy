@@ -38,6 +38,8 @@ Thumbs.db
 *（自动存储）.*
 *（已自動儲存）.*
 preview-app/preview-fonts/
+preview-app/fonts-avar2/
+preview-app/build-temp/
 
 # Static font outputs (variable fonts are tracked)
 fonts/otf/
@@ -49,3 +51,21 @@ __pycache__/
 *.py[cod]
 *$py.class
 test-output/
+
+# Test build output (isolated from production fonts/)
+fonts-test/
+
+# Local agent tooling (Playwright harness, scratch files)
+.agent-tools/
+
+# Local agent instructions (not committed)
+/AGENTS.md
+
+# avar2 tooling archive — pending deletion review, excluded from git
+/archive/
+
+# Avar2 Studio per-project workspace (config, backups, build output)
+.avar2-studio/
+
+# avar2-studio secondary-axis sidecar (working file, regenerate with scripts/setup_lowercase_axis.py)
+*-control.json
