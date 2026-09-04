@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "enabled": true,
+  "default_pct": 0.25,
+  "instances": [
+    {
+      "name": "WideUltra Min",
+      "pct": 0.05
+    },
+    {
+      "name": "Def",
+      "pct": 0.1
+    },
+    {
+      "name": "Narrow-Ultra-MaxOpsz",
+      "pct": 0.03
+    }
+  ]
+}
