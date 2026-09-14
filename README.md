@@ -47,6 +47,17 @@ automatically and writes its working state into a sibling
 `.avar2-studio/` directory (gitignored). Open the printed URL in a
 browser.
 
+**Design tools:**
+
+Five Glyphs 3 plugins were built for Crispy's design workflow and live
+in [`tools/`](tools/README.md): **Corner Radii** (rounded-corner
+audit/edit), **Instance Delta** (master/instance comparison overlay),
+**Multi-Source Edit** (node drags propagated across masters),
+**Parametric Masters** (live parametric-master metrics audit), and
+**Width Matcher** (width-matched master creation). Install by copying
+the bundles into `~/Library/Application Support/Glyphs 3/Plugins/` —
+see [`tools/README.md`](tools/README.md) for usage.
+
 ___
 **For the purposes of this project, I describe *axes* as visual paradigms that we use to describe one or more features in a variable font.**
 

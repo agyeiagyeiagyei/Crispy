@@ -18,12 +18,15 @@ object is filtered out — it is a working instance that tool rewrites live, not
 something to compare against.
 
 Panel visibility follows the same contract as Width Matcher and CornerRadii:
-this Glyphs build never calls ``activate()``, so the reporter's own draw
-callback is the View-toggle signal — the panel is ordered front from there and
-hidden by a heartbeat once the calls stop.
+this Glyphs build does not call ``activate()``/``deactivate()`` on View
+toggles, so the reporter's own draw callback is the View-toggle signal — the
+panel is ordered front from there and hidden by a heartbeat once the calls
+stop. Toggle state is tracked via the View menu item, whose action is
+trampolined so a real click is distinguishable from Glyphs' programmatic
+session restore: the restore is switched back off, clicks are honoured —
+the tool is closed by default and opens via the View menu; the panel's
+red X toggles it back off.
 """
-
-from __future__ import division, print_function, unicode_literals
 
 import time
 import traceback
@@ -49,15 +52,16 @@ INSTANCE_FILL = (0.85, 0.25, 0.55)   # the overlaid instance
 EDIT_MARK = (0.55, 0.55, 0.55)       # the layer being edited
 PANEL_W = 320
 
-# Glyphs restores the View-menu toggle at launch and starts drawing straight
-# away. That is not the user asking for the tool, so draw callbacks arriving
-# within this many seconds of start() are treated as "restored", not "chosen".
-LAUNCH_GRACE = 4.0
 # How long without a draw callback before the reporter counts as switched off.
 IDLE_OFF = 1.5
 
 
+DEBUG = True  # flip to True for /tmp instrumentation while developing
+
+
 def _dbg(msg):
+    if not DEBUG:
+        return
     try:
         with open(_DEBUG_LOG, "a") as f:
             f.write("%s\n" % msg)
@@ -66,6 +70,8 @@ def _dbg(msg):
 
 
 def _dbgexc(prefix=""):
+    if not DEBUG:
+        return
     try:
         _dbg("%s%s" % (prefix, traceback.format_exc()))
     except Exception:
@@ -92,24 +98,36 @@ class InstanceDelta(ReporterPlugin):
         self._interpMasterId = None
         self._interpFor = None          # which instance the cache belongs to
         self._lastForegroundAt = 0.0
-        self._startedAt = 0.0
         # The tool is INERT until the user turns it on in this session: no
         # panel and no overlay. Nothing here is driven by the draw callback
         # merely firing, because Glyphs fires it for a toggle it restored.
         self._panelWanted = False
-        self._wasIdle = True
-        self._loggedDraw = False
         self._bgFired = False       # did background() ever fire in this build?
         self._showMarkers = True
+        # View-toggle tracking (see _pollViewItem)
+        self._viewItem = None
+        self._userEnabled = False
+        self._userClicked = False
+        self._itemWasOn = False
+        self._origItemTarget = None
+        self._origItemAction = None
+        self._lastUntoggleAt = 0.0
 
     @objc.python_method
     def start(self):
         _dbg("start() called")
-        self._lastForegroundAt = 0.0
-        self._startedAt = time.time()
+        self._lastForegroundAt = time.time()
+        try:
+            Glyphs.addCallback(self._interfacePing_, UPDATEINTERFACE)
+            _dbg("start: addCallback registered")
+        except Exception:
+            _dbgexc("subscribe: ")
         # Deliberately NOT building the panel here. Building it at launch is
         # what put a window on screen before the user had asked for anything.
         self._startHeartbeat()
+        item = self._findViewItem()
+        _dbg("start: View item %r, state %r"
+             % (item, None if item is None else item.state()))
 
     # ------------------------------------------------------------------
     # panel plumbing
@@ -124,26 +142,160 @@ class InstanceDelta(ReporterPlugin):
         except Exception:
             _dbgexc("heartbeat: ")
 
+    @objc.python_method
+    def _findViewItem(self):
+        """The reporter's View-menu item (its state() is the toggle's
+        ground truth)."""
+        def find_item(menu, depth=0):
+            for item in menu.itemArray():
+                # Glyphs flips the title with the toggle: "Show X" when
+                # off, "Hide X" when on — match both (and the bare name).
+                if item.title() in ("Hide " + self.menuName,
+                                    "Show " + self.menuName,
+                                    self.menuName) \
+                        and item.action():
+                    return item
+                sub = item.submenu()
+                if sub is not None and depth < 3:
+                    found = find_item(sub, depth + 1)
+                    if found is not None:
+                        return found
+            return None
+        try:
+            main = NSApp.mainMenu()
+            main.update()  # force dynamic (reporter) items to populate
+            return find_item(main)
+        except Exception:
+            return None
+
+    @objc.python_method
+    def _pollViewItem(self):
+        """Track the View-menu toggle, reading state() fresh (menu.update()
+        forces validation first). The item's action is hooked with a
+        trampoline (_viewItemClicked_), so a real click is distinguishable
+        from Glyphs' session restore, which flips the toggle WITHOUT
+        invoking the action: an on read with no click seen is the restore
+        and is switched straight back off, whenever it lands."""
+        item = self._viewItem or self._findViewItem()
+        if item is None:
+            if not getattr(self, "_notFoundLogged", False):
+                self._notFoundLogged = True
+                _dbg("poll: View item NOT FOUND")
+            return
+        self._viewItem = item
+        self._hookViewItem(item)
+        try:
+            menu = item.menu()
+            if menu is not None:
+                menu.update()
+        except Exception:
+            pass
+        on = bool(item.state())
+        if on != self._itemWasOn:
+            _dbg("poll: toggle reads %s (userClicked=%s)"
+                 % ("ON" if on else "OFF", self._userClicked))
+        if on and not self._userClicked:
+            self._toggleOffViaMenu()  # session restore, not a click
+            return
+        if not on:
+            self._userEnabled = False
+            if self._itemWasOn:
+                self._toggledOff()
+        else:
+            if not self._userEnabled:
+                _dbg("poll: enabling (ON + clicked)")
+            self._userEnabled = True
+        self._itemWasOn = on
+
+    @objc.python_method
+    def _hookViewItem(self, item):
+        """Point the View item at the trampoline, keeping the original
+        target/action for forwarding (and for programmatic toggles, which
+        must NOT count as clicks)."""
+        try:
+            if item.target() is self:
+                return  # already hooked
+            self._origItemTarget = item.target()
+            self._origItemAction = item.action()
+            item.setTarget_(self)
+            item.setAction_(objc.selector(self._viewItemClicked_))
+            _dbg("hook: View item action trampolined")
+        except Exception:
+            _dbgexc("hook: ")
+
+    # NOT @objc.python_method — the menu item needs a real ObjC selector.
+    def _viewItemClicked_(self, sender):
+        # A REAL click (the restore never invokes the action): the user
+        # owns the toggle from here on. Forward to Glyphs' own handler.
+        _dbg("click: View item clicked")
+        self._userClicked = True
+        try:
+            NSApp.sendAction_to_from_(self._origItemAction,
+                                      self._origItemTarget, sender)
+        except Exception:
+            _dbgexc("click: ")
+
+    @objc.python_method
+    def _toggledOff(self):
+        """The reporter was switched off (seen by _pollViewItem): hide the
+        panel and clear the overlay."""
+        _dbg("toggledOff: hide panel, clear overlay")
+        self._panelWanted = False
+        ns = self._nswindow()
+        if ns is not None and ns.isVisible():
+            ns.orderOut_(None)
+        self._redraw()
+
+    @objc.python_method
+    def _toggleOffViaMenu(self):
+        """Switch the reporter OFF programmatically, throttled to one send
+        a second. Sends the item's ORIGINAL action (saved when the
+        trampoline was installed): routing through the current action
+        would trip _viewItemClicked_ and count our own untoggle as a user
+        click."""
+        now = time.time()
+        if now - self._lastUntoggleAt < 1.0:
+            return
+        item = self._viewItem or self._findViewItem()
+        if item is None:
+            _dbg("untoggle: no View item")
+            return
+        try:
+            menu = item.menu()
+            if menu is not None:
+                menu.update()
+        except Exception:
+            pass
+        if not item.state():
+            return
+        hooked = item.target() is self
+        action = self._origItemAction if hooked else item.action()
+        target = self._origItemTarget if hooked else item.target()
+        try:
+            ok = NSApp.sendAction_to_from_(action, target, item)
+            self._lastUntoggleAt = now
+            _dbg("untoggle: sendAction -> %r, state now %r" % (ok, item.state()))
+        except Exception:
+            _dbgexc("untoggle: ")
+
+    # NOT @objc.python_method — Glyphs.addCallback needs an ObjC selector.
+    def _interfacePing_(self, sender):
+        try:
+            if not getattr(self, "_pingLogged", False):
+                self._pingLogged = True
+                _dbg("ping: UPDATEINTERFACE channel alive")
+            self._pollViewItem()
+        except Exception:
+            pass
+
     # NOT @objc.python_method — NSTimer needs a real ObjC selector, and the
     # trailing underscore supplies the single colon it expects.
     def _panelHeartbeat_(self, timer):
         try:
-            idle = time.time() - self._lastForegroundAt > IDLE_OFF
-            if idle and not self._wasIdle:
-                # The reporter was just switched off. Drop the panel and force
-                # one redraw so the last overlay we painted does not linger.
-                self._wasIdle = True
-                self._panelWanted = False
-                _dbg("heartbeat: went idle -> panel hidden, overlay cleared")
-                ns = self._nswindow()
-                if ns is not None:
-                    try:
-                        ns.orderOut_(None)
-                    except Exception:
-                        pass
-                self._redraw()
-            elif not idle:
-                self._wasIdle = False
+            if not getattr(self, "_heartbeatLogged", False):
+                self._heartbeatLogged = True
+                _dbg("heartbeat: NSTimer channel alive")
+            self._pollViewItem()
         except Exception:
             pass
 
@@ -158,10 +310,10 @@ class InstanceDelta(ReporterPlugin):
 
     @objc.python_method
     def _panelClosed(self, sender):
-        # The red X means "I am done with this tool", not "reopen yourself on
-        # the next redraw". Drop the window AND stop drawing the overlay;
-        # re-selecting it in the View menu brings both back.
+        # The red X toggles the reporter off (same as the View menu does);
+        # re-selecting it in the View menu brings panel and overlay back.
         _dbg("panel: closed by user")
+        self._toggleOffViaMenu()
         self._panelWanted = False
         self._panel = None
         self._redraw()
@@ -425,37 +577,33 @@ class InstanceDelta(ReporterPlugin):
             return (-300.0, 1600.0)
 
     @objc.python_method
-    def _pulse(self, which, layer):
-        """Panel lifecycle, run from whichever draw callback fires.
+    def _pulse(self):
+        """Panel lifecycle, run from each draw callback.
 
-        This Glyphs build never calls activate(), so a draw callback is the
-        only View-toggle signal there is. But the callback also fires for a
-        toggle Glyphs merely RESTORED at launch, which is not the user asking
-        for anything — so an off->on transition only counts once the launch
-        grace has passed. Until the tool is wanted it stays completely inert:
-        no window, no overlay.
+        This Glyphs build does not call activate()/deactivate() on View
+        toggles, so a draw callback is the only View-toggle signal there
+        is. Wanting is driven entirely by the menu item's tracked state
+        (see _pollViewItem) — never by draw timing, which restored
+        toggles and ordinary drawing pauses both distort. Until the tool
+        is wanted it stays completely inert: no window, no overlay.
 
         Returns the font to draw against, or None to draw nothing.
         """
-        now = time.time()
-        idle = now - self._lastForegroundAt
-        self._lastForegroundAt = now
-        if not self._loggedDraw:
-            self._loggedDraw = True
-            _dbg("%s: first call, %.1fs after start" % (which, now - self._startedAt))
-
-        if idle > IDLE_OFF:                      # off -> on
-            if now - self._startedAt > LAUNCH_GRACE:
-                self._panelWanted = True
-                _dbg("pulse: %s toggled on -> showing panel" % which)
-            else:
-                _dbg("pulse: %s active at launch -> staying inert" % which)
-        self._wasIdle = False
-
+        self._lastForegroundAt = time.time()
+        if not self._userEnabled:
+            self._pollViewItem()
+        self._panelWanted = self._userEnabled
         if not self._panelWanted:
+            if not getattr(self, "_gatedLogged", False):
+                self._gatedLogged = True
+                _dbg("pulse: gated (userEnabled=%s)" % self._userEnabled)
             return None
+        if not getattr(self, "_wantedLogged", False):
+            self._wantedLogged = True
+            _dbg("pulse: engaging (userEnabled=True, latch clear)")
 
         if self._panel is None and FloatingWindow is not None:
+            _dbg("pulse: building panel")
             self._build_panel()                  # built lazily, on demand
         ns = self._nswindow()
         if ns is not None and not ns.isVisible():
@@ -541,13 +689,13 @@ class InstanceDelta(ReporterPlugin):
     @objc.python_method
     def background(self, layer):
         self._bgFired = True
-        if self._pulse("background", layer) is None:
+        if self._pulse() is None:
             return
         self._draw(layer)
 
     @objc.python_method
     def foreground(self, layer):
-        if self._pulse("foreground", layer) is None:
+        if self._pulse() is None:
             return
         if not self._bgFired:
             self._draw(layer)

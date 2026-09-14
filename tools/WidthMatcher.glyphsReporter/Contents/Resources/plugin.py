@@ -13,11 +13,15 @@ Create a new master whose advance widths match another master's, by hand:
   master (gray) vs. generated instance (blue), centered on the
   reference's ink — with markers at both advance boxes, plus numeric
   advance AND ink (outline extent) readouts. The ink delta is the
-  matching target: sidebearings come from the reference.
+  matching target.
+- The Spacing popup picks how the saved master is spaced: the
+  reference's sidebearings verbatim, or the reference's advance (plus
+  an optional Adv offset) with the sidebearings redistributed —
+  proportional to the reference's, centred, or keeping its LSB.
 - "Save as Master" interpolates the working instance and appends it to
   the font's masters, copying every glyph's interpolated layer across
-  and setting each layer's sidebearings to the reference master's
-  (LSB/RSB; empty glyphs take the reference advance verbatim).
+  and re-spacing each per the chosen mode (empty glyphs take the
+  reference advance, plus the offset in the advance modes).
 
 Matching itself is manual: nudge the sliders until the ink delta reads
 zero.
@@ -25,21 +29,27 @@ Width/outline data comes from `instance.interpolatedFont` (Glyphs' own
 engine, brace layers and extrapolation included).
 
 NOTE on regen triggering: the original design debounced regeneration
-through NSTimer, but in this Glyphs build the timer callback never
+through NSTimer, but in this Glyphs build the regen timer callback never
 fired (debug log: hundreds of "regen scheduled", zero "regen timer
 fired"). Regeneration is therefore synchronous, throttled to at most
 one run per 0.5 s during slider drags, with foreground() catching any
 trailing dirty state once the drag settles.
 """
 
-from __future__ import division, print_function, unicode_literals
-
 import copy as _copy
 import time
 import traceback
 
 import objc
-from AppKit import NSApp, NSBezierPath, NSColor, NSImage, NSImageView, NSTimer
+from AppKit import (
+    NSAffineTransform,
+    NSApp,
+    NSBezierPath,
+    NSColor,
+    NSImage,
+    NSImageView,
+    NSTimer,
+)
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 
@@ -73,8 +83,6 @@ SPACING_MODES = [
 
 REF_GRAY = (0.65, 0.65, 0.65)
 GEN_BLUE = (0.10, 0.45, 0.95)
-OK_GREEN = (0.15, 0.60, 0.25)
-AMBER = (0.95, 0.62, 0.10)
 
 WORKING_INSTANCE_NAME = "Width Matcher Preview"
 
@@ -88,6 +96,7 @@ REGEN_IDLE = 0.35
 PREVIEW_W = 296
 PREVIEW_H = 220
 
+DEBUG = False  # flip to True for /tmp instrumentation while developing
 _DEBUG_LOG = "/tmp/widthmatcher-debug.log"
 
 
@@ -97,6 +106,8 @@ def _dbgexc(prefix=""):
     Bare ``_dbg("EXCEPTION")`` records that something failed but not what,
     which is useless when the failure is a panel that silently never opens.
     """
+    if not DEBUG:
+        return
     try:
         _dbg("%s%s" % (prefix, traceback.format_exc()))
     except Exception:
@@ -104,13 +115,13 @@ def _dbgexc(prefix=""):
 
 
 def _dbg(msg):
-    """Load-path instrumentation while the plugin is young."""
+    if not DEBUG:
+        return
     try:
-        import traceback as _tb
         with open(_DEBUG_LOG, "a") as f:
             f.write("%s\n" % msg)
             if msg == "EXCEPTION":
-                f.write(_tb.format_exc())
+                f.write(traceback.format_exc())
     except Exception:
         pass
 
@@ -131,7 +142,6 @@ class WidthMatcher(ReporterPlugin):
         self._previewView = None           # NSImageView inside the panel
         self._lastLayer = None
         self._previewGlyphName = None
-        self._active = True
         self._widthCache = {}              # glyphName -> generated advance width
         self._interpFont = None            # last interpolated font (outline source)
         self._interpMasterId = None
@@ -143,17 +153,28 @@ class WidthMatcher(ReporterPlugin):
         self._masterName = None            # last used new-master name (persists)
         self._spacingMode = SPACING_REF_SB  # how the saved master gets spaced
         self._advOffset = 0.0              # units added to the target advance
-        self._panelClosedByUser = False    # red X kills the vanilla window
         self._loggedForeground = False      # one-shot foreground trace
+        # View-toggle tracking (see _pollViewItem)
+        self._viewItem = None
+        self._userEnabled = False
+        self._userClicked = False
+        self._itemWasOn = False
+        self._origItemTarget = None
+        self._origItemAction = None
+        self._lastUntoggleAt = 0.0
 
     @objc.python_method
     def start(self):
         _dbg("start() called")
-        self._lastForegroundAt = 0.0
-        if FloatingWindow is not None:
-            # Build hidden — the reporter's draw heartbeat (View toggle)
-            # orders the panel front on the first foreground() call.
-            self._build_panel()
+        self._lastForegroundAt = time.time()
+        try:
+            Glyphs.addCallback(self._interfacePing_, UPDATEINTERFACE)
+        except Exception:
+            _dbg("EXCEPTION")
+        # Deliberately NOT building the panel here: building it creates the
+        # "Width Matcher Preview" instance in the font (via _syncPanelToFont
+        # → _requestRegen → _workingInstance) — a side effect no one asked
+        # for at launch. The first wanted foreground() builds it.
         self._startHeartbeat()
 
     @objc.python_method
@@ -168,16 +189,149 @@ class WidthMatcher(ReporterPlugin):
         except Exception:
             _dbg("EXCEPTION")
 
+    @objc.python_method
+    def _findViewItem(self):
+        """The reporter's View-menu item (its state() is the toggle's
+        ground truth)."""
+        def find_item(menu, depth=0):
+            for item in menu.itemArray():
+                # Glyphs flips the title with the toggle: "Show X" when
+                # off, "Hide X" when on — match both (and the bare name).
+                if item.title() in ("Hide " + self.menuName,
+                                    "Show " + self.menuName,
+                                    self.menuName) \
+                        and item.action():
+                    return item
+                sub = item.submenu()
+                if sub is not None and depth < 3:
+                    found = find_item(sub, depth + 1)
+                    if found is not None:
+                        return found
+            return None
+        try:
+            main = NSApp.mainMenu()
+            main.update()  # force dynamic (reporter) items to populate
+            return find_item(main)
+        except Exception:
+            return None
+
+    @objc.python_method
+    def _pollViewItem(self):
+        """Track the View-menu toggle, reading state() fresh (menu.update()
+        forces validation first). The item's action is hooked with a
+        trampoline (_viewItemClicked_), so a real click is distinguishable
+        from Glyphs' session restore, which flips the toggle WITHOUT
+        invoking the action: an on read with no click seen is the restore
+        and is switched straight back off, whenever it lands."""
+        item = self._viewItem or self._findViewItem()
+        if item is None:
+            if not getattr(self, "_notFoundLogged", False):
+                self._notFoundLogged = True
+                _dbg("poll: View item NOT FOUND")
+            return
+        self._viewItem = item
+        self._hookViewItem(item)
+        try:
+            menu = item.menu()
+            if menu is not None:
+                menu.update()
+        except Exception:
+            pass
+        on = bool(item.state())
+        if on and not self._userClicked:
+            self._toggleOffViaMenu()  # session restore, not a click
+            return
+        if not on:
+            self._userEnabled = False
+            if self._itemWasOn:
+                self._toggledOff()
+        else:
+            self._userEnabled = True
+        self._itemWasOn = on
+
+    @objc.python_method
+    def _hookViewItem(self, item):
+        """Point the View item at the trampoline, keeping the original
+        target/action for forwarding (and for programmatic toggles, which
+        must NOT count as clicks)."""
+        try:
+            if item.target() is self:
+                return  # already hooked
+            self._origItemTarget = item.target()
+            self._origItemAction = item.action()
+            item.setTarget_(self)
+            item.setAction_(objc.selector(self._viewItemClicked_))
+            _dbg("hook: View item action trampolined")
+        except Exception:
+            _dbg("EXCEPTION")
+
+    # NOT @objc.python_method — the menu item needs a real ObjC selector.
+    def _viewItemClicked_(self, sender):
+        # A REAL click (the restore never invokes the action): the user
+        # owns the toggle from here on. Forward to Glyphs' own handler.
+        _dbg("click: View item clicked")
+        self._userClicked = True
+        try:
+            NSApp.sendAction_to_from_(self._origItemAction,
+                                      self._origItemTarget, sender)
+        except Exception:
+            _dbg("EXCEPTION")
+
+    @objc.python_method
+    def _toggledOff(self):
+        """The reporter was switched off (seen by _pollViewItem)."""
+        ns = self._nswindow()
+        if ns is not None and ns.isVisible():
+            ns.orderOut_(None)
+
+    @objc.python_method
+    def _toggleOffViaMenu(self):
+        """Switch the reporter OFF programmatically, throttled to one send
+        a second. Sends the item's ORIGINAL action (saved when the
+        trampoline was installed): routing through the current action
+        would trip _viewItemClicked_ and count our own untoggle as a user
+        click."""
+        now = time.time()
+        if now - self._lastUntoggleAt < 1.0:
+            return
+        item = self._viewItem or self._findViewItem()
+        if item is None:
+            _dbg("untoggle: no View item")
+            return
+        try:
+            menu = item.menu()
+            if menu is not None:
+                menu.update()
+        except Exception:
+            pass
+        if not item.state():
+            return
+        hooked = item.target() is self
+        action = self._origItemAction if hooked else item.action()
+        target = self._origItemTarget if hooked else item.target()
+        try:
+            ok = NSApp.sendAction_to_from_(action, target, item)
+            self._lastUntoggleAt = now
+            _dbg("untoggle: sendAction -> %r, state now %r" % (ok, item.state()))
+        except Exception:
+            _dbg("EXCEPTION")
+
+    # NOT @objc.python_method — Glyphs.addCallback needs an ObjC selector.
+    def _interfacePing_(self, sender):
+        try:
+            self._pollViewItem()
+        except Exception:
+            pass
+
     # NOTE: NOT @objc.python_method — NSTimer needs this as a real ObjC
     # selector. The trailing underscore gives it the required single colon.
     def _panelHeartbeat_(self, timer):
-        ns = self._nswindow()
-        if ns is None:
-            return
         try:
-            idle = time.time() - self._lastForegroundAt
-            if idle > 1.5 and ns.isVisible():
-                ns.orderOut_(None)
+            self._pollViewItem()
+            if time.time() - self._lastForegroundAt > 1.5:
+                ns = self._nswindow()
+                if ns is not None and ns.isVisible():
+                    ns.orderOut_(None)
         except Exception:
             pass
 
@@ -191,51 +345,24 @@ class WidthMatcher(ReporterPlugin):
 
     @objc.python_method
     def _panelClosed(self, sender):
-        """Red X = toggle the reporter off via its own View menu item,
-        exactly like CornerRadii — a plain close would be re-shown by the
-        next foreground() draw. The vanilla window is dead after a close,
-        so flag it: the next foreground() rebuilds the panel from scratch
-        (state lives on self, not in the window)."""
-        self._panelClosedByUser = True
-        def find_item(menu, depth=0):
-            for item in menu.itemArray():
-                if item.title() in (self.menuName, "Show " + self.menuName) \
-                        and item.action():
-                    return item
-                sub = item.submenu()
-                if sub is not None and depth < 3:
-                    found = find_item(sub, depth + 1)
-                    if found is not None:
-                        return found
-            return None
-
-        try:
-            main = NSApp.mainMenu()
-            main.update()
-            item = find_item(main)
-            if item is not None:
-                NSApp.sendAction_to_from_(item.action(), item.target(), item)
-        except Exception:
-            _dbg("EXCEPTION")
+        """Panel's red X clicked — toggle the reporter OFF (same as the
+        View menu does) and drop the dead vanilla window: the next wanted
+        foreground() rebuilds the panel from scratch."""
+        self._toggleOffViaMenu()
+        self._panel = None
+        self._previewView = None
 
     @objc.python_method
     def activate(self):
-        """Reporter toggled ON (View menu) — set active state only.
-        Do NOT show the panel here: Glyphs calls activate() on ALL reporter
-        plugins at app launch, which would open every panel on startup.
-        foreground() shows the panel only when the View toggle is on."""
+        """Reporter toggled ON (View menu). Do NOT build or show the panel
+        here: Glyphs calls activate() on ALL reporter plugins at app launch.
+        The first wanted foreground() builds and shows it."""
         _dbg("activate() called")
-        self._active = True
-        if FloatingWindow is None:
-            return
-        if self._panel is None:
-            self._build_panel()
         self._redraw()
 
     @objc.python_method
     def deactivate(self):
         _dbg("deactivate() called")
-        self._active = False
         ns = self._nswindow()
         if ns is not None:
             try:
@@ -554,7 +681,7 @@ class WidthMatcher(ReporterPlugin):
             view = NSImageView.alloc().initWithFrame_(
                 ((0, 0), (PREVIEW_W, PREVIEW_H)))
             view.setImageFrameStyle_(0)      # no frame
-            view.setImageAlignment_(5)       # center
+            view.setImageAlignment_(5)       # bottom (moot: the image fills the view)
             w.previewBox._nsObject.addSubview_(view)
             self._previewView = view
         except Exception:
@@ -1024,8 +1151,6 @@ class WidthMatcher(ReporterPlugin):
             asc = float(ref.ascender)
             desc = float(ref.descender)
 
-            from AppKit import NSAffineTransform
-
             # The generated glyph is drawn with its INK centered on the
             # reference's ink, not left-aligned at the origin — the user
             # matches outline extents (sidebearings are copied from the
@@ -1186,8 +1311,11 @@ class WidthMatcher(ReporterPlugin):
         is on anyway, and on builds that call deactivate() but never
         activate() such a gate would permanently brick the panel."""
         self._lastLayer = layer
-        # The draw heartbeat IS the View-toggle signal (see CornerRadii).
         self._lastForegroundAt = time.time()
+        if not self._userEnabled:
+            self._pollViewItem()
+            if not self._userEnabled:
+                return
         if not self._loggedForeground:
             self._loggedForeground = True
             _ns0 = self._nswindow()
@@ -1195,11 +1323,7 @@ class WidthMatcher(ReporterPlugin):
                  % (self._panel is not None,
                     _ns0 is not None,
                     "n/a" if _ns0 is None else _ns0.isVisible()))
-        if self._panelClosedByUser:
-            # the red-X close disposed the vanilla window — rebuild
-            self._panelClosedByUser = False
-            self._panel = None
-            self._previewView = None
+        if self._panel is None and FloatingWindow is not None:
             self._build_panel()
         ns = self._nswindow()
         if ns is not None and not ns.isVisible():
