@@ -20,8 +20,6 @@ entire font (all masters, ticks ignored). Font-wide scopes also
 transform each glyph's brace/bracket layers.
 """
 
-from __future__ import division, print_function, unicode_literals
-
 import os
 import sys
 import time
@@ -50,16 +48,19 @@ except ImportError:  # vanilla ships with Glyphs; guard for dev linting
 BLUE = (0.10, 0.45, 0.95)
 AMBER = (0.95, 0.62, 0.10)
 GRAY = (0.45, 0.45, 0.45)
+RED = (0.95, 0.25, 0.15)
 
 # A round whose circle-fit residual exceeds this fraction of its radius
 # is flagged "not very circular".
 RESIDUAL_FLAG = 0.08
 
+DEBUG = False  # flip to True for /tmp instrumentation while developing
 _DEBUG_LOG = "/tmp/cornerradii-debug.log"
 
 
 def _dbg(msg):
-    """Load-path instrumentation while the plugin is young."""
+    if not DEBUG:
+        return
     try:
         import traceback as _tb
         with open(_DEBUG_LOG, "a") as f:
@@ -95,14 +96,26 @@ class CornerRadii(ReporterPlugin):
         # on the View toggle. activate()/deactivate() (if this build calls
         # them) only drive panel show/hide + the master switch below.
         self._active = True
+        # View-toggle tracking (see _pollViewItem)
+        self._viewItem = None
+        self._userEnabled = False
+        self._userClicked = False
+        self._itemWasOn = False
+        self._origItemTarget = None
+        self._origItemAction = None
+        self._lastUntoggleAt = 0.0
 
     @objc.python_method
     def start(self):
         _dbg("start() called")
-        self._lastForegroundAt = 0.0
+        self._lastForegroundAt = time.time()
+        try:
+            Glyphs.addCallback(self._interfacePing_, UPDATEINTERFACE)
+        except Exception:
+            _dbg("EXCEPTION")
         if FloatingWindow is not None:
             # Build hidden — the reporter's draw heartbeat (View toggle)
-            # orders the panel front on the first foreground() call.
+            # orders the panel front on the first wanted foreground() call.
             self._build_panel()
         self._startHeartbeat()
 
@@ -122,6 +135,140 @@ class CornerRadii(ReporterPlugin):
             _dbg("EXCEPTION")
 
     @objc.python_method
+    def _findViewItem(self):
+        """The reporter's View-menu item (its state() is the toggle's
+        ground truth)."""
+        def find_item(menu, depth=0):
+            for item in menu.itemArray():
+                # Glyphs flips the title with the toggle: "Show X" when
+                # off, "Hide X" when on — match both (and the bare name).
+                if item.title() in ("Hide " + self.menuName,
+                                    "Show " + self.menuName,
+                                    self.menuName) \
+                        and item.action():
+                    return item
+                sub = item.submenu()
+                if sub is not None and depth < 3:
+                    found = find_item(sub, depth + 1)
+                    if found is not None:
+                        return found
+            return None
+        try:
+            main = NSApp.mainMenu()
+            main.update()  # force dynamic (reporter) items to populate
+            return find_item(main)
+        except Exception:
+            return None
+
+    @objc.python_method
+    def _pollViewItem(self):
+        """Track the View-menu toggle, reading state() fresh (menu.update()
+        forces validation first). The item's action is hooked with a
+        trampoline (_viewItemClicked_), so a real click is distinguishable
+        from Glyphs' session restore, which flips the toggle WITHOUT
+        invoking the action: an on read with no click seen is the restore
+        and is switched straight back off, whenever it lands."""
+        item = self._viewItem or self._findViewItem()
+        if item is None:
+            if not getattr(self, "_notFoundLogged", False):
+                self._notFoundLogged = True
+                _dbg("poll: View item NOT FOUND")
+            return
+        self._viewItem = item
+        self._hookViewItem(item)
+        try:
+            menu = item.menu()
+            if menu is not None:
+                menu.update()
+        except Exception:
+            pass
+        on = bool(item.state())
+        if on and not self._userClicked:
+            self._toggleOffViaMenu()  # session restore, not a click
+            return
+        if not on:
+            self._userEnabled = False
+            if self._itemWasOn:
+                self._toggledOff()
+        else:
+            self._userEnabled = True
+        self._itemWasOn = on
+
+    @objc.python_method
+    def _hookViewItem(self, item):
+        """Point the View item at the trampoline, keeping the original
+        target/action for forwarding (and for programmatic toggles, which
+        must NOT count as clicks)."""
+        try:
+            if item.target() is self:
+                return  # already hooked
+            self._origItemTarget = item.target()
+            self._origItemAction = item.action()
+            item.setTarget_(self)
+            item.setAction_(objc.selector(self._viewItemClicked_))
+            _dbg("hook: View item action trampolined")
+        except Exception:
+            _dbg("EXCEPTION")
+
+    # NOT @objc.python_method — the menu item needs a real ObjC selector.
+    def _viewItemClicked_(self, sender):
+        # A REAL click (the restore never invokes the action): the user
+        # owns the toggle from here on. Forward to Glyphs' own handler.
+        _dbg("click: View item clicked")
+        self._userClicked = True
+        try:
+            NSApp.sendAction_to_from_(self._origItemAction,
+                                      self._origItemTarget, sender)
+        except Exception:
+            _dbg("EXCEPTION")
+
+    @objc.python_method
+    def _toggledOff(self):
+        """The reporter was switched off (seen by _pollViewItem)."""
+        ns = self._nswindow()
+        if ns is not None and ns.isVisible():
+            ns.orderOut_(None)
+
+    @objc.python_method
+    def _toggleOffViaMenu(self):
+        """Switch the reporter OFF programmatically, throttled to one send
+        a second. Sends the item's ORIGINAL action (saved when the
+        trampoline was installed): routing through the current action
+        would trip _viewItemClicked_ and count our own untoggle as a user
+        click."""
+        now = time.time()
+        if now - self._lastUntoggleAt < 1.0:
+            return
+        item = self._viewItem or self._findViewItem()
+        if item is None:
+            _dbg("untoggle: no View item")
+            return
+        try:
+            menu = item.menu()
+            if menu is not None:
+                menu.update()
+        except Exception:
+            pass
+        if not item.state():
+            return
+        hooked = item.target() is self
+        action = self._origItemAction if hooked else item.action()
+        target = self._origItemTarget if hooked else item.target()
+        try:
+            ok = NSApp.sendAction_to_from_(action, target, item)
+            self._lastUntoggleAt = now
+            _dbg("untoggle: sendAction -> %r, state now %r" % (ok, item.state()))
+        except Exception:
+            _dbg("EXCEPTION")
+
+    # NOT @objc.python_method — Glyphs.addCallback needs an ObjC selector.
+    def _interfacePing_(self, sender):
+        try:
+            self._pollViewItem()
+        except Exception:
+            pass
+
+    @objc.python_method
     def _nswindow(self):
         """The panel's real NSWindow. Visibility MUST go through this:
         vanilla's wrapper forwards isVisible but NOT orderOut_ /
@@ -136,53 +283,22 @@ class CornerRadii(ReporterPlugin):
     # selector. The trailing underscore gives it the required single colon
     # (and keeps the class-transform's arg-count check happy).
     def _panelHeartbeat_(self, timer):
-        ns = self._nswindow()
-        if ns is None:
-            return
         try:
-            idle = time.time() - self._lastForegroundAt
-            if idle > 1.5 and ns.isVisible():
-                ns.orderOut_(None)
+            self._pollViewItem()
+            if time.time() - self._lastForegroundAt > 1.5:
+                ns = self._nswindow()
+                if ns is not None and ns.isVisible():
+                    ns.orderOut_(None)
         except Exception:
             pass
 
     @objc.python_method
     def _panelClosed(self, sender):
-        """Panel's red X clicked — toggle View → Corner Radii OFF by
-        sending the reporter's own menu-item action (the same thing the
-        View menu does). The window then closes normally; with the
-        reporter off, foreground() stops firing, so nothing re-shows it
-        until the user re-enables the view."""
-        def find_item(menu, depth=0):
-            for item in menu.itemArray():
-                # Glyphs prefixes reporter items with "Show "
-                if item.title() in (self.menuName, "Show " + self.menuName) \
-                        and item.action():
-                    return item
-                sub = item.submenu()
-                if sub is not None and depth < 3:
-                    found = find_item(sub, depth + 1)
-                    if found is not None:
-                        return found
-            return None
-
-        try:
-            main = NSApp.mainMenu()
-            main.update()  # force dynamic (reporter) items to populate
-            item = find_item(main)
-            if item is not None:
-                NSApp.sendAction_to_from_(item.action(), item.target(), item)
-                return
-            # evidence for the next attempt: dump the View menu's titles
-            for top in main.itemArray():
-                if top.title() == "View" and top.submenu() is not None:
-                    titles = [i.title() for i in top.submenu().itemArray()]
-                    _dbg("panelClosed: not found; View menu = %r" % titles)
-                    break
-            else:
-                _dbg("panelClosed: no View menu")
-        except Exception:
-            _dbg("EXCEPTION")
+        """Panel's red X clicked — toggle the reporter OFF (same as the
+        View menu does) and drop the dead vanilla window: the next wanted
+        foreground() rebuilds the panel from scratch."""
+        self._toggleOffViaMenu()
+        self._panel = None
 
     @objc.python_method
     def activate(self):
@@ -298,7 +414,7 @@ class CornerRadii(ReporterPlugin):
         except Exception:
             pass
         if include_braces:
-            if not getattr(self, "_braceDiagLogged", False):
+            if DEBUG and not getattr(self, "_braceDiagLogged", False):
                 try:
                     font = glyph.parent
                     n_masters = len(font.masters)
@@ -446,7 +562,6 @@ class CornerRadii(ReporterPlugin):
         y += 34
         w.mastersLabel = TextBox((12, y, 200, 20), "Masters:")
         y += 22
-        self._mastersY = y
         self._mastersBlockY = y
         self._refreshMasters()
         w.open()
@@ -659,9 +774,13 @@ class CornerRadii(ReporterPlugin):
         if not self._active:
             return
         self._lastLayer = layer
-        # The draw heartbeat IS the View-toggle signal: foreground only
-        # fires while the reporter is enabled, so (re)show the panel here.
         self._lastForegroundAt = time.time()
+        if not self._userEnabled:
+            self._pollViewItem()
+            if not self._userEnabled:
+                return
+        if self._panel is None and FloatingWindow is not None:
+            self._build_panel()
         ns = self._nswindow()
         if ns is not None and not ns.isVisible():
             try:
@@ -700,7 +819,7 @@ class CornerRadii(ReporterPlugin):
                  if c["class"] == "counter" and c.get("center") and c.get("radius")]
         if not outer or not inner:
             return
-        _rgba((0.95, 0.25, 0.15), 0.35).set()
+        _rgba(RED, 0.35).set()
         for o in outer:
             r1 = o["radius"] * self.outerFactor
             for i in inner:

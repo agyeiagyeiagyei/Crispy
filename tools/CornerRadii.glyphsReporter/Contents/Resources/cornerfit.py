@@ -16,8 +16,6 @@ preserving node count/order/type — i.e. it is interpolation-safe for
 variable fonts as long as the same k-factors are applied per master.
 """
 
-from __future__ import division
-
 import math
 
 LINE = 1
@@ -46,8 +44,6 @@ _OFFCURVE = {"offcurve"}
 def _kind(node):
     return _KIND.get(node.type, "unknown")
 
-_KAPPA = 0.5522847498307936  # quarter-circle handle-length / radius ratio
-
 
 # --------------------------------------------------------------------------
 # small vector helpers
@@ -60,10 +56,6 @@ def _pt(node):
 
 def _sub(a, b):
     return (a[0] - b[0], a[1] - b[1])
-
-
-def _mul(a, k):
-    return (a[0] * k, a[1] * k)
 
 
 def _dist(a, b):
@@ -225,7 +217,8 @@ def find_corners(paths, baseline_y=0.0, baseline_tol=10.0):
       mids         on-curve coordinates between T1 and T2 (multi-curve rounds)
       corner       virtual corner C (line intersection; None when parallel)
       center/radius/residual   from the circle fit (None when degenerate)
-      handle_radius            radius implied by handle length / kappa
+      segments     cubic sub-segments of the round (``{p0, handles, p1}`` indices)
+      prev, next   coordinates of the round's straight-segment neighbours
       class        ``'outer'`` (exterior contour) or ``'counter'``
       convex       True when the round bulges away from the contour centroid
       baseline     True when |C.y - baseline_y| <= baseline_tol
@@ -340,10 +333,6 @@ def find_corners(paths, baseline_y=0.0, baseline_tol=10.0):
             fit = circle_fit(fit_pts)
             center, radius, residual = (fit if fit else (None, None, None))
 
-            handle_radius = None
-            if handle_pts:
-                handle_radius = _dist(t1_pt, handle_pts[0]) / _KAPPA
-
             arc_mid = _cubic_mid(
                 t1_pt,
                 handle_pts[0] if handle_pts else t1_pt,
@@ -377,7 +366,6 @@ def find_corners(paths, baseline_y=0.0, baseline_tol=10.0):
                     "center": center,
                     "radius": radius,
                     "residual": residual,
-                    "handle_radius": handle_radius,
                     "class": "counter" if depths[pi] % 2 == 1 else "outer",
                     "convex": convex,
                     "baseline": corner_c is not None and abs(corner_c[1] - baseline_y) <= baseline_tol,
@@ -416,14 +404,9 @@ def transformed_positions(path, corner, factor, pivot=None):
     return out
 
 
-def factor_to_absolute(corner, factor):
-    """The radius a factor would produce, for the panel readout."""
-    base = corner.get("radius") or corner.get("handle_radius")
-    return None if base is None else base * factor
-
-
 # --------------------------------------------------------------------------
-# sharpening (Glyphs' "Sharpen Corners": T1/T2 onto C, handles deleted)
+# sharpening (batched "Sharpen Corners": T1 moves onto C, the rest of the
+# round up to and including T2 is deleted)
 # --------------------------------------------------------------------------
 
 def sharpen_plan(corner):

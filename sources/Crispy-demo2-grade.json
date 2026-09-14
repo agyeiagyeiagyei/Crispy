@@ -2,6 +2,8 @@
   "version": 1,
   "enabled": true,
   "default_pct": 0.25,
+  "intensity": 1.0,
+  "clamp_to_headroom": true,
   "instances": [
     {
       "name": "WideUltra Min",

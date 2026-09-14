@@ -13,8 +13,6 @@ tool: drag a node, and the same movement is applied live to the same
 Undo: one step per target layer per drag, via beginChanges/endChanges.
 """
 
-from __future__ import division, print_function, unicode_literals
-
 import os
 import time
 
@@ -33,10 +31,13 @@ except ImportError:
     FloatingWindow = None
 
 
+DEBUG = False  # flip to True for /tmp instrumentation while developing
 _DEBUG_LOG = "/tmp/multisourceedit-debug.log"
 
 
 def _dbg(msg):
+    if not DEBUG:
+        return
     try:
         import traceback as _tb
         with open(_DEBUG_LOG, "a") as f:
@@ -55,12 +56,12 @@ class MultiSourceEdit(SelectTool):
         self.keyboardShortcut = None
         icon_path = os.path.join(os.path.dirname(self.__file__()), "toolbarIconTemplate.pdf")
         my_image = NSImage.alloc().initByReferencingFile_(icon_path)
-        self._icon = None
         self.tool_bar_image = my_image
 
         # Sync state
         self.syncActive = False
         self.masterSelections = {}      # masterId -> bool (default True)
+        self._startedAt = 0.0
         self._panel = None
         self._masterRows = {}           # masterId -> CheckBox widget
 
@@ -74,13 +75,20 @@ class MultiSourceEdit(SelectTool):
 
     @objc.python_method
     def start(self):
+        self._startedAt = time.time()
         if FloatingWindow is not None:
             self._build_panel()
 
     @objc.python_method
     def activate(self):
         self._refreshMasters()
-        self._show_panel()
+        # Glyphs restores the last-active tool at launch: an activate()
+        # landing right after start() is that restore, not the user picking
+        # the tool — keep the panel closed for it. (Tradeoff: selecting the
+        # tool within 2s of launch shows the panel only after one
+        # reselection.)
+        if time.time() - self._startedAt > 2.0:
+            self._show_panel()
 
     @objc.python_method
     def deactivate(self):
@@ -151,7 +159,7 @@ class MultiSourceEdit(SelectTool):
     # ------------------------------------------------------------------
 
     @objc.python_method
-    def _selectedNodeKeys(self, layer):
+    def _computeSelectedNodeKeys(self, layer):
         """[(pathIndex, nodeIndex)] for nodes currently in layer.selection."""
         keys = []
         selection = set(layer.selection)
@@ -222,7 +230,8 @@ class MultiSourceEdit(SelectTool):
 
     @objc.python_method
     def _panelClosed(self, sender):
-        # Deactivate sync rather than closing the window
+        # Closing the panel just turns sync off and hides it; activating the
+        # tool again re-shows it.
         self.syncActive = False
         if self._panel is not None:
             self._panel.syncBox.set(False)
@@ -246,7 +255,7 @@ class MultiSourceEdit(SelectTool):
             return
         font = self._currentFont()
         w = self._panel
-        for mid, cb in list(self._masterRows.items()):
+        for mid in list(self._masterRows):
             try:
                 delattr(w, "master_%s" % mid.replace("-", "_"))
             except Exception:
@@ -302,7 +311,7 @@ class MultiSourceEdit(SelectTool):
                 return
 
             self._dragStart = self.editViewController().graphicView().getActiveLocation_(theEvent)
-            self._selectedNodeKeys = self._selectedNodeKeys(layer)
+            self._selectedNodeKeys = self._computeSelectedNodeKeys(layer)
 
             # Record initial positions in active layer
             self._activeInitial = {}

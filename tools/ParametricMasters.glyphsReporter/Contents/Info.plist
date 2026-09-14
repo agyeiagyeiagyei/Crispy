@@ -5,15 +5,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Multi-Source Edit</string>
+	<string>Parametric Masters</string>
 	<key>CFBundleExecutable</key>
 	<string>plugin</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.agyei.MultiSourceEdit</string>
+	<string>com.agyei.ParametricMasters</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Multi-Source Edit</string>
+	<string>Parametric Masters</string>
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
@@ -23,7 +23,7 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright, agyei, 2026</string>
 	<key>NSPrincipalClass</key>
-	<string>MultiSourceEdit</string>
+	<string>ParametricMasters</string>
 	<key>PyMainFileNames</key>
 	<array>
 		<string>plugin.py</string>
