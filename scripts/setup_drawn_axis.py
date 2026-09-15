@@ -30,7 +30,7 @@ Deleting ``.avar2-studio/`` loses them. Keep backups of that directory once you
 have drawing invested in it.
 
 Usage:
-    python scripts/setup_drawn_axis.py sources/Crispy-demo2.glyphs \\
+    python scripts/setup_drawn_axis.py sources/Crispy.glyphs \\
         --tag ymod --name "Horizontal correction" \\
         --glyphs "E,e,s,S,B,K" \\
         --at "XTRA=1715,XOPQ=263,YOPQ=104" \\

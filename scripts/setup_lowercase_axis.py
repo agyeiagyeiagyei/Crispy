@@ -38,8 +38,8 @@ layer per glyph at XTRA max with NO correction: its delta is zero, so it changes
 nothing where it sits and bounds the tuple everywhere else (leak drops to ~1).
 
 USAGE
-    python scripts/setup_lowercase_axis.py sources/Crispy-demo2.glyphs --lag 10
-    python scripts/setup_lowercase_axis.py sources/Crispy-demo2.glyphs --lag 10 \
+    python scripts/setup_lowercase_axis.py sources/Crispy.glyphs --lag 10
+    python scripts/setup_lowercase_axis.py sources/Crispy.glyphs --lag 10 \
         --workspace /tmp/ws --build --verify
 
 The source file is NEVER modified: the axis and its layers live in the

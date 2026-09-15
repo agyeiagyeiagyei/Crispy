@@ -4,11 +4,9 @@ on: [push, pull_request, workflow_dispatch]
 permissions: write-all
 
 env:
-  # The source CI builds. sources/Crispy.glyphs is the family, but it does
-  # not currently compile (z and braceleft are interpolation-incompatible —
-  # see the open-corner audit in scripts/); demo2 is the studio's working
-  # source and builds clean. Point this back at Crispy.glyphs once fixed.
-  SOURCE: sources/Crispy-demo2.glyphs
+  # The source CI builds. Its avar2 mappings, grade and transform settings
+  # come from the sibling Crispy-avar.csv / -grade.json / -transforms.json.
+  SOURCE: sources/Crispy.glyphs
   # The studio owns the build now (it replaced the Makefile/gftools flow in
   # July). Install it from the branch the hosted demo deploys from until a
   # release carrying the current work exists.
