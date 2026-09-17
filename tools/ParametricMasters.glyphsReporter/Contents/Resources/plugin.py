@@ -22,7 +22,6 @@ import time
 import traceback
 
 import objc
-from AppKit import NSApp, NSTimer
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 
@@ -41,7 +40,6 @@ except ImportError:  # vanilla ships with Glyphs; guard for dev linting
 
 TOLERANCE = 1.0        # units; deviations beyond this are flagged
 SCAN_THROTTLE = 1.0    # min seconds between live scans
-IDLE_OFF = 1.5         # seconds without foreground() => reporter toggled off
 
 DEBUG = False  # flip to True for /tmp instrumentation while developing
 _DEBUG_LOG = "/tmp/parametricmasters-debug.log"
@@ -154,185 +152,82 @@ class ParametricMasters(ReporterPlugin):
         self.live = True
         self._dirty = False              # edits arrived since last scan
         self._lastScanAt = 0.0
-        self._lastForegroundAt = 0.0
         self._currentGlyphName = None
-        # View-toggle tracking (see _pollViewItem)
-        self._viewItem = None
-        self._userEnabled = False
-        self._userClicked = False
-        self._itemWasOn = False
-        self._origItemTarget = None
-        self._origItemAction = None
-        self._lastUntoggleAt = 0.0
+        self._active = False             # mirrors the View toggle (willActivate)
 
     @objc.python_method
     def start(self):
-        self._lastForegroundAt = time.time()
-        self._startHeartbeat()
+        self._forgetRestoredToggle()
         try:
             Glyphs.addCallback(self._updateInterface_, UPDATEINTERFACE)
         except Exception:
             _dbgexc("subscribe: ")
 
-    # --- View-toggle tracking ------------------------------------------
-    # Glyphs restores the View-menu toggle programmatically (at launch or
-    # document open) and there is no reliable moment to catch it — so the
-    # item's action is trampolined (_hookViewItem/_viewItemClicked_): a
-    # real CLICK marks user intent; an on state with no click seen is the
-    # restore and is switched back off (_toggleOffViaMenu, bypassing the
-    # trampoline). Draw timing is never trusted either.
+    # --- View toggle -----------------------------------------------------
+    # Glyphs calls willActivate / willDeactivate on the reporter instance
+    # when its View item is toggled, and again at launch for every reporter
+    # listed in its ``visibleReporters`` default (whatever was on at quit).
+    # The SDK's ReporterPlugin does not forward these to activate() /
+    # deactivate() — only SelectTool does — so they are implemented here
+    # directly, as real ObjC selectors (no @objc.python_method).
 
-    @objc.python_method
-    def _findViewItem(self):
-        def find_item(menu, depth=0):
-            for item in menu.itemArray():
-                # Glyphs flips the title with the toggle: "Show X" when
-                # off, "Hide X" when on — match both (and the bare name).
-                if item.title() in ("Hide " + self.menuName,
-                                    "Show " + self.menuName,
-                                    self.menuName) \
-                        and item.action():
-                    return item
-                sub = item.submenu()
-                if sub is not None and depth < 3:
-                    found = find_item(sub, depth + 1)
-                    if found is not None:
-                        return found
-            return None
+    def willActivate(self):
         try:
-            main = NSApp.mainMenu()
-            main.update()  # force dynamic (reporter) items to populate
-            return find_item(main)
+            self._active = True
+            self._showPanel()
+            self._redraw()
         except Exception:
-            return None
+            _dbgexc("willActivate: ")
+
+    def willDeactivate(self):
+        try:
+            self._active = False
+            self._hidePanel()
+            self._redraw()
+        except Exception:
+            _dbgexc("willDeactivate: ")
 
     @objc.python_method
-    def _pollViewItem(self):
-        """Track the View-menu toggle, reading state() fresh (menu.update()
-        forces validation first). The item's action is hooked with a
-        trampoline (_viewItemClicked_), so a real click is distinguishable
-        from Glyphs' session restore, which flips the toggle WITHOUT
-        invoking the action: an on read with no click seen is the restore
-        and is switched straight back off, whenever it lands."""
-        item = self._viewItem or self._findViewItem()
-        if item is None:
-            if not getattr(self, "_notFoundLogged", False):
-                self._notFoundLogged = True
-                _dbg("poll: View item NOT FOUND")
+    def _forgetRestoredToggle(self):
+        """Drop this reporter from Glyphs' ``visibleReporters`` default so
+        the panel never opens on launch: Glyphs re-enables every reporter
+        in that list when it starts, and these panels are wanted on demand
+        only. The user's next View click puts it back for the session."""
+        key = "visibleReporters"
+        name = self.__class__.__name__
+        try:
+            current = Glyphs.defaults[key]
+            if current and name in list(current):
+                Glyphs.defaults[key] = [n for n in current if n != name]
+                _dbg("start: dropped %s from %s" % (name, key))
+        except Exception:
+            _dbgexc("visibleReporters: ")
+
+    @objc.python_method
+    def _showPanel(self):
+        if FloatingWindow is None:
             return
-        self._viewItem = item
-        self._hookViewItem(item)
-        try:
-            menu = item.menu()
-            if menu is not None:
-                menu.update()
-        except Exception:
-            pass
-        on = bool(item.state())
-        if on and not self._userClicked:
-            self._toggleOffViaMenu()  # session restore, not a click
-            return
-        if not on:
-            self._userEnabled = False
-            if self._itemWasOn:
-                self._toggledOff()
-        else:
-            self._userEnabled = True
-        self._itemWasOn = on
+        if self._panel is None:
+            self._build_panel()
+        ns = self._nswindow()
+        if ns is not None and not ns.isVisible():
+            try:
+                ns.makeKeyAndOrderFront_(None)
+            except Exception:
+                _dbgexc("showPanel: ")
 
     @objc.python_method
-    def _hookViewItem(self, item):
-        """Point the View item at the trampoline, keeping the original
-        target/action for forwarding (and for programmatic toggles, which
-        must NOT count as clicks)."""
-        try:
-            if item.target() is self:
-                return  # already hooked
-            self._origItemTarget = item.target()
-            self._origItemAction = item.action()
-            item.setTarget_(self)
-            item.setAction_(objc.selector(self._viewItemClicked_))
-            _dbg("hook: View item action trampolined")
-        except Exception:
-            _dbgexc("hook: ")
-
-    # NOT @objc.python_method — the menu item needs a real ObjC selector.
-    def _viewItemClicked_(self, sender):
-        # A REAL click (the restore never invokes the action): the user
-        # owns the toggle from here on. Forward to Glyphs' own handler.
-        _dbg("click: View item clicked")
-        self._userClicked = True
-        try:
-            NSApp.sendAction_to_from_(self._origItemAction,
-                                      self._origItemTarget, sender)
-        except Exception:
-            _dbgexc("click: ")
-
-    @objc.python_method
-    def _toggledOff(self):
-        """The reporter was switched off (seen by _pollViewItem)."""
+    def _hidePanel(self):
         ns = self._nswindow()
         if ns is not None and ns.isVisible():
-            ns.orderOut_(None)
-
-    @objc.python_method
-    def _toggleOffViaMenu(self):
-        """Switch the reporter OFF programmatically, throttled to one send
-        a second. Sends the item's ORIGINAL action (saved when the
-        trampoline was installed): routing through the current action
-        would trip _viewItemClicked_ and count our own untoggle as a user
-        click."""
-        now = time.time()
-        if now - self._lastUntoggleAt < 1.0:
-            return
-        item = self._viewItem or self._findViewItem()
-        if item is None:
-            _dbg("untoggle: no View item")
-            return
-        try:
-            menu = item.menu()
-            if menu is not None:
-                menu.update()
-        except Exception:
-            pass
-        if not item.state():
-            return
-        hooked = item.target() is self
-        action = self._origItemAction if hooked else item.action()
-        target = self._origItemTarget if hooked else item.target()
-        try:
-            ok = NSApp.sendAction_to_from_(action, target, item)
-            self._lastUntoggleAt = now
-            _dbg("untoggle: sendAction -> %r, state now %r" % (ok, item.state()))
-        except Exception:
-            _dbgexc("untoggle: ")
-
-    # --- heartbeat -----------------------------------------------------
-
-    @objc.python_method
-    def _startHeartbeat(self):
-        try:
-            NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-                0.75, self, objc.selector(self._panelHeartbeat_), None, True
-            )
-        except Exception:
-            _dbgexc("heartbeat: ")
-
-    # NOT @objc.python_method — NSTimer needs this as a real ObjC selector.
-    def _panelHeartbeat_(self, timer):
-        try:
-            self._pollViewItem()
-            if time.time() - self._lastForegroundAt > IDLE_OFF:
-                ns = self._nswindow()
-                if ns is not None and ns.isVisible():
-                    ns.orderOut_(None)
-        except Exception:
-            pass
+            try:
+                ns.orderOut_(None)
+            except Exception:
+                _dbgexc("hidePanel: ")
 
     # NOT @objc.python_method — Glyphs.addCallback needs an ObjC selector.
     def _updateInterface_(self, sender):
-        self._pollViewItem()
-        if not self.live:
+        if not self._active or not self.live:
             return
         self._dirty = True
         self._maybeScan()
@@ -420,11 +315,14 @@ class ParametricMasters(ReporterPlugin):
 
     @objc.python_method
     def _panelClosed(self, sender):
-        # The red X toggles the reporter off (same as the View menu does)
-        # and the dead vanilla window is dropped: the next wanted
-        # foreground() rebuilds the panel from scratch.
-        self._toggleOffViaMenu()
+        """Panel's red X: turn the reporter off through Glyphs' own API
+        (the View item follows) and drop the dead vanilla window — the
+        next willActivate rebuilds it."""
         self._panel = None
+        try:
+            Glyphs.deactivateReporter(self)
+        except Exception:
+            _dbgexc("panelClosed: ")
 
     @objc.python_method
     def _setStatus(self, text):
@@ -555,22 +453,10 @@ class ParametricMasters(ReporterPlugin):
 
     @objc.python_method
     def foreground(self, layer):
-        """Glyphs 3 reporter draw entry — the panel heartbeat and trailing
+        """Glyphs 3 reporter draw entry — panel upkeep and the trailing
         live scan. Nothing is drawn into the Edit view."""
-        self._lastForegroundAt = time.time()
         self._lastLayer = layer
-        if not self._userEnabled:
-            self._pollViewItem()
-            if not self._userEnabled:
-                return
-        if self._panel is None and FloatingWindow is not None:
-            self._build_panel()
-        ns = self._nswindow()
-        if ns is not None and not ns.isVisible():
-            try:
-                ns.makeKeyAndOrderFront_(None)
-            except Exception:
-                pass
+        self._showPanel()  # lazy: also covers a build that skips willActivate
         font = self._currentFont()
         if font is not None and font is not self._panelFont:
             self._panelFont = font

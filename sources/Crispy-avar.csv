@@ -1,4 +1,4 @@
-﻿Instance Name,XTRA,XOPQ,YOPQ,WGHT,WDTH,OPSZ
+Instance Name,XTRA,XOPQ,YOPQ,WGHT,WDTH,OPSZ
 Narrow-Thin-MaxOpsz,47.0,1.0,1.0,1.0,5.0,144.0
 Narrow-Thin-MinOpsz,109.5,7.9,7.1,1.0,5.0,14.0
 Narrow-Ultra-MaxOpsz,47.0,354.5,255.4,1000.0,5.0,144.0
@@ -9,3 +9,4 @@ Wide-Thin-MinOpsz,1715.0,31.0,12.4,1.0,220.0,14.0
 Wide-Ultra-Max Opsz,47.0,1462.0,275.0,1000.0,220.0,144.0
 WideUltra Min,47.0,1462.0,275.0,1000.0,220.0,14.0
 Def,663.1,202.5,121.8,400.0,100.0,48.0
+Width Matcher Preview,47.0,1462.0,275.0,,,

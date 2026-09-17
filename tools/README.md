@@ -76,9 +76,8 @@ Enable via **View → Instance Delta**.
   instance-advance marker (**Advance markers** toggles them).
 - The overlay draws for every glyph in the tab; the readout tracks the
   active glyph.
-- A View toggle restored at launch does not open the panel (4 s grace);
-  closing the panel with the red X stops panel and overlay until the view
-  is re-selected.
+- Closing the panel with the red X turns the reporter off (panel and
+  overlay) until it is re-selected in the View menu.
 
 ## Multi-Source Edit (`MultiSourceEdit.glyphsTool`)
 
@@ -153,25 +152,28 @@ Edit view; everything happens in the panel.
 - All five plugins follow the standard Glyphs 3 Python plugin template
   (bundle + stub loader, `NSPrincipalClass`, `PyMainFileNames`,
   vanilla `FloatingWindow` panels).
-- This Glyphs build does not call `activate()`/`deactivate()` on View
-  toggles, so panel visibility is driven by the reporter draw callbacks
-  plus an `NSTimer` heartbeat instead — that is deliberate, not a quirk
-  to "fix".
-- Plugins are closed by default, opened via the View menu: Glyphs
-  restores the View toggle programmatically (at launch or document
-  open), and there is no reliable moment to catch it. So each reporter
-  trampolines its View item's action (`_hookViewItem` /
-  `_viewItemClicked_`): a real CLICK marks user intent, while an on
-  state with no click seen is the session restore and is switched back
-  off (`_toggleOffViaMenu`, bypassing the trampoline). Toggle state is
-  polled from `Glyphs.addCallback(UPDATEINTERFACE)` with `state()`
-  reads forced fresh via `menu.update()`; NSTimer callbacks never fire
-  in this build (confirmed by instrumentation), and draw timing is never
-  used — a pause in drawing is indistinguishable from a toggle (the bug
-  in earlier iterations). A panel's red X toggles the reporter off and
-  drops the dead vanilla window; the next wanted `foreground()` rebuilds
-  the panel. (Multi-Source Edit is a toolbar tool without a View item,
-  so it keeps a 2 s activate grace instead.)
+- View toggles reach a reporter through `willActivate` /
+  `willDeactivate`, which Glyphs calls on the plugin instance (the
+  selectors are in GlyphsCore, and RedArrow relies on them). The SDK's
+  `ReporterPlugin` does not forward them to `activate()` /
+  `deactivate()` — only `SelectTool` does — so the reporters implement
+  the two methods directly, as real ObjC selectors (no
+  `@objc.python_method`). `willActivate` builds and shows the panel,
+  `willDeactivate` hides it. A panel's red X calls
+  `Glyphs.deactivateReporter(self)`, the SDK's own API, so the View item
+  follows; the next `willActivate` rebuilds the window. `foreground()`
+  also shows the panel lazily, as a fallback.
+- Glyphs remembers enabled reporters across launches in its
+  `visibleReporters` default and re-enables them at start-up — that, not
+  a launch-time `activate()` call, is what used to put panels on screen
+  before anything was asked for. These panels are wanted on demand only,
+  so each reporter drops itself from that list in `start()`
+  (`_forgetRestoredToggle`); the next View click puts it back for the
+  session. Do not reintroduce menu-item trampolines or draw-timing
+  heuristics for this: Glyphs uses separate `activateReporter:` /
+  `deactivateReporter:` actions and rebuilds the reporter menu, so a
+  hooked item goes stale. (Multi-Source Edit is a toolbar tool without a
+  View item; it keeps a 2 s activate grace.)
 - Each `plugin.py` has a module-level `DEBUG = False`. Flip it to `True`
   to append instrumentation to `/tmp/<plugin>-debug.log` while
   developing; it ships off.
