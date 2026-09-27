@@ -39,7 +39,7 @@ Crispy's avar2 mappings, secondary axes, grade and transforms are authored with
 release wheel for the studio (the git install used by CI has no UI):
 
 ```bash
-pipx install https://github.com/agyeiagyeiagyei/avar2-studio/releases/latest/download/avar2_studio-0.1.0.dev6-py3-none-any.whl
+pipx install avar2-studio
 avar2-studio sources/Crispy.glyphs
 ```
 
@@ -50,14 +50,15 @@ in a browser.
 
 **Design tools:**
 
-Five Glyphs 3 plugins were built for Crispy's design workflow and live
-in [`tools/`](tools/README.md): **Corner Radii** (rounded-corner
-audit/edit), **Instance Delta** (master/instance comparison overlay),
-**Multi-Source Edit** (node drags propagated across masters),
-**Parametric Masters** (live parametric-master metrics audit), and
-**Width Matcher** (width-matched master creation). Install by copying
-the bundles into `~/Library/Application Support/Glyphs 3/Plugins/` —
-see [`tools/README.md`](tools/README.md) for usage.
+Six Glyphs 3 plugins were built for Crispy's design workflow — **Corner
+Radii** (rounded-corner audit/edit), **Instance Delta** (master/instance
+comparison overlay), **Multi-Source Edit** (node drags propagated across
+masters), **Parametric Masters** (live parametric-master metrics audit),
+**Slant Master** (italic masters: a source sheared into a new master, widths
+matched to a reference), and **Width Matcher** (width-matched master creation). They now ship
+with avar2-studio, under its **Window → avar2 Studio** menu in Glyphs:
+`avar2-studio install-glyphs-plugins`, then restart Glyphs. Usage is in
+[avar2-studio's glyphs README](https://github.com/agyeiagyeiagyei/avar2-studio/blob/main/src/avar2_studio/glyphs/README.md).
 
 ___
 **For the purposes of this project, I describe *axes* as visual paradigms that we use to describe one or more features in a variable font.**
