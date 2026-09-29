@@ -53,7 +53,7 @@ in a browser.
 Six Glyphs 3 plugins were built for Crispy's design workflow — **Corner
 Radii** (rounded-corner audit/edit), **Instance Delta** (master/instance
 comparison overlay), **Multi-Source Edit** (node drags propagated across
-masters), **Parametric Masters** (live parametric-master metrics audit),
+masters), **Metrics Parity** (live parametric-master metrics audit),
 **Slant Master** (italic masters: a source sheared into a new master, widths
 matched to a reference), and **Width Matcher** (width-matched master creation). They now ship
 with avar2-studio, under its **Window → avar2 Studio** menu in Glyphs:
