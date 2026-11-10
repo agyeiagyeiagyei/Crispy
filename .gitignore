@@ -67,5 +67,7 @@ fonts-test/
 # Avar2 Studio per-project workspace (config, backups, build output)
 .avar2-studio/
 
-# avar2-studio secondary-axis sidecar (working file, regenerate with scripts/setup_lowercase_axis.py)
+# avar2-studio secondary-axis sidecars (regenerate with scripts/setup_lowercase_axis.py);
+# Crispy's is tracked so every build carries LCWD and YMOD
 *-control.json
+!sources/Crispy-control.json

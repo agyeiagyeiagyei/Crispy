@@ -27,7 +27,7 @@ These are the fundamental building blocks that control specific structural compo
 - **X-Transparency** (XTRA): 47–1715 units - Controls horizontal transparent (negative) space
 - **Spacing** (SPAC): −40 to 40 — tracking, added by the width-aware spacing transform declared in `sources/Crispy-transforms.json`
 
-Two **secondary parametric axes** deform only chosen glyphs: **Lowercase width** (lcwd, 0–100) renders the lowercase at the heavy end as if at a lighter XOPQ, and **Horizontal correction** (ymod, 0–100) adjusts a handful of glyphs. They are declared in `sources/Crispy-control.json`, a working file that is not committed; `scripts/setup_lowercase_axis.py` and `scripts/setup_drawn_axis.py` regenerate it.
+Two **secondary parametric axes** deform only chosen glyphs: **Lowercase width** (lcwd, 0–100) renders the lowercase at the heavy end as if at a lighter XOPQ, and **Horizontal correction** (ymod, 0–100) adjusts a handful of glyphs. They are declared in `sources/Crispy-control.json`; `scripts/setup_lowercase_axis.py` and `scripts/setup_drawn_axis.py` regenerate it.
 
 **Avar2 Mapping:**
 The font uses an avar2 table to map traditional axis combinations to parametric axis values. This allows users to work with familiar axes (Weight, Width, Optical Size) while the font internally uses parametric axes (XOPQ, YOPQ, XTRA). Each row of `sources/Crispy-avar.csv` is one mapping: the `Def` row, for example, maps Weight=400, Width=100, Optical Size=48 to XTRA=663.1, XOPQ=202.5, YOPQ=121.8.
