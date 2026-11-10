@@ -1,0 +1,89 @@
+{
+  "XTRA": {
+    "display_name": "X-Transparency",
+    "registered_tag": "xtra",
+    "min": 47.0,
+    "max": 1715.0,
+    "is_parametric": true
+  },
+  "XOPQ": {
+    "display_name": "X-Opacity",
+    "registered_tag": "xopq",
+    "min": 1.0,
+    "max": 1462.0,
+    "is_parametric": true
+  },
+  "YOPQ": {
+    "display_name": "Y-Opacity",
+    "registered_tag": "yopq",
+    "min": 1.0,
+    "max": 275.0,
+    "is_parametric": true
+  },
+  "WGHT": {
+    "display_name": "Weight",
+    "registered_tag": "wght",
+    "is_parametric": false,
+    "min": 1,
+    "default": 1,
+    "max": 1000
+  },
+  "WDTH": {
+    "display_name": "Width",
+    "registered_tag": "wdth",
+    "is_parametric": false,
+    "min": 5,
+    "default": 5,
+    "max": 220
+  },
+  "OPSZ": {
+    "display_name": "Optical Size",
+    "registered_tag": "opsz",
+    "is_parametric": false,
+    "min": 14,
+    "default": 144,
+    "max": 144
+  },
+  "GRAD": {
+    "display_name": "Grade",
+    "registered_tag": "grad",
+    "min": -10.0,
+    "max": 10.0,
+    "is_parametric": false
+  },
+  "LCWD": {
+    "display_name": "Lowercase width",
+    "registered_tag": "lcwd",
+    "min": -1000,
+    "max": 1000,
+    "is_parametric": false
+  },
+  "YMOD": {
+    "display_name": "Horizontal correction",
+    "registered_tag": "ymod",
+    "min": -1000,
+    "max": 1000,
+    "is_parametric": false
+  },
+  "ROND": {
+    "display_name": "Rounding",
+    "registered_tag": "rond",
+    "min": 0.0,
+    "max": 100.0,
+    "is_parametric": true
+  },
+  "SLNT": {
+    "display_name": "Slant",
+    "registered_tag": "slnt",
+    "min": -11.0,
+    "max": 0.0,
+    "is_parametric": true
+  },
+  "SPAC": {
+    "display_name": "Spacing",
+    "registered_tag": "spac",
+    "min": -40.0,
+    "max": 40.0,
+    "is_parametric": false
+  }
+}

@@ -6,16 +6,20 @@
   "clamp_to_headroom": true,
   "instances": [
     {
-      "name": "WideUltra Min",
-      "pct": 0.05
-    },
-    {
-      "name": "Def",
-      "pct": 0.1
-    },
-    {
       "name": "Narrow-Ultra-MaxOpsz",
       "pct": 0.03
+    },
+    {
+      "name": "Default 1 MinOpsz",
+      "pct": 0.25
+    },
+    {
+      "name": "Wide 900 MinOpsz",
+      "pct": 0.15
+    },
+    {
+      "name": "Default 400 MaxOpsz",
+      "pct": 0.2
     }
   ]
 }

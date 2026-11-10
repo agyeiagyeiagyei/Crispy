@@ -17,6 +17,36 @@
       "params": {}
     },
     {
+      "type": "round_corners",
+      "enabled": true,
+      "params": {
+        "default_pct": 0.0,
+        "outer_pct": 20.0,
+        "inner_pct": 1.0,
+        "outer_xtra_pct": 15.0,
+        "inner_xtra_pct": 1.0,
+        "outer_min": 2.0,
+        "inner_min": 1.0,
+        "style_pcts": {},
+        "master_overrides": {
+          "Black Narrow Max 47-350-255": {
+            "outer": 20
+          }
+        }
+      }
+    },
+    {
+      "type": "slant",
+      "enabled": true,
+      "params": {
+        "default_pct": 0.0,
+        "narrow_angle": 11.0,
+        "wide_angle": 8.0,
+        "style_pcts": {},
+        "master_angles": {}
+      }
+    },
+    {
       "type": "spac",
       "enabled": false,
       "params": {
@@ -28,10 +58,10 @@
       "type": "spac_widthaware",
       "enabled": true,
       "params": {
-        "min": -40,
-        "max": 40,
+        "min": -100,
+        "max": 100,
         "bias": 1.0,
-        "scale": 1.25
+        "scale": 2.386
       }
     }
   ]
