@@ -69,3 +69,4 @@ fonts-test/
 
 # avar2-studio secondary-axis sidecar (working file, regenerate with scripts/setup_lowercase_axis.py)
 *-control.json
+venv-old

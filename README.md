@@ -92,7 +92,7 @@ pip install "avar2-studio @ git+https://github.com/agyeiagyeiagyei/avar2-studio@
 avar2-studio build sources/Crispy.glyphs --out fonts/variable
 ```
 
-This compiles the source with fontc, regenerates the secondary-axis shadow and the grade layers, builds the avar2 table from `sources/Crispy-avar.csv`, applies the spacing transform, and writes the variable font to `fonts/variable/`. CI then runs fontspector and diffenator2 proofs and publishes the results to GitHub Pages.
+This compiles the source with fontc, regenerates the secondary-axis shadow and the grade layers, builds the avar2 table from `sources/Crispy-avar.csv`, applies the spacing transform, and writes the variable font to `fonts/variable/`. CI then runs fontspector and publishes the report to GitHub Pages.
 
 
 ### Glyphs + :
