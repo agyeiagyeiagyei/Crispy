@@ -7,10 +7,9 @@ env:
   # The source CI builds. Its avar2 mappings, grade and transform settings
   # come from the sibling Crispy-avar.csv / -grade.json / -transforms.json.
   SOURCE: sources/Crispy.glyphs
-  # The studio owns the build now (it replaced the Makefile/gftools flow in
-  # July). Install it from the branch the hosted demo deploys from until a
-  # release carrying the current work exists.
-  AVAR2_STUDIO: "avar2-studio @ git+https://github.com/agyeiagyeiagyei/avar2-studio@github-pages"
+  # The build toolchain is requirements.txt, frozen from requirements.in (which
+  # pins avar2-studio to a commit, since it has no release yet). Regenerate the
+  # freeze there; never pip install anything else here.
 
 jobs:
   build:
@@ -30,12 +29,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Install toolset
       run: |
-        sudo apt-get update
-        sudo apt-get install -y ttfautohint libcairo2-dev python3-cairo-dev pkg-config python3-dev
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install "$AVAR2_STUDIO"
-        avar2-studio doctor || true
+        avar2-studio doctor --strict
     - name: Set artifact file name
       shell: bash
       run: echo "ZIP_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')-fonts" >> $GITHUB_ENV
@@ -54,17 +50,12 @@ jobs:
           --ghmarkdown out/fontspector/fontspector-report.md \
           fonts/variable/*.ttf \
           || echo "::warning title=fontspector::QA reported issues — see the report artifact."
-    - name: Generate proofs
-      run: |
-        mkdir -p out/proof
-        diffenator2 proof fonts/variable/*.ttf -o out/proof
     - name: Set up test result site
       run: |
         cat > out/index.html <<'HTML'
         <!doctype html><meta charset="utf-8"><title>Crispy — build results</title>
         <h1>Crispy build results</h1>
         <ul>
-          <li><a href="proof/">Proofs (diffenator2)</a></li>
           <li><a href="fontspector/fontspector-report.html">Fontspector report</a></li>
         </ul>
         HTML

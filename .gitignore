@@ -71,3 +71,4 @@ fonts-test/
 # Crispy's is tracked so every build carries LCWD and YMOD
 *-control.json
 !sources/Crispy-control.json
+venv-old
