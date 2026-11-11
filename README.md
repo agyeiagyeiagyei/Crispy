@@ -16,7 +16,7 @@ Crispy uses a dual-axis system: **traditional axes** (stylistic) and **parametri
 **Traditional Axes (Stylistic):**
 These are the familiar axes that describe the end-result appearance:
 - **Weight** (wght): 1–1000
-- **Width** (wdth): 5–220
+- **Width** (wdth): 25–200
 - **Optical Size** (opsz): 14–144
 - **Grade** (GRAD): −10 to +10 — darkens or lightens a style without changing its advance widths; declared in `sources/Crispy-grade.json`
 

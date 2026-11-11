@@ -4305,7 +4305,7 @@
           "glyph": "e",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -4421,7 +4421,7 @@
           "glyph": "s",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 1000.0,
             "XOPQ": 337.1,
             "XTRA": 47.0,
@@ -4537,7 +4537,7 @@
           "glyph": "S",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -4653,7 +4653,7 @@
           "glyph": "S",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 1000.0,
             "XOPQ": 337.1,
             "XTRA": 47.0,
@@ -4769,7 +4769,7 @@
           "glyph": "B",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -4915,7 +4915,7 @@
           "glyph": "B",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 1000.0,
             "XOPQ": 337.1,
             "XTRA": 47.0,
@@ -5061,7 +5061,7 @@
           "glyph": "K",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -5167,7 +5167,7 @@
           "glyph": "K",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 1000.0,
             "XOPQ": 337.1,
             "XTRA": 47.0,
@@ -5273,7 +5273,7 @@
           "glyph": "E",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -5379,7 +5379,7 @@
           "glyph": "E",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 1000.0,
             "XOPQ": 337.1,
             "XTRA": 47.0,
@@ -5485,7 +5485,7 @@
           "glyph": "e",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 1000.0,
             "XOPQ": 1190.4,
             "XTRA": 47.0,
@@ -5601,7 +5601,7 @@
           "glyph": "e",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -5717,7 +5717,7 @@
           "glyph": "s",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 1000.0,
             "XOPQ": 1190.4,
             "XTRA": 47.0,
@@ -5833,7 +5833,7 @@
           "glyph": "g",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -6208,7 +6208,7 @@
           "glyph": "g",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -6334,7 +6334,7 @@
           "glyph": "Z",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -6694,7 +6694,7 @@
           "glyph": "Z",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -6815,7 +6815,7 @@
           "glyph": "Z.noterminal",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -7115,7 +7115,7 @@
           "glyph": "Z.noterminal",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -7216,7 +7216,7 @@
           "glyph": "z",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -7516,7 +7516,7 @@
           "glyph": "z",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -7617,7 +7617,7 @@
           "glyph": "q",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -7902,7 +7902,7 @@
           "glyph": "q",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -7998,7 +7998,7 @@
           "glyph": "3",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -8031,7 +8031,7 @@
           "glyph": "3",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -8043,7 +8043,7 @@
           "glyph": "4",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -8076,7 +8076,7 @@
           "glyph": "4",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -8088,7 +8088,7 @@
           "glyph": "5",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -8121,7 +8121,7 @@
           "glyph": "5",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -8133,7 +8133,7 @@
           "glyph": "8",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -8166,7 +8166,7 @@
           "glyph": "8",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -8178,7 +8178,7 @@
           "glyph": "2",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -8211,7 +8211,7 @@
           "glyph": "2",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -8223,7 +8223,7 @@
           "glyph": "6",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -8256,7 +8256,7 @@
           "glyph": "6",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,
@@ -8268,7 +8268,7 @@
           "glyph": "k",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 5.0,
+            "WDTH": 25.0,
             "WGHT": 900.0,
             "XOPQ": 212.9,
             "XTRA": 123.7,
@@ -8613,7 +8613,7 @@
           "glyph": "k",
           "location": {
             "OPSZ": 144.0,
-            "WDTH": 220.0,
+            "WDTH": 200.0,
             "WGHT": 900.0,
             "XOPQ": 500.9,
             "XTRA": 1560.8,

@@ -32,9 +32,9 @@
     "display_name": "Width",
     "registered_tag": "wdth",
     "is_parametric": false,
-    "min": 5,
-    "default": 5,
-    "max": 220
+    "min": 25,
+    "default": 25,
+    "max": 200
   },
   "OPSZ": {
     "display_name": "Optical Size",
