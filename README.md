@@ -18,6 +18,9 @@ These are the familiar axes that describe the end-result appearance:
 - **Weight** (wght): 1–1000
 - **Width** (wdth): 25–200
 - **Optical Size** (opsz): 14–144
+- **Grade** (GRAD): -10-10
+- **Slant** (slnt): 0-11
+- **Rounding** (ROND): 0-100
 
 **Parametric Axes (Elemental):**
 These are the fundamental building blocks that control specific structural components, following the [Type Network Parametric Axes proposal](https://github.com/Microsoft/OpenTypeDesignVariationAxisTags/blob/master/Proposals/TypeNetwork_ParametricAxes/Overview.md). Values are in units on the em square (where 1000 units = 1em):
