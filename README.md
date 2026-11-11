@@ -23,7 +23,7 @@ These are the familiar axes that describe the end-result appearance:
 - **Rounding** (ROND): 0-100
 
 **Parametric Axes (Elemental):**
-These are the fundamental building blocks that control specific structural components, following the [Type Network Parametric Axes proposal](https://github.com/Microsoft/OpenTypeDesignVariationAxisTags/blob/master/Proposals/TypeNetwork_ParametricAxes/Overview.md). Values are in units on the em square (where 1000 units = 1em):
+These are the fundamental building blocks that control specific structural components, following the [Type Network Parametric Axes proposal](https://github.com/Microsoft/OpenTypeDesignVariationAxisTags/blob/master/Proposals/TypeNetwork_ParametricAxes/Overview.md). Values are in units on the em square (where 2000 units = 1em):
 - **X-Opacity** (XOPQ): 1–1462 units - Controls horizontal opaque (positive) space
 - **Y-Opacity** (YOPQ): 1–275 units - Controls vertical opaque (positive) space
 - **X-Transparency** (XTRA): 47–1715 units - Controls horizontal transparent (negative) space
