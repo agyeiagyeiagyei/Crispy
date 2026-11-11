@@ -89,11 +89,12 @@ The fonts are built by avar2-studio, headless — the same pipeline the studio r
 ```bash
 pip install -r requirements.txt
 pip install "avar2-studio @ git+https://github.com/agyeiagyeiagyei/avar2-studio@github-pages"
-avar2-studio build sources/Crispy.glyphs --out fonts/variable
+avar2-studio build sources/Crispy.glyphs --out fonts/variable --default wght=400,wdth=100,opsz=144
 gftools gen-stat --src sources/Crispy-stat.yaml --inplace fonts/variable/*.ttf
+python scripts/fix_instances.py fonts/variable/*.ttf
 ```
 
-This compiles the source with fontc, regenerates the secondary-axis shadow and the grade layers, builds the avar2 table from `sources/Crispy-avar.csv`, applies the spacing transform, and writes the variable font to `fonts/variable/`. `gftools gen-stat` then replaces the studio's preview STAT with Crispy's own, authored in `sources/Crispy-stat.yaml`: the Google Fonts registry's named stops on weight, width and optical size, and none on the parametric axes. CI then runs fontspector and publishes the report to GitHub Pages.
+This compiles the source with fontc, regenerates the secondary-axis shadow and the grade layers, builds the avar2 table from `sources/Crispy-avar.csv`, applies the spacing transform, and writes the variable font to `fonts/variable/`. `gftools gen-stat` then replaces the studio's preview STAT with Crispy's own, authored in `sources/Crispy-stat.yaml`: the Google Fonts registry's named stops on weight, width and optical size, and none on the parametric axes. The shipped font rests at Regular (`--default`), and `scripts/fix_instances.py` gives it Google Fonts' named instances: nine weights, upright and Italic (the slant at −11). CI then runs fontspector and publishes the report to GitHub Pages.
 
 
 ### Glyphs + :
