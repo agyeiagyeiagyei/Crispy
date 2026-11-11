@@ -1,0 +1,77 @@
+# Crispy's STAT table — applied to the built font by gftools gen-stat
+# (`gftools gen-stat --src sources/Crispy-stat.yaml --inplace fonts/variable/*.ttf`).
+#
+# Every fvar axis is listed, in display order. Registered axes carry the Google
+# Fonts registry stops inside Crispy's ranges, with the registry names; flags 2
+# marks the stop a style name omits (ELIDABLE). Parametric axes carry a record
+# and no stops: one named value on a parametric axis is no use in a style picker
+# (issue #52).
+- name: Optical Size
+  tag: opsz
+  values:
+    - {name: 14pt, value: 14}
+    - {name: 16pt, value: 16}
+    - {name: 17pt, value: 17}
+    - {name: 18pt, value: 18}
+    - {name: 20pt, value: 20}
+    - {name: 24pt, value: 24}
+    - {name: 28pt, value: 28}
+    - {name: 36pt, value: 36}
+    - {name: 48pt, value: 48}
+    - {name: 60pt, value: 60}
+    - {name: 72pt, value: 72}
+    - {name: 96pt, value: 96}
+    - {name: 120pt, value: 120}
+    - {name: 144pt, value: 144, flags: 2}
+- name: Width
+  tag: wdth
+  values:
+    - {name: SuperCondensed, value: 25}
+    - {name: UltraCondensed, value: 50}
+    - {name: ExtraCondensed, value: 62.5}
+    - {name: Condensed, value: 75}
+    - {name: SemiCondensed, value: 87.5}
+    - {name: Normal, value: 100, flags: 2}
+    - {name: SemiExpanded, value: 112.5}
+    - {name: Expanded, value: 125}
+    - {name: ExtraExpanded, value: 150}
+    - {name: UltraExpanded, value: 200}
+- name: Weight
+  tag: wght
+  values:
+    - {name: Thin, value: 100}
+    - {name: ExtraLight, value: 200}
+    - {name: Light, value: 300}
+    - {name: Regular, value: 400, flags: 2, linkedValue: 700}
+    - {name: Medium, value: 500}
+    - {name: SemiBold, value: 600}
+    - {name: Bold, value: 700}
+    - {name: ExtraBold, value: 800}
+    - {name: Black, value: 900}
+- name: Slant
+  tag: slnt
+  values: []
+- name: X-Transparency
+  tag: XTRA
+  values: []
+- name: X-Opacity
+  tag: XOPQ
+  values: []
+- name: Y-Opacity
+  tag: YOPQ
+  values: []
+- name: Lowercase width
+  tag: LCWD
+  values: []
+- name: Horizontal correction
+  tag: YMOD
+  values: []
+- name: Grade
+  tag: GRAD
+  values: []
+- name: Rounding
+  tag: ROND
+  values: []
+- name: Spacing
+  tag: SPAC
+  values: []

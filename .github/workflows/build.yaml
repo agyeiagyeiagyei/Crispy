@@ -40,6 +40,9 @@ jobs:
       run: |
         rm -rf fonts
         avar2-studio build "$SOURCE" --out fonts/variable
+        # Crispy's own STAT (named stops, issue #52) replaces the studio's
+        # preview STAT; the file is the source of truth for style naming.
+        gftools gen-stat --src sources/Crispy-stat.yaml --inplace fonts/variable/*.ttf
         ls -la fonts/variable
     - name: Check with fontspector
       continue-on-error: true
