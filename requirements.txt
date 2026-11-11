@@ -1,6 +1,6 @@
 absl-py==2.5.1
 attrs==26.1.0
-avar2-studio @ git+https://github.com/agyeiagyeiagyei/avar2-studio@cb48ec58fac2bf7d76df36616cd707e91be67803
+avar2-studio @ git+https://github.com/agyeiagyeiagyei/avar2-studio@55d3f7ed87d6eb43b2897886c99bc760cd941a6d
 axisregistry==0.4.20
 beautifulsoup4==4.15.0
 blinker==1.9.0

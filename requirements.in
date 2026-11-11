@@ -3,6 +3,6 @@
 #         && venv/bin/pip freeze > requirements.txt
 # avar2-studio builds the fonts and brings fontc, glyphsLib and fontTools with it.
 # It has no release yet, so it is pinned to a commit of its main branch.
-avar2-studio @ git+https://github.com/agyeiagyeiagyei/avar2-studio@cb48ec58fac2bf7d76df36616cd707e91be67803
+avar2-studio @ git+https://github.com/agyeiagyeiagyei/avar2-studio@55d3f7ed87d6eb43b2897886c99bc760cd941a6d
 # The latest gftools (avar2-to-avar1 and friends); the studio only asks for >=0.9.
 gftools>=0.10.8

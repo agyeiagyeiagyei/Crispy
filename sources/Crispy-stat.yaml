@@ -22,7 +22,7 @@
     - {name: 72pt, value: 72}
     - {name: 96pt, value: 96}
     - {name: 120pt, value: 120}
-    - {name: 144pt, value: 144, flags: 2}
+    - {name: 144pt, value: 144}
 - name: Width
   tag: wdth
   values:
