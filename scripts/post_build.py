@@ -28,7 +28,10 @@ This script runs after ``avar2-studio build`` and:
 - names the wght, wdth and opsz axes, which the studio names after their tags;
 - rebuilds STAT with an axis record for every fvar axis, the registry's
   fallback values for wght, wdth and opsz, and Hairline (1) and ExtraBlack
-  (1000) for the two wght stops outside the registry.
+  (1000) for the two wght stops outside the registry;
+- renames the file to ``<Family>[tags].ttf`` from the axes that are not
+  hidden, as gftools-builder names a variable font. fontspector 1.9.0 still
+  expects every fvar axis in the name, hidden ones included.
 
 It does not move the default location and does not touch any glyph.
 
@@ -61,6 +64,7 @@ WIDTHS = [
 # Names for the stops beyond the registry's range; STAT values only, no instance.
 EXTRA_WEIGHTS = [(1, "Hairline"), (1000, "ExtraBlack")]
 ELIDABLE = 0x2
+HIDDEN_AXIS = 0x1
 
 # The studio names the axes it creates after their tags.
 AXIS_NAMES = {"wght": "Weight", "wdth": "Width", "opsz": "Optical Size"}
@@ -226,6 +230,19 @@ def fix_stat(font):
     buildStatTable(font, axes, elidedFallbackName=STYLE)
 
 
+def canonical_path(font, path):
+    """``<Family>[tags].ext`` from the axes a font picker shows.
+
+    Hidden axes stay out of the name, as gftools-builder leaves them out.
+    Unregistered (uppercase) tags come first, each group sorted, as the
+    Google Fonts axis registry's ``build_filename`` orders them.
+    """
+    tags = [a.axisTag for a in font["fvar"].axes if not a.flags & HIDDEN_AXIS]
+    tags = sorted(t for t in tags if t.isupper()) + sorted(t for t in tags if t.islower())
+    family = font["name"].getBestFamilyName().replace(" ", "")
+    return path.with_name(f"{family}[{','.join(tags)}]{path.suffix}")
+
+
 def finish(path):
     font = TTFont(path)
     stale = _referenced_name_ids(font)
@@ -236,8 +253,11 @@ def finish(path):
     still_used = _referenced_name_ids(font)
     for name_id in stale - still_used:
         font["name"].removeNames(nameID=name_id)
-    font.save(path)
-    print(f"finished {path}: {len(font['fvar'].instances)} instances, "
+    target = canonical_path(font, path)
+    font.save(target)
+    if target != path:
+        path.unlink()
+    print(f"finished {target.name}: {len(font['fvar'].instances)} instances, "
           f"STAT records for {len(font['fvar'].axes)} axes")
 
 
